@@ -8,9 +8,9 @@ const geist = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "챗봇 메이커 | 아이디어를 대화로 만드는 스튜디오",
+  title: "AI 챗봇 LAB | App Inventor 방식 챗봇 만들기",
   description:
-    "학생 누구나 템플릿과 기능 블록을 이용해 자신만의 챗봇을 디자인하고 공유할 수 있는 노코드 제작 도구입니다.",
+    "초등학생과 중학생이 팔레트, 휴대폰 화면, 속성, 블록을 이용해 AI 알림장 챗봇을 만드는 교육용 제작 도구입니다.",
 };
 
 export default function RootLayout({
@@ -19,8 +19,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko">
-      <body className={geist.variable}>{children}</body>
+    <html lang="ko" className={geist.variable}>
+      <body>{children}</body>
     </html>
   );
 }
