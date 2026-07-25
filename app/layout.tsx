@@ -8,9 +8,9 @@ const geist = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "챗봇 메이커 | 아이디어를 대화로 만드는 스튜디오",
+  title: "나만의 웹 만들기 | 기획부터 직접 만드는 웹 스튜디오",
   description:
-    "학생 누구나 템플릿과 기능 블록을 이용해 자신만의 챗봇을 디자인하고 공유할 수 있는 노코드 제작 도구입니다.",
+    "학생 누구나 기획부터 화면 구성, 기능 연결, 테스트까지 앱 인벤터처럼 블록을 조립해 자신만의 웹을 만드는 교육용 제작 도구입니다.",
 };
 
 export default function RootLayout({
