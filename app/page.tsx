@@ -8,19 +8,25 @@ import {
   Cat,
   Check,
   CircleCheckBig,
+  Code2,
+  GitBranch,
+  GripVertical,
   Hammer,
   Lightbulb,
   LockKeyhole,
   Megaphone,
   MessageCircle,
+  Palette,
   PencilLine,
   Puzzle,
   Rocket,
+  Save,
   School,
   Send,
   Smile,
   Sparkles,
   Split,
+  TextCursorInput,
   Trash2,
   WandSparkles,
   type LucideIcon,
@@ -32,7 +38,8 @@ type BlockType =
   | "checklist"
   | "schedule"
   | "faq"
-  | "choice";
+  | "choice"
+  | "custom";
 
 type ThemeId = "violet" | "mint" | "sunset" | "navy";
 
@@ -47,7 +54,8 @@ type IconName =
   | "rocket"
   | "school"
   | "book"
-  | "puzzle";
+  | "puzzle"
+  | "code";
 
 type AvatarId = "bot" | "cat" | "sparkles" | "rocket" | "book" | "smile";
 
@@ -58,6 +66,7 @@ type BotBlock = {
   title: string;
   description: string;
   items: string[];
+  script?: string;
 };
 
 type BotConfig = {
@@ -66,6 +75,11 @@ type BotConfig = {
   welcome: string;
   emoji: AvatarId;
   theme: ThemeId;
+  accent?: string;
+  canvas?: string;
+  radius?: number;
+  fontScale?: number;
+  menuColumns?: 1 | 2;
   blocks: BotBlock[];
 };
 
@@ -89,18 +103,19 @@ const makeBlock = (
   title: string,
   description: string,
   items: string[] = [],
-): BotBlock => ({ id: uid(), type, icon, title, description, items });
+  script = "",
+): BotBlock => ({ id: uid(), type, icon, title, description, items, script });
 
-const cloneConfig = (config: BotConfig): BotConfig => ({
-  ...config,
-  emoji: resolveAvatar(config.emoji),
-  blocks: config.blocks.map((block) => ({
-    ...block,
-    id: uid(),
-    icon: resolveIconName(block.icon, block.type),
-    items: [...block.items],
-  })),
-});
+const cloneConfig = (config: BotConfig): BotConfig =>
+  normalizeConfig({
+    ...config,
+    blocks: config.blocks.map((block) => ({
+      ...block,
+      id: uid(),
+      items: [...block.items],
+      script: block.script ?? "",
+    })),
+  });
 
 const blockCatalog: Array<{
   type: BlockType;
@@ -109,7 +124,17 @@ const blockCatalog: Array<{
   hint: string;
   defaultDescription: string;
   items?: string[];
+  script?: string;
 }> = [
+  {
+    type: "custom",
+    icon: "code",
+    name: "직접 기능 만들기",
+    hint: "한국어 명령으로 동작을 설계해요",
+    defaultDescription: "내가 직접 순서와 동작을 작성한 기능이에요.",
+    script:
+      "말하기: 안녕하세요! 직접 만든 기능이에요.\n질문하기: 이름이 무엇인가요?\n입력받기: 이름\n저장하기: 이름\n말하기: 반가워요, {{이름}}님!",
+  },
   {
     type: "announcement",
     icon: "megaphone",
@@ -294,6 +319,7 @@ const iconMap: Record<IconName, LucideIcon> = {
   school: School,
   book: BookOpen,
   puzzle: Puzzle,
+  code: Code2,
 };
 
 const avatarMap: Record<AvatarId, LucideIcon> = {
@@ -322,6 +348,7 @@ const blockIconOptions: IconName[] = [
   "lightbulb",
   "split",
   "sparkles",
+  "code",
 ];
 
 const defaultIconByType: Record<BlockType, IconName> = {
@@ -331,6 +358,7 @@ const defaultIconByType: Record<BlockType, IconName> = {
   schedule: "calendar",
   faq: "lightbulb",
   choice: "split",
+  custom: "code",
 };
 
 const legacyIconMap: Record<string, IconName> = {
@@ -365,13 +393,21 @@ function resolveAvatar(value: string): AvatarId {
 }
 
 function normalizeConfig(config: BotConfig): BotConfig {
+  const selectedTheme =
+    themes.find((item) => item.id === config.theme) ?? themes[0];
   return {
     ...config,
     emoji: resolveAvatar(config.emoji),
+    accent: config.accent ?? selectedTheme.color,
+    canvas: config.canvas ?? "#f8f7ff",
+    radius: config.radius ?? 12,
+    fontScale: config.fontScale ?? 1,
+    menuColumns: config.menuColumns === 1 ? 1 : 2,
     blocks: config.blocks.map((block) => ({
       ...block,
       icon: resolveIconName(block.icon, block.type),
       items: Array.isArray(block.items) ? block.items : [],
+      script: block.script ?? "",
     })),
   };
 }
@@ -413,6 +449,39 @@ function decodeConfig(value: string): BotConfig | null {
   }
 }
 
+type ScriptCommand = {
+  id: string;
+  kind: "say" | "ask" | "input" | "choice" | "check" | "save" | "condition";
+  value: string;
+};
+
+const commandKindMap: Record<string, ScriptCommand["kind"]> = {
+  말하기: "say",
+  질문하기: "ask",
+  입력받기: "input",
+  선택하기: "choice",
+  체크하기: "check",
+  저장하기: "save",
+  조건: "condition",
+};
+
+function parseScript(script: string): ScriptCommand[] {
+  return script
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line, index) => {
+      const separator = line.indexOf(":");
+      const rawCommand = separator >= 0 ? line.slice(0, separator).trim() : "말하기";
+      const value = separator >= 0 ? line.slice(separator + 1).trim() : line;
+      return {
+        id: `${index}-${rawCommand}-${value}`,
+        kind: commandKindMap[rawCommand] ?? "say",
+        value,
+      };
+    });
+}
+
 export default function Home() {
   const [config, setConfig] = useState<BotConfig>(() => cloneConfig(templates[1].config));
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -421,6 +490,7 @@ export default function Home() {
   const [shareStatus, setShareStatus] = useState("공유 링크 복사");
   const [toast, setToast] = useState("");
   const [mobileTab, setMobileTab] = useState<"build" | "preview">("build");
+  const [draggingId, setDraggingId] = useState<string | null>(null);
   const loadedRef = useRef(false);
 
   const selectedBlock = useMemo(
@@ -487,6 +557,7 @@ export default function Home() {
       item.name,
       item.defaultDescription,
       item.items ? [...item.items] : [],
+      item.script ?? "",
     );
     setConfig((current) => ({ ...current, blocks: [...current.blocks, block] }));
     setSelectedId(block.id);
@@ -513,6 +584,20 @@ export default function Home() {
       [nextBlocks[index], nextBlocks[nextIndex]] = [nextBlocks[nextIndex], nextBlocks[index]];
       return { ...current, blocks: nextBlocks };
     });
+  };
+
+  const dropBlock = (targetId: string) => {
+    if (!draggingId || draggingId === targetId) return;
+    setConfig((current) => {
+      const sourceIndex = current.blocks.findIndex((block) => block.id === draggingId);
+      const targetIndex = current.blocks.findIndex((block) => block.id === targetId);
+      if (sourceIndex < 0 || targetIndex < 0) return current;
+      const nextBlocks = [...current.blocks];
+      const [moved] = nextBlocks.splice(sourceIndex, 1);
+      nextBlocks.splice(targetIndex, 0, moved);
+      return { ...current, blocks: nextBlocks };
+    });
+    setDraggingId(null);
   };
 
   const removeBlock = () => {
@@ -542,8 +627,11 @@ export default function Home() {
       className="app-shell"
       style={
         {
-          "--theme": theme.color,
-          "--theme-soft": theme.soft,
+          "--theme": config.accent ?? theme.color,
+          "--theme-soft": `color-mix(in srgb, ${config.accent ?? theme.color} 12%, white)`,
+          "--chat-canvas": config.canvas ?? "#f8f7ff",
+          "--bubble-radius": `${config.radius ?? 12}px`,
+          "--chat-scale": config.fontScale ?? 1,
         } as React.CSSProperties
       }
     >
@@ -631,7 +719,7 @@ export default function Home() {
           <div className="catalog">
             {blockCatalog.map((item) => (
               <button
-                className="catalog-item"
+                className={`catalog-item ${item.type === "custom" ? "custom-catalog-item" : ""}`}
                 key={item.type}
                 type="button"
                 onClick={() => addBlock(item.type)}
@@ -731,7 +819,11 @@ export default function Home() {
                   key={item.id}
                   type="button"
                   onClick={() =>
-                    setConfig((current) => ({ ...current, theme: item.id }))
+                    setConfig((current) => ({
+                      ...current,
+                      theme: item.id,
+                      accent: item.color,
+                    }))
                   }
                 >
                   <span style={{ backgroundColor: item.color }} />
@@ -739,6 +831,87 @@ export default function Home() {
                 </button>
               ))}
             </fieldset>
+            <div className="design-lab">
+              <div className="design-lab-heading">
+                <Palette aria-hidden="true" size={16} />
+                <div>
+                  <strong>디자인 세부 편집</strong>
+                  <span>정해진 테마 밖으로 직접 조정해 보세요.</span>
+                </div>
+              </div>
+              <div className="design-controls">
+                <label className="color-control">
+                  <span>강조 색</span>
+                  <input
+                    type="color"
+                    value={config.accent ?? theme.color}
+                    onChange={(event) =>
+                      setConfig((current) => ({ ...current, accent: event.target.value }))
+                    }
+                  />
+                </label>
+                <label className="color-control">
+                  <span>대화 배경</span>
+                  <input
+                    type="color"
+                    value={config.canvas ?? "#f8f7ff"}
+                    onChange={(event) =>
+                      setConfig((current) => ({ ...current, canvas: event.target.value }))
+                    }
+                  />
+                </label>
+                <label className="range-control">
+                  <span>말풍선 곡률 <b>{config.radius ?? 12}px</b></span>
+                  <input
+                    min="4"
+                    max="24"
+                    type="range"
+                    value={config.radius ?? 12}
+                    onChange={(event) =>
+                      setConfig((current) => ({
+                        ...current,
+                        radius: Number(event.target.value),
+                      }))
+                    }
+                  />
+                </label>
+                <label className="range-control">
+                  <span>대화 글자 <b>{Math.round((config.fontScale ?? 1) * 100)}%</b></span>
+                  <input
+                    min="0.85"
+                    max="1.3"
+                    step="0.05"
+                    type="range"
+                    value={config.fontScale ?? 1}
+                    onChange={(event) =>
+                      setConfig((current) => ({
+                        ...current,
+                        fontScale: Number(event.target.value),
+                      }))
+                    }
+                  />
+                </label>
+                <fieldset className="layout-control">
+                  <legend>메뉴 배치</legend>
+                  <button
+                    aria-pressed={(config.menuColumns ?? 2) === 1}
+                    className={(config.menuColumns ?? 2) === 1 ? "selected" : ""}
+                    type="button"
+                    onClick={() => setConfig((current) => ({ ...current, menuColumns: 1 }))}
+                  >
+                    1열
+                  </button>
+                  <button
+                    aria-pressed={(config.menuColumns ?? 2) === 2}
+                    className={(config.menuColumns ?? 2) === 2 ? "selected" : ""}
+                    type="button"
+                    onClick={() => setConfig((current) => ({ ...current, menuColumns: 2 }))}
+                  >
+                    2열
+                  </button>
+                </fieldset>
+              </div>
+            </div>
           </div>
 
           <div className="flow-heading">
@@ -759,12 +932,20 @@ export default function Home() {
             <div className="flow-list">
               {config.blocks.map((block, index) => (
                 <button
-                  className={`flow-card ${selectedId === block.id ? "selected" : ""}`}
+                  className={`flow-card ${selectedId === block.id ? "selected" : ""} ${draggingId === block.id ? "dragging" : ""}`}
+                  draggable
                   key={block.id}
                   type="button"
                   onClick={() => setSelectedId(block.id)}
+                  onDragEnd={() => setDraggingId(null)}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDragStart={() => setDraggingId(block.id)}
+                  onDrop={() => dropBlock(block.id)}
                 >
-                  <span className="flow-index">{index + 1}</span>
+                  <span className="flow-index">
+                    <GripVertical aria-hidden="true" size={12} />
+                    {index + 1}
+                  </span>
                   <span className="flow-icon">
                     <CuteIcon name={block.icon} />
                   </span>
@@ -806,7 +987,7 @@ export default function Home() {
                     ))}
                   </div>
                 </fieldset>
-                <label>
+                <label className="wide-field">
                   <span>버튼 이름</span>
                   <input
                     value={selectedBlock.title}
@@ -821,8 +1002,44 @@ export default function Home() {
                     onChange={(event) => updateBlock({ description: event.target.value })}
                   />
                 </label>
+                {selectedBlock.type === "custom" && (
+                  <div className="script-editor wide-field">
+                    <div className="script-editor-heading">
+                      <span>
+                        <Code2 aria-hidden="true" size={15} /> 동작 스크립트
+                      </span>
+                      <small>{parseScript(selectedBlock.script ?? "").length}개 동작</small>
+                    </div>
+                    <textarea
+                      aria-label="동작 스크립트"
+                      rows={9}
+                      spellCheck={false}
+                      value={selectedBlock.script ?? ""}
+                      onChange={(event) => updateBlock({ script: event.target.value })}
+                    />
+                    <div className="command-reference" aria-label="사용 가능한 명령">
+                      <code>말하기:</code>
+                      <code>질문하기:</code>
+                      <code>입력받기:</code>
+                      <code>선택하기:</code>
+                      <code>체크하기:</code>
+                      <code>저장하기:</code>
+                      <code>조건:</code>
+                    </div>
+                    <ol className="script-map">
+                      {parseScript(selectedBlock.script ?? "").map((command, index) => (
+                        <li key={command.id}>
+                          <span>{index + 1}</span>
+                          <b>{command.kind}</b>
+                          <small>{command.value || "내용을 입력하세요"}</small>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
                 {selectedBlock.type !== "announcement" &&
-                  selectedBlock.type !== "journal" && (
+                  selectedBlock.type !== "journal" &&
+                  selectedBlock.type !== "custom" && (
                     <label className="wide-field">
                       <span>목록 항목 <small>한 줄에 하나씩 입력</small></span>
                       <textarea
@@ -907,7 +1124,7 @@ export default function Home() {
                 </div>
               )}
             </div>
-            <div className="quick-actions">
+            <div className={`quick-actions columns-${config.menuColumns ?? 2}`}>
               {config.blocks.map((block) => (
                 <button key={block.id} type="button" onClick={() => setActivePreviewId(block.id)}>
                   <CuteIcon name={block.icon} size={13} />
@@ -945,6 +1162,15 @@ function PreviewInteraction({
   block: BotBlock;
   onToast: (message: string) => void;
 }) {
+  if (block.type === "custom") {
+    return (
+      <ScriptInteraction
+        commands={parseScript(block.script ?? "")}
+        onToast={onToast}
+      />
+    );
+  }
+
   if (block.type === "journal") {
     return (
       <div className="preview-interaction journal-interaction">
@@ -999,4 +1225,111 @@ function PreviewInteraction({
   }
 
   return null;
+}
+
+function ScriptInteraction({
+  commands,
+  onToast,
+}: {
+  commands: ScriptCommand[];
+  onToast: (message: string) => void;
+}) {
+  const [values, setValues] = useState<Record<string, string>>({});
+  const interpolate = (value: string) =>
+    value.replace(/\{\{(.+?)\}\}/g, (_, key: string) => values[key.trim()] || `{{${key}}}`);
+
+  if (commands.length === 0) {
+    return (
+      <div className="preview-interaction script-preview-empty">
+        동작 스크립트를 작성하면 여기에 실행 결과가 나타나요.
+      </div>
+    );
+  }
+
+  return (
+    <div className="preview-interaction script-preview">
+      {commands.map((command) => {
+        if (command.kind === "say" || command.kind === "ask") {
+          return (
+            <div className="script-preview-line" key={command.id}>
+              <MessageCircle aria-hidden="true" size={13} />
+              <span>{interpolate(command.value)}</span>
+            </div>
+          );
+        }
+
+        if (command.kind === "input") {
+          return (
+            <label className="script-preview-input" key={command.id}>
+              <TextCursorInput aria-hidden="true" size={13} />
+              <input
+                aria-label={command.value}
+                placeholder={`${command.value} 입력`}
+                value={values[command.value] ?? ""}
+                onChange={(event) =>
+                  setValues((current) => ({
+                    ...current,
+                    [command.value]: event.target.value,
+                  }))
+                }
+              />
+            </label>
+          );
+        }
+
+        if (command.kind === "choice") {
+          return (
+            <div className="script-preview-options" key={command.id}>
+              {command.value.split("|").map((option) => (
+                <button
+                  key={option.trim()}
+                  type="button"
+                  onClick={() => onToast(`“${option.trim()}”을 선택했어요.`)}
+                >
+                  {option.trim()}
+                </button>
+              ))}
+            </div>
+          );
+        }
+
+        if (command.kind === "check") {
+          return (
+            <div className="script-preview-checks" key={command.id}>
+              {command.value.split("|").map((option) => (
+                <label key={option.trim()}>
+                  <input type="checkbox" />
+                  {option.trim()}
+                </label>
+              ))}
+            </div>
+          );
+        }
+
+        if (command.kind === "save") {
+          return (
+            <button
+              className="script-preview-save"
+              key={command.id}
+              type="button"
+              onClick={() =>
+                onToast(
+                  `${command.value || "입력값"}${values[command.value] ? ` “${values[command.value]}”` : ""}을 저장했어요.`,
+                )
+              }
+            >
+              <Save aria-hidden="true" size={13} /> {command.value || "입력값"} 저장
+            </button>
+          );
+        }
+
+        return (
+          <div className="script-preview-condition" key={command.id}>
+            <GitBranch aria-hidden="true" size={13} />
+            <span>조건: {command.value}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
 }

@@ -14,6 +14,12 @@ test("contains the reusable chatbot maker templates and interactions", async () 
   assert.match(page, /copyShareLink/);
   assert.match(page, /addBlock/);
   assert.match(page, /moveBlock/);
+  assert.match(page, /직접 기능 만들기/);
+  assert.match(page, /동작 스크립트/);
+  assert.match(page, /parseScript/);
+  assert.match(page, /말하기:/);
+  assert.match(page, /디자인 세부 편집/);
+  assert.match(page, /dropBlock/);
 });
 
 test("uses Korean metadata and the standard Vercel Next.js runtime", async () => {
