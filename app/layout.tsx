@@ -8,9 +8,9 @@ const geist = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "나만의 웹 만들기 | 기획부터 직접 만드는 웹 스튜디오",
+  title: "WEB MAKER | 직접 디자인하고 코딩하는 웹 스튜디오",
   description:
-    "학생 누구나 기획부터 화면 구성, 기능 연결, 테스트까지 앱 인벤터처럼 블록을 조립해 자신만의 웹을 만드는 교육용 제작 도구입니다.",
+    "학생이 캔버스에서 직접 배치하고 디자인하며 HTML, CSS, JavaScript까지 편집하는 교육용 웹 제작 스튜디오입니다.",
 };
 
 export default function RootLayout({
