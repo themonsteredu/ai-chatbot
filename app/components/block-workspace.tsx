@@ -5,72 +5,88 @@ import {
   ArrowUp,
   Bot,
   Braces,
-  GitBranch,
+  CheckCircle2,
+  ListChecks,
+  MonitorPlay,
   MousePointerClick,
+  NotebookPen,
   Plus,
+  Save,
   Trash2,
 } from "lucide-react";
 import type {
-  ChatbotProject,
   SelectedTarget,
+  WebAppProject,
 } from "../../lib/chatbot-studio";
 
 type BlockWorkspaceProps = {
-  project: ChatbotProject;
+  project: WebAppProject;
   selectedTarget: SelectedTarget;
   onSelect: (target: SelectedTarget) => void;
-  onAdd: () => void;
-  onMove: (id: string, direction: -1 | 1) => void;
-  onDelete: (id: string) => void;
+  onAddAction: () => void;
+  onMoveAction: (id: string, direction: -1 | 1) => void;
+  onDeleteAction: (id: string) => void;
 };
 
 export function BlockWorkspace({
   project,
   selectedTarget,
   onSelect,
-  onAdd,
-  onMove,
-  onDelete,
+  onAddAction,
+  onMoveAction,
+  onDeleteAction,
 }: BlockWorkspaceProps) {
+  const connectedCount =
+    1 +
+    Number(project.checklistEnabled) +
+    Number(project.journalEnabled) +
+    Number(project.buttonEnabled) +
+    (project.chatbotEnabled ? project.actions.length : 0);
+
   return (
     <div className="blocks-editor">
       <aside className="block-palette" aria-label="블록 종류">
         <div className="panel-title">
           <span>블록</span>
-          <small>필요한 동작을 골라요</small>
+          <small>웹앱의 움직임을 확인해요</small>
         </div>
-        <button className="block-chip event" type="button" onClick={onAdd}>
-          <MousePointerClick size={16} aria-hidden="true" />
-          버튼을 클릭했을 때
-        </button>
         <button
-          className="block-chip action"
+          className="block-chip event"
           type="button"
-          onClick={() => onSelect("greeting")}
+          onClick={() => onSelect("header")}
         >
-          <Bot size={16} aria-hidden="true" />
-          챗봇이 말하기
+          <MonitorPlay size={16} aria-hidden="true" />
+          화면을 열었을 때
         </button>
         <button
           className="block-chip condition"
           type="button"
-          onClick={() => onSelect("input")}
+          onClick={() => onSelect("checklist")}
         >
-          <GitBranch size={16} aria-hidden="true" />
-          질문에 맞는 답 찾기
+          <ListChecks size={16} aria-hidden="true" />
+          활동을 체크했을 때
         </button>
         <button
           className="block-chip value"
           type="button"
-          onClick={() => onSelect("input")}
+          onClick={() => onSelect("journal")}
         >
-          <Braces size={16} aria-hidden="true" />
-          입력한 질문
+          <Save size={16} aria-hidden="true" />
+          기록을 저장했을 때
+        </button>
+        <button
+          className="block-chip action"
+          type="button"
+          onClick={() => onSelect("chatbot")}
+        >
+          <Bot size={16} aria-hidden="true" />
+          AI 챗봇에게 물었을 때
         </button>
         <div className="block-tip">
-          <strong>블록은 자동으로 연결돼요</strong>
+          <strong>기능을 넣으면 블록도 생겨요</strong>
           <span>
-            오른쪽 속성에서 버튼 이름과 챗봇의 답만 바꾸면 완성됩니다.
+            디자이너에서 기능을 추가하고, 오른쪽 속성에서 글과 동작을
+            바꿔 보세요.
           </span>
         </div>
       </aside>
@@ -78,79 +94,171 @@ export function BlockWorkspace({
       <section className="block-canvas">
         <header className="block-canvas-header">
           <div>
-            <span className="canvas-kicker">SCREEN1 · LOGIC</span>
-            <h2>질문과 답 연결하기</h2>
+            <span className="canvas-kicker">SCREEN1 · WEB APP LOGIC</span>
+            <h2>내 웹앱의 움직임</h2>
           </div>
-          <span className="connected-count">
-            {project.actions.length}개 연결됨
-          </span>
+          <span className="connected-count">{connectedCount}개 연결됨</span>
         </header>
 
         <div className="block-stacks">
-          {project.actions.map((action, index) => (
+          <article
+            className={`block-stack feature-logic-stack ${
+              selectedTarget === "header" ? "selected" : ""
+            }`}
+            onClick={() => onSelect("header")}
+          >
+            <div className="event-block">
+              <span className="block-number">1</span>
+              <MonitorPlay size={17} aria-hidden="true" />
+              <span>
+                <b>Screen1</b> 화면을 열었을 때
+              </span>
+            </div>
+            <div className="block-connector" aria-hidden="true" />
+            <div className="action-block">
+              <Braces size={17} aria-hidden="true" />
+              <span>
+                앱 제목을 <b>“{project.appName}”</b>으로 보여 주기
+              </span>
+            </div>
+          </article>
+
+          {project.checklistEnabled && (
             <article
-              className={`block-stack ${
-                selectedTarget === action.id ? "selected" : ""
+              className={`block-stack feature-logic-stack ${
+                selectedTarget === "checklist" ? "selected" : ""
               }`}
-              key={action.id}
-              onClick={() => onSelect(action.id)}
+              onClick={() => onSelect("checklist")}
             >
               <div className="event-block">
-                <span className="block-number">{index + 1}</span>
-                <MousePointerClick size={17} aria-hidden="true" />
+                <ListChecks size={17} aria-hidden="true" />
                 <span>
-                  <b>{action.label}</b> 버튼을 클릭했을 때
+                  <b>{project.checklistTitle}</b> 항목을 체크했을 때
                 </span>
               </div>
               <div className="block-connector" aria-hidden="true" />
-              <div className="action-block">
-                <Bot size={17} aria-hidden="true" />
-                <span>
-                  챗봇이 <b>“{action.response}”</b> 라고 말하기
-                </span>
-              </div>
-              <div className="block-order-actions">
-                <button
-                  type="button"
-                  aria-label={`${action.label} 위로 이동`}
-                  disabled={index === 0}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onMove(action.id, -1);
-                  }}
-                >
-                  <ArrowUp size={14} aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  aria-label={`${action.label} 아래로 이동`}
-                  disabled={index === project.actions.length - 1}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onMove(action.id, 1);
-                  }}
-                >
-                  <ArrowDown size={14} aria-hidden="true" />
-                </button>
-                <button
-                  className="delete-block"
-                  type="button"
-                  aria-label={`${action.label} 삭제`}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onDelete(action.id);
-                  }}
-                >
-                  <Trash2 size={14} aria-hidden="true" />
-                </button>
+              <div className="action-block mint-block">
+                <CheckCircle2 size={17} aria-hidden="true" />
+                <span>선택한 활동을 완료로 표시하기</span>
               </div>
             </article>
-          ))}
+          )}
 
-          <button className="add-block-stack" type="button" onClick={onAdd}>
-            <Plus size={18} aria-hidden="true" />
-            새 질문·답 블록 연결
-          </button>
+          {project.journalEnabled && (
+            <article
+              className={`block-stack feature-logic-stack ${
+                selectedTarget === "journal" ? "selected" : ""
+              }`}
+              onClick={() => onSelect("journal")}
+            >
+              <div className="event-block">
+                <NotebookPen size={17} aria-hidden="true" />
+                <span>
+                  <b>{project.journalButtonLabel}</b> 버튼을 클릭했을 때
+                </span>
+              </div>
+              <div className="block-connector" aria-hidden="true" />
+              <div className="action-block pink-block">
+                <Save size={17} aria-hidden="true" />
+                <span>입력한 나의 기록을 이 기기에 저장하기</span>
+              </div>
+            </article>
+          )}
+
+          {project.buttonEnabled && (
+            <article
+              className={`block-stack feature-logic-stack ${
+                selectedTarget === "button" ? "selected" : ""
+              }`}
+              onClick={() => onSelect("button")}
+            >
+              <div className="event-block">
+                <MousePointerClick size={17} aria-hidden="true" />
+                <span>
+                  <b>{project.buttonLabel}</b> 버튼을 클릭했을 때
+                </span>
+              </div>
+              <div className="block-connector" aria-hidden="true" />
+              <div className="action-block blue-block">
+                <Braces size={17} aria-hidden="true" />
+                <span>
+                  <b>“{project.buttonMessage}”</b> 보여 주기
+                </span>
+              </div>
+            </article>
+          )}
+
+          {project.chatbotEnabled &&
+            project.actions.map((action, index) => (
+              <article
+                className={`block-stack ${
+                  selectedTarget === action.id ? "selected" : ""
+                }`}
+                key={action.id}
+                onClick={() => onSelect(action.id)}
+              >
+                <div className="event-block">
+                  <span className="block-number">{index + 1}</span>
+                  <MousePointerClick size={17} aria-hidden="true" />
+                  <span>
+                    AI 챗봇에서 <b>{action.label}</b>을 눌렀을 때
+                  </span>
+                </div>
+                <div className="block-connector" aria-hidden="true" />
+                <div className="action-block">
+                  <Bot size={17} aria-hidden="true" />
+                  <span>
+                    AI가 <b>“{action.response}”</b>라고 말하기
+                  </span>
+                </div>
+                <div className="block-order-actions">
+                  <button
+                    type="button"
+                    aria-label={`${action.label} 위로 이동`}
+                    disabled={index === 0}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onMoveAction(action.id, -1);
+                    }}
+                  >
+                    <ArrowUp size={14} aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`${action.label} 아래로 이동`}
+                    disabled={index === project.actions.length - 1}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onMoveAction(action.id, 1);
+                    }}
+                  >
+                    <ArrowDown size={14} aria-hidden="true" />
+                  </button>
+                  <button
+                    className="delete-block"
+                    type="button"
+                    aria-label={`${action.label} 삭제`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onDeleteAction(action.id);
+                    }}
+                  >
+                    <Trash2 size={14} aria-hidden="true" />
+                  </button>
+                </div>
+              </article>
+            ))}
+
+          {project.chatbotEnabled && (
+            <button
+              className="add-block-stack"
+              type="button"
+              onClick={onAddAction}
+            >
+              <Plus size={18} aria-hidden="true" />
+              AI 챗봇 질문·답 블록 추가
+            </button>
+          )}
         </div>
       </section>
     </div>

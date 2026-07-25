@@ -8,9 +8,9 @@ const geist = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "AI 챗봇 LAB | App Inventor 방식 챗봇 만들기",
+  title: "나만의 웹앱 만들기 | AI WEB APP LAB",
   description:
-    "초등학생과 중학생이 팔레트, 휴대폰 화면, 속성, 블록을 이용해 AI 알림장 챗봇을 만드는 교육용 제작 도구입니다.",
+    "학생이 App Inventor처럼 기능을 고르고 속성을 바꾸며 알림장, 캠프 활동장, 기록장과 AI 챗봇이 담긴 나만의 웹앱을 만드는 교육용 제작 도구입니다.",
 };
 
 export default function RootLayout({

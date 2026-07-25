@@ -1,55 +1,65 @@
 "use client";
 
 import {
+  AppWindow,
+  BellRing,
   Bot,
   Check,
   ChevronDown,
   ChevronRight,
   CircleHelp,
+  ClipboardCheck,
   Copy,
+  FilePlus2,
   GripVertical,
+  Info,
   LayoutPanelTop,
-  MessageCircle,
+  ListChecks,
   MousePointerClick,
+  NotebookPen,
   Palette,
   Play,
   Plus,
+  Rocket,
   RotateCcw,
   Save,
-  Send,
   Settings2,
   Share2,
   Smartphone,
   Sparkles,
-  TextCursorInput,
+  TentTree,
   Trash2,
   Workflow,
   X,
   type LucideIcon,
 } from "lucide-react";
-import {
-  DragEvent,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { DragEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   ACTION_ICON_LABELS,
   DEFAULT_PROJECT,
+  PROJECT_TEMPLATES,
+  cloneProject,
   normalizeProject,
   type ActionIcon,
-  type ChatbotProject,
   type QuickAction,
   type SelectedTarget,
   type StudioMode,
+  type TemplateId,
+  type WebAppProject,
 } from "../../lib/chatbot-studio";
 import { BlockWorkspace } from "./block-workspace";
 import { PhonePreview } from "./phone-preview";
 
-const STORAGE_KEY = "ai-chatbot-inventor-project-v1";
+const STORAGE_KEY = "my-webapp-inventor-project-v2";
 
-type PaletteKind = "screen" | "bot" | "greeting" | "action" | "input";
+type PaletteKind =
+  | "screen"
+  | "header"
+  | "notice"
+  | "checklist"
+  | "journal"
+  | "button"
+  | "chatbot";
 type MobilePanel = "palette" | "viewer" | "properties";
 
 type PaletteItem = {
@@ -64,39 +74,67 @@ const paletteItems: PaletteItem[] = [
   {
     kind: "screen",
     name: "화면 배경",
-    hint: "앱의 바탕을 꾸며요",
+    hint: "웹앱의 바탕을 꾸며요",
     icon: Smartphone,
     tone: "blue",
   },
   {
-    kind: "bot",
-    name: "챗봇 머리글",
-    hint: "이름과 설명을 보여줘요",
-    icon: Bot,
+    kind: "header",
+    name: "앱 머리글",
+    hint: "이름과 소개를 보여줘요",
+    icon: AppWindow,
     tone: "violet",
   },
   {
-    kind: "greeting",
-    name: "첫 인사",
-    hint: "처음 말할 내용을 정해요",
-    icon: MessageCircle,
+    kind: "notice",
+    name: "안내 카드",
+    hint: "중요한 내용을 알려줘요",
+    icon: Info,
+    tone: "yellow",
+  },
+  {
+    kind: "checklist",
+    name: "활동 체크",
+    hint: "할 일을 하나씩 완료해요",
+    icon: ListChecks,
     tone: "mint",
   },
   {
-    kind: "action",
-    name: "질문 버튼",
-    hint: "누르면 챗봇이 답해요",
+    kind: "journal",
+    name: "나의 기록",
+    hint: "생각을 적고 저장해요",
+    icon: NotebookPen,
+    tone: "blue",
+  },
+  {
+    kind: "button",
+    name: "일반 버튼",
+    hint: "누르면 안내를 보여줘요",
     icon: MousePointerClick,
     tone: "yellow",
   },
   {
-    kind: "input",
-    name: "질문 입력창",
-    hint: "직접 질문할 수 있어요",
-    icon: TextCursorInput,
-    tone: "blue",
+    kind: "chatbot",
+    name: "AI 챗봇",
+    hint: "웹앱 안에서 질문해요",
+    icon: Bot,
+    tone: "violet",
   },
 ];
+
+const templateIconMap: Record<TemplateId, LucideIcon> = {
+  notice: BellRing,
+  camp: TentTree,
+  blank: FilePlus2,
+};
+
+const featureEnabledKey = {
+  notice: "noticeEnabled",
+  checklist: "checklistEnabled",
+  journal: "journalEnabled",
+  button: "buttonEnabled",
+  chatbot: "chatbotEnabled",
+} as const;
 
 const colorChoices = [
   { name: "보라", value: "#6956e8" },
@@ -106,7 +144,7 @@ const colorChoices = [
   { name: "분홍", value: "#e65387" },
 ];
 
-function encodeProject(project: ChatbotProject) {
+function encodeProject(project: WebAppProject) {
   const bytes = new TextEncoder().encode(JSON.stringify(project));
   let binary = "";
   bytes.forEach((byte) => {
@@ -128,7 +166,9 @@ function decodeProject(value: string) {
 }
 
 export function ChatbotStudio() {
-  const [project, setProject] = useState<ChatbotProject>(DEFAULT_PROJECT);
+  const [project, setProject] = useState<WebAppProject>(() =>
+    cloneProject(DEFAULT_PROJECT),
+  );
   const [mode, setMode] = useState<StudioMode>("designer");
   const [selectedTarget, setSelectedTarget] =
     useState<SelectedTarget>("screen");
@@ -143,6 +183,14 @@ export function ChatbotStudio() {
     [project.actions, selectedTarget],
   );
 
+  const visibleFeatureCount =
+    1 +
+    Number(project.noticeEnabled) +
+    Number(project.checklistEnabled) +
+    Number(project.journalEnabled) +
+    Number(project.buttonEnabled) +
+    Number(project.chatbotEnabled);
+
   useEffect(() => {
     const timer = window.setTimeout(() => {
       const shared = new URLSearchParams(window.location.search).get("project");
@@ -155,7 +203,7 @@ export function ChatbotStudio() {
         try {
           setProject(normalizeProject(JSON.parse(saved)));
         } catch {
-          setProject(DEFAULT_PROJECT);
+          setProject(cloneProject(DEFAULT_PROJECT));
         }
       }
       setHydrated(true);
@@ -191,9 +239,9 @@ export function ChatbotStudio() {
     toastTimer.current = setTimeout(() => setToast(""), 2400);
   };
 
-  const updateProject = <Key extends keyof ChatbotProject>(
+  const updateProject = <Key extends keyof WebAppProject>(
     key: Key,
-    value: ChatbotProject[Key],
+    value: WebAppProject[Key],
   ) => {
     setProject((current) => ({ ...current, [key]: value }));
   };
@@ -212,7 +260,7 @@ export function ChatbotStudio() {
 
   const addAction = () => {
     if (project.actions.length >= 12) {
-      notify("질문 버튼은 12개까지 만들 수 있어요.");
+      notify("AI 질문 버튼은 12개까지 만들 수 있어요.");
       return;
     }
 
@@ -224,19 +272,20 @@ export function ChatbotStudio() {
     const id = `question-${serial}`;
     setProject((current) => ({
       ...current,
+      chatbotEnabled: true,
       actions: [
         ...current.actions,
         {
           id,
-          label: `새 질문 ${order}`,
-          response: "이 버튼을 눌렀을 때 챗봇이 말할 답을 적어 주세요.",
+          label: `새 도움 ${order}`,
+          response: "이 버튼을 눌렀을 때 AI가 말할 답을 적어 주세요.",
           icon: "message",
         },
       ],
     }));
     setSelectedTarget(id);
     setMobilePanel("properties");
-    notify("새 질문 버튼을 추가했어요.");
+    notify("AI 챗봇에 새 질문 버튼을 추가했어요.");
   };
 
   const removeAction = (id: string) => {
@@ -248,7 +297,7 @@ export function ChatbotStudio() {
       ...current,
       actions: current.actions.filter((item) => item.id !== id),
     }));
-    setSelectedTarget("screen");
+    setSelectedTarget("chatbot");
     notify("질문 버튼을 삭제했어요.");
   };
 
@@ -266,21 +315,50 @@ export function ChatbotStudio() {
   };
 
   const choosePaletteItem = (kind: PaletteKind) => {
-    if (kind === "action") {
-      addAction();
-      return;
-    }
-    if (kind === "input" && !project.inputEnabled) {
-      updateProject("inputEnabled", true);
+    if (kind !== "screen" && kind !== "header") {
+      const enabledKey =
+        featureEnabledKey[kind as keyof typeof featureEnabledKey];
+      setProject((current) => ({ ...current, [enabledKey]: true }));
     }
     setSelectedTarget(kind);
     setMobilePanel("properties");
+    if (kind !== "screen" && kind !== "header") {
+      notify(`${paletteItems.find((item) => item.kind === kind)?.name} 기능을 준비했어요.`);
+    }
+  };
+
+  const hideFeature = (
+    kind: Exclude<PaletteKind, "screen" | "header">,
+  ) => {
+    const item = paletteItems.find((paletteItem) => paletteItem.kind === kind);
+    if (!window.confirm(`‘${item?.name}’ 기능을 화면에서 뺄까요?`)) return;
+    const enabledKey = featureEnabledKey[kind];
+    setProject((current) => ({ ...current, [enabledKey]: false }));
+    setSelectedTarget("screen");
+    notify(`${item?.name} 기능을 화면에서 뺐어요.`);
+  };
+
+  const applyTemplate = (templateId: TemplateId) => {
+    const template = PROJECT_TEMPLATES.find((item) => item.id === templateId);
+    if (!template || template.id === project.template) return;
+    if (
+      !window.confirm(
+        `지금 내용을 ‘${template.name}’ 예제로 바꿀까요? 현재 내용은 새 예제로 바뀝니다.`,
+      )
+    ) {
+      return;
+    }
+    setProject(cloneProject(template.project));
+    setSelectedTarget("screen");
+    setMode("designer");
+    setMobilePanel("viewer");
+    notify(`${template.name} 예제를 불러왔어요.`);
   };
 
   const dropPaletteItem = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     const kind = event.dataTransfer.getData(
-      "application/x-chatbot-component",
+      "application/x-webapp-component",
     ) as PaletteKind;
     if (paletteItems.some((item) => item.kind === kind)) {
       choosePaletteItem(kind);
@@ -289,15 +367,16 @@ export function ChatbotStudio() {
 
   const saveNow = () => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(project));
-    notify("이 기기에 프로젝트를 저장했어요.");
+    notify("이 기기에 웹앱 프로젝트를 저장했어요.");
   };
 
   const resetProject = () => {
-    if (!window.confirm("지금 만든 내용을 지우고 처음 예제로 돌아갈까요?")) return;
-    setProject(DEFAULT_PROJECT);
+    if (!window.confirm("지금 만든 내용을 지우고 알림장 예제로 돌아갈까요?"))
+      return;
+    setProject(cloneProject(DEFAULT_PROJECT));
     setSelectedTarget("screen");
     setMode("designer");
-    notify("AI 알림장 예제로 돌아왔어요.");
+    notify("우리 반 알림장 예제로 돌아왔어요.");
   };
 
   const shareProject = async () => {
@@ -307,7 +386,7 @@ export function ChatbotStudio() {
 
     try {
       await navigator.clipboard.writeText(url.toString());
-      notify("공유 링크를 복사했어요.");
+      notify("내 웹앱 공유 링크를 복사했어요.");
     } catch {
       window.prompt("아래 링크를 복사해 주세요.", url.toString());
     }
@@ -316,6 +395,21 @@ export function ChatbotStudio() {
   const selectTarget = (target: SelectedTarget) => {
     setSelectedTarget(target);
     if (window.innerWidth < 760) setMobilePanel("properties");
+  };
+
+  const updateChecklistItems = (value: string) => {
+    const lines = value
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .slice(0, 10);
+    updateProject(
+      "checklistItems",
+      lines.map((text, index) => ({
+        id: project.checklistItems[index]?.id ?? `check-${index + 1}`,
+        text,
+      })),
+    );
   };
 
   const renderProperties = () => {
@@ -327,8 +421,8 @@ export function ChatbotStudio() {
               <MousePointerClick size={16} aria-hidden="true" />
             </span>
             <div>
-              <strong>질문 버튼</strong>
-              <small>QuestionButton</small>
+              <strong>AI 질문 버튼</strong>
+              <small>ChatbotQuestion</small>
             </div>
           </div>
           <label>
@@ -342,7 +436,7 @@ export function ChatbotStudio() {
             />
           </label>
           <label>
-            <span>챗봇이 말할 답</span>
+            <span>AI가 말할 답</span>
             <textarea
               rows={5}
               value={selectedAction.response}
@@ -386,31 +480,31 @@ export function ChatbotStudio() {
       );
     }
 
-    if (selectedTarget === "bot") {
+    if (selectedTarget === "header") {
       return (
         <div className="property-form">
           <div className="selected-component-heading">
             <span className="component-symbol violet">
-              <Bot size={16} aria-hidden="true" />
+              <AppWindow size={16} aria-hidden="true" />
             </span>
             <div>
-              <strong>챗봇 머리글</strong>
-              <small>ChatbotHeader</small>
+              <strong>앱 머리글</strong>
+              <small>AppHeader</small>
             </div>
           </div>
           <label>
-            <span>챗봇 이름</span>
+            <span>웹앱 이름</span>
             <input
-              value={project.botName}
-              maxLength={24}
-              onChange={(event) => updateProject("botName", event.target.value)}
+              value={project.appName}
+              maxLength={26}
+              onChange={(event) => updateProject("appName", event.target.value)}
             />
           </label>
           <label>
             <span>한 줄 소개</span>
             <input
               value={project.subtitle}
-              maxLength={36}
+              maxLength={42}
               onChange={(event) =>
                 updateProject("subtitle", event.target.value)
               }
@@ -420,50 +514,233 @@ export function ChatbotStudio() {
       );
     }
 
-    if (selectedTarget === "greeting") {
+    if (selectedTarget === "notice") {
       return (
         <div className="property-form">
           <div className="selected-component-heading">
-            <span className="component-symbol mint">
-              <MessageCircle size={16} aria-hidden="true" />
+            <span className="component-symbol yellow">
+              <Info size={16} aria-hidden="true" />
             </span>
             <div>
-              <strong>첫 인사</strong>
-              <small>GreetingMessage</small>
+              <strong>안내 카드</strong>
+              <small>NoticeCard</small>
             </div>
           </div>
           <label>
-            <span>처음 보여 줄 말</span>
-            <textarea
-              rows={6}
-              value={project.greeting}
-              maxLength={180}
+            <span>카드 제목</span>
+            <input
+              value={project.noticeTitle}
+              maxLength={28}
               onChange={(event) =>
-                updateProject("greeting", event.target.value)
+                updateProject("noticeTitle", event.target.value)
               }
             />
-            <small className="field-count">{project.greeting.length}/180</small>
           </label>
+          <label>
+            <span>안내 내용</span>
+            <textarea
+              rows={6}
+              value={project.noticeBody}
+              maxLength={220}
+              onChange={(event) =>
+                updateProject("noticeBody", event.target.value)
+              }
+            />
+          </label>
+          <button
+            className="danger-button"
+            type="button"
+            onClick={() => hideFeature("notice")}
+          >
+            <Trash2 size={15} aria-hidden="true" />
+            안내 카드 화면에서 빼기
+          </button>
         </div>
       );
     }
 
-    if (selectedTarget === "input") {
+    if (selectedTarget === "checklist") {
+      return (
+        <div className="property-form">
+          <div className="selected-component-heading">
+            <span className="component-symbol mint">
+              <ListChecks size={16} aria-hidden="true" />
+            </span>
+            <div>
+              <strong>활동 체크</strong>
+              <small>Checklist</small>
+            </div>
+          </div>
+          <label>
+            <span>체크 목록 제목</span>
+            <input
+              value={project.checklistTitle}
+              maxLength={28}
+              onChange={(event) =>
+                updateProject("checklistTitle", event.target.value)
+              }
+            />
+          </label>
+          <label>
+            <span>체크할 항목 · 한 줄에 하나</span>
+            <textarea
+              rows={7}
+              value={project.checklistItems
+                .map((item) => item.text)
+                .join("\n")}
+              onChange={(event) => updateChecklistItems(event.target.value)}
+            />
+            <small className="property-help">
+              최대 10개까지 만들 수 있어요.
+            </small>
+          </label>
+          <button
+            className="danger-button"
+            type="button"
+            onClick={() => hideFeature("checklist")}
+          >
+            <Trash2 size={15} aria-hidden="true" />
+            활동 체크 화면에서 빼기
+          </button>
+        </div>
+      );
+    }
+
+    if (selectedTarget === "journal") {
       return (
         <div className="property-form">
           <div className="selected-component-heading">
             <span className="component-symbol blue">
-              <TextCursorInput size={16} aria-hidden="true" />
+              <NotebookPen size={16} aria-hidden="true" />
             </span>
             <div>
-              <strong>질문 입력창</strong>
-              <small>QuestionInput</small>
+              <strong>나의 기록</strong>
+              <small>MyJournal</small>
             </div>
           </div>
+          <label>
+            <span>기록 제목</span>
+            <input
+              value={project.journalTitle}
+              maxLength={28}
+              onChange={(event) =>
+                updateProject("journalTitle", event.target.value)
+              }
+            />
+          </label>
+          <label>
+            <span>입력창 안내 문구</span>
+            <textarea
+              rows={4}
+              value={project.journalPrompt}
+              maxLength={120}
+              onChange={(event) =>
+                updateProject("journalPrompt", event.target.value)
+              }
+            />
+          </label>
+          <label>
+            <span>저장 버튼 글</span>
+            <input
+              value={project.journalButtonLabel}
+              maxLength={20}
+              onChange={(event) =>
+                updateProject("journalButtonLabel", event.target.value)
+              }
+            />
+          </label>
+          <button
+            className="danger-button"
+            type="button"
+            onClick={() => hideFeature("journal")}
+          >
+            <Trash2 size={15} aria-hidden="true" />
+            나의 기록 화면에서 빼기
+          </button>
+        </div>
+      );
+    }
+
+    if (selectedTarget === "button") {
+      return (
+        <div className="property-form">
+          <div className="selected-component-heading">
+            <span className="component-symbol yellow">
+              <MousePointerClick size={16} aria-hidden="true" />
+            </span>
+            <div>
+              <strong>일반 버튼</strong>
+              <small>ActionButton</small>
+            </div>
+          </div>
+          <label>
+            <span>버튼에 보일 글</span>
+            <input
+              value={project.buttonLabel}
+              maxLength={28}
+              onChange={(event) =>
+                updateProject("buttonLabel", event.target.value)
+              }
+            />
+          </label>
+          <label>
+            <span>눌렀을 때 보여 줄 말</span>
+            <textarea
+              rows={5}
+              value={project.buttonMessage}
+              maxLength={160}
+              onChange={(event) =>
+                updateProject("buttonMessage", event.target.value)
+              }
+            />
+          </label>
+          <button
+            className="danger-button"
+            type="button"
+            onClick={() => hideFeature("button")}
+          >
+            <Trash2 size={15} aria-hidden="true" />
+            일반 버튼 화면에서 빼기
+          </button>
+        </div>
+      );
+    }
+
+    if (selectedTarget === "chatbot") {
+      return (
+        <div className="property-form">
+          <div className="selected-component-heading">
+            <span className="component-symbol violet">
+              <Bot size={16} aria-hidden="true" />
+            </span>
+            <div>
+              <strong>AI 챗봇</strong>
+              <small>AIChatbot</small>
+            </div>
+          </div>
+          <label>
+            <span>챗봇 이름</span>
+            <input
+              value={project.botName}
+              maxLength={26}
+              onChange={(event) => updateProject("botName", event.target.value)}
+            />
+          </label>
+          <label>
+            <span>첫 인사</span>
+            <textarea
+              rows={4}
+              value={project.greeting}
+              maxLength={160}
+              onChange={(event) =>
+                updateProject("greeting", event.target.value)
+              }
+            />
+          </label>
           <label className="toggle-row">
             <span>
-              <b>입력창 보이기</b>
-              <small>학생이 직접 질문할 수 있어요.</small>
+              <b>직접 질문 입력</b>
+              <small>사용자가 문장으로 질문할 수 있어요.</small>
             </span>
             <input
               type="checkbox"
@@ -473,27 +750,43 @@ export function ChatbotStudio() {
               }
             />
           </label>
-          <label>
-            <span>입력 안내 문구</span>
-            <input
-              value={project.inputPlaceholder}
-              maxLength={42}
-              onChange={(event) =>
-                updateProject("inputPlaceholder", event.target.value)
-              }
-            />
-          </label>
-          <label>
-            <span>답을 찾지 못했을 때</span>
-            <textarea
-              rows={5}
-              value={project.fallbackResponse}
-              maxLength={180}
-              onChange={(event) =>
-                updateProject("fallbackResponse", event.target.value)
-              }
-            />
-          </label>
+          {project.inputEnabled && (
+            <>
+              <label>
+                <span>입력창 안내 문구</span>
+                <input
+                  value={project.inputPlaceholder}
+                  maxLength={44}
+                  onChange={(event) =>
+                    updateProject("inputPlaceholder", event.target.value)
+                  }
+                />
+              </label>
+              <label>
+                <span>답을 찾지 못했을 때</span>
+                <textarea
+                  rows={4}
+                  value={project.fallbackResponse}
+                  maxLength={180}
+                  onChange={(event) =>
+                    updateProject("fallbackResponse", event.target.value)
+                  }
+                />
+              </label>
+            </>
+          )}
+          <button className="secondary-button" type="button" onClick={addAction}>
+            <Plus size={15} aria-hidden="true" />
+            AI 질문 버튼 추가
+          </button>
+          <button
+            className="danger-button"
+            type="button"
+            onClick={() => hideFeature("chatbot")}
+          >
+            <Trash2 size={15} aria-hidden="true" />
+            AI 챗봇 화면에서 빼기
+          </button>
         </div>
       );
     }
@@ -506,7 +799,7 @@ export function ChatbotStudio() {
           </span>
           <div>
             <strong>Screen1</strong>
-            <small>앱 전체 화면</small>
+            <small>웹앱 전체 화면</small>
           </div>
         </div>
         <label>
@@ -549,12 +842,12 @@ export function ChatbotStudio() {
           </div>
         </fieldset>
         <label className="color-input-row">
-          <span>대화 화면 배경</span>
+          <span>웹앱 화면 배경</span>
           <span>
             <input
               type="color"
               value={project.screenBackground}
-              aria-label="대화 화면 배경색"
+              aria-label="웹앱 화면 배경색"
               onChange={(event) =>
                 updateProject("screenBackground", event.target.value)
               }
@@ -571,11 +864,11 @@ export function ChatbotStudio() {
       <header className="studio-topbar">
         <div className="studio-brand">
           <span className="studio-logo">
-            <Bot size={23} strokeWidth={2.5} aria-hidden="true" />
+            <Rocket size={23} strokeWidth={2.5} aria-hidden="true" />
           </span>
           <span>
-            <strong>AI CHATBOT LAB</strong>
-            <small>App Inventor 방식으로 쉽게 만들기</small>
+            <strong>AI WEB APP LAB</strong>
+            <small>나만의 웹앱 만들기</small>
           </span>
         </div>
 
@@ -606,7 +899,7 @@ export function ChatbotStudio() {
           >
             <Workflow size={16} aria-hidden="true" />
             블록
-            <span>{project.actions.length}</span>
+            <span>{visibleFeatureCount}</span>
           </button>
         </nav>
 
@@ -643,35 +936,37 @@ export function ChatbotStudio() {
         </div>
       </header>
 
-      <section className="learning-strip" aria-label="챗봇 만들기 순서">
+      <section className="learning-strip" aria-label="웹앱 만들기 순서">
         <div className={mode === "designer" ? "current" : ""}>
           <span>1</span>
           <p>
-            <strong>화면 놓기</strong>
-            <small>기능을 골라 휴대폰에 넣어요</small>
+            <strong>예시 고르기</strong>
+            <small>알림장·캠프·빈 웹앱에서 시작</small>
           </p>
         </div>
         <ChevronRight size={15} aria-hidden="true" />
         <div className={mode === "designer" ? "current" : ""}>
           <span>2</span>
           <p>
-            <strong>속성 바꾸기</strong>
-            <small>글과 색, 챗봇 답을 적어요</small>
+            <strong>기능과 내용 바꾸기</strong>
+            <small>체크·기록·버튼·챗봇을 꾸며요</small>
           </p>
         </div>
         <ChevronRight size={15} aria-hidden="true" />
         <div className={mode === "blocks" ? "current" : ""}>
           <span>3</span>
           <p>
-            <strong>블록 연결하기</strong>
-            <small>질문 버튼과 답을 확인해요</small>
+            <strong>움직임 확인하기</strong>
+            <small>블록으로 기능의 동작을 살펴봐요</small>
           </p>
         </div>
         <button
           className="lesson-help"
           type="button"
           onClick={() =>
-            notify("기능을 누르고 오른쪽 속성만 바꾸면 챗봇이 완성돼요.")
+            notify(
+              "예시를 고르고, 필요한 기능을 누른 뒤 오른쪽 속성만 바꾸면 돼요.",
+            )
           }
         >
           <CircleHelp size={15} aria-hidden="true" />
@@ -716,11 +1011,42 @@ export function ChatbotStudio() {
             }`}
           >
             <div className="panel-title">
+              <span>시작 예시</span>
+              <small>만들고 싶은 웹앱을 골라요</small>
+            </div>
+            <div className="template-picker">
+              {PROJECT_TEMPLATES.map((template) => {
+                const Icon = templateIconMap[template.id];
+                return (
+                  <button
+                    className={
+                      project.template === template.id ? "selected" : ""
+                    }
+                    key={template.id}
+                    type="button"
+                    onClick={() => applyTemplate(template.id)}
+                  >
+                    <span>
+                      <Icon size={15} aria-hidden="true" />
+                    </span>
+                    <span>
+                      <strong>{template.name}</strong>
+                      <small>{template.hint}</small>
+                    </span>
+                    {project.template === template.id && (
+                      <Check size={13} aria-hidden="true" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="panel-title palette-title">
               <span>팔레트</span>
-              <small>끌어 놓거나 눌러 추가</small>
+              <small>끌어 놓거나 눌러 기능 추가</small>
             </div>
             <div className="palette-section-heading">
-              <span>사용자 인터페이스</span>
+              <span>웹앱 기능</span>
               <ChevronDown size={14} aria-hidden="true" />
             </div>
             <div className="palette-list">
@@ -734,7 +1060,7 @@ export function ChatbotStudio() {
                     type="button"
                     onDragStart={(event) => {
                       event.dataTransfer.setData(
-                        "application/x-chatbot-component",
+                        "application/x-webapp-component",
                         item.kind,
                       );
                       event.dataTransfer.effectAllowed = "copy";
@@ -758,10 +1084,8 @@ export function ChatbotStudio() {
                 <Sparkles size={16} aria-hidden="true" />
               </span>
               <div>
-                <strong>중학생도 바로 시작</strong>
-                <p>
-                  복잡한 코드를 쓰지 않고 질문과 답만 바꾸면 작동해요.
-                </p>
+                <strong>코드 없이 내 아이디어 완성</strong>
+                <p>필요한 기능을 고르고 글만 바꾸면 바로 작동해요.</p>
               </div>
             </div>
           </aside>
@@ -777,7 +1101,7 @@ export function ChatbotStudio() {
               <header className="viewer-heading">
                 <div>
                   <span>뷰어</span>
-                  <small>Screen1 · 휴대폰 화면</small>
+                  <small>Screen1 · 나만의 웹앱</small>
                 </div>
                 <span className="viewer-tip">
                   <MousePointerClick size={14} aria-hidden="true" />
@@ -813,9 +1137,9 @@ export function ChatbotStudio() {
               project={project}
               selectedTarget={selectedTarget}
               onSelect={selectTarget}
-              onAdd={addAction}
-              onMove={moveAction}
-              onDelete={removeAction}
+              onAddAction={addAction}
+              onMoveAction={moveAction}
+              onDeleteAction={removeAction}
             />
           )}
         </section>
@@ -828,7 +1152,11 @@ export function ChatbotStudio() {
           <section className="components-panel">
             <div className="panel-title horizontal">
               <span>컴포넌트</span>
-              <small>{project.actions.length + 4}개</small>
+              <small>
+                {visibleFeatureCount +
+                  (project.chatbotEnabled ? project.actions.length : 0)}
+                개
+              </small>
             </div>
             <div className="component-tree">
               <button
@@ -846,67 +1174,78 @@ export function ChatbotStudio() {
                 </span>
               </button>
               <div className="tree-children">
-                <button
-                  className={selectedTarget === "bot" ? "selected" : ""}
-                  type="button"
-                  onClick={() => selectTarget("bot")}
-                >
-                  <span className="tree-line" aria-hidden="true" />
-                  <span className="tree-icon violet">
-                    <Bot size={13} aria-hidden="true" />
-                  </span>
-                  <span>
-                    <strong>ChatbotHeader1</strong>
-                    <small>{project.botName}</small>
-                  </span>
-                </button>
-                <button
-                  className={selectedTarget === "greeting" ? "selected" : ""}
-                  type="button"
-                  onClick={() => selectTarget("greeting")}
-                >
-                  <span className="tree-line" aria-hidden="true" />
-                  <span className="tree-icon mint">
-                    <MessageCircle size={13} aria-hidden="true" />
-                  </span>
-                  <span>
-                    <strong>GreetingMessage1</strong>
-                    <small>첫 인사</small>
-                  </span>
-                </button>
-                {project.actions.map((action, index) => (
-                  <button
-                    className={selectedTarget === action.id ? "selected" : ""}
-                    key={action.id}
-                    type="button"
-                    onClick={() => selectTarget(action.id)}
-                  >
-                    <span className="tree-line" aria-hidden="true" />
-                    <span className="tree-icon yellow">
-                      <MousePointerClick size={13} aria-hidden="true" />
-                    </span>
-                    <span>
-                      <strong>QuestionButton{index + 1}</strong>
-                      <small>{action.label}</small>
-                    </span>
-                  </button>
-                ))}
-                <button
-                  className={selectedTarget === "input" ? "selected" : ""}
-                  type="button"
-                  onClick={() => selectTarget("input")}
-                >
-                  <span className="tree-line" aria-hidden="true" />
-                  <span className="tree-icon blue">
-                    <Send size={13} aria-hidden="true" />
-                  </span>
-                  <span>
-                    <strong>QuestionInput1</strong>
-                    <small>
-                      {project.inputEnabled ? "화면에 보임" : "숨김"}
-                    </small>
-                  </span>
-                </button>
+                <ComponentTreeItem
+                  active={selectedTarget === "header"}
+                  icon={AppWindow}
+                  name="AppHeader1"
+                  detail={project.appName}
+                  tone="violet"
+                  onClick={() => selectTarget("header")}
+                />
+                {project.noticeEnabled && (
+                  <ComponentTreeItem
+                    active={selectedTarget === "notice"}
+                    icon={Info}
+                    name="NoticeCard1"
+                    detail={project.noticeTitle}
+                    tone="yellow"
+                    onClick={() => selectTarget("notice")}
+                  />
+                )}
+                {project.checklistEnabled && (
+                  <ComponentTreeItem
+                    active={selectedTarget === "checklist"}
+                    icon={ClipboardCheck}
+                    name="Checklist1"
+                    detail={`${project.checklistItems.length}개 활동`}
+                    tone="mint"
+                    onClick={() => selectTarget("checklist")}
+                  />
+                )}
+                {project.journalEnabled && (
+                  <ComponentTreeItem
+                    active={selectedTarget === "journal"}
+                    icon={NotebookPen}
+                    name="MyJournal1"
+                    detail={project.journalTitle}
+                    tone="blue"
+                    onClick={() => selectTarget("journal")}
+                  />
+                )}
+                {project.buttonEnabled && (
+                  <ComponentTreeItem
+                    active={selectedTarget === "button"}
+                    icon={MousePointerClick}
+                    name="ActionButton1"
+                    detail={project.buttonLabel}
+                    tone="yellow"
+                    onClick={() => selectTarget("button")}
+                  />
+                )}
+                {project.chatbotEnabled && (
+                  <>
+                    <ComponentTreeItem
+                      active={selectedTarget === "chatbot"}
+                      icon={Bot}
+                      name="AIChatbot1"
+                      detail={project.botName}
+                      tone="violet"
+                      onClick={() => selectTarget("chatbot")}
+                    />
+                    {project.actions.map((action, index) => (
+                      <ComponentTreeItem
+                        active={selectedTarget === action.id}
+                        icon={MousePointerClick}
+                        key={action.id}
+                        name={`ChatQuestion${index + 1}`}
+                        detail={action.label}
+                        tone="yellow"
+                        nested
+                        onClick={() => selectTarget(action.id)}
+                      />
+                    ))}
+                  </>
+                )}
               </div>
             </div>
           </section>
@@ -941,8 +1280,8 @@ export function ChatbotStudio() {
                   <i aria-hidden="true" />
                   LIVE TEST
                 </span>
-                <h2 id="preview-title">내 챗봇 실행하기</h2>
-                <p>버튼을 누르거나 직접 질문해 보세요.</p>
+                <h2 id="preview-title">내 웹앱 실행하기</h2>
+                <p>활동을 체크하고, 기록을 저장하고, AI에게 물어보세요.</p>
               </div>
               <button
                 type="button"
@@ -958,11 +1297,11 @@ export function ChatbotStudio() {
             <footer>
               <span>
                 <Check size={14} aria-hidden="true" />
-                질문 버튼 {project.actions.length}개가 연결되어 있어요
+                작동하는 기능 {visibleFeatureCount - 1}개가 들어 있어요
               </span>
               <button type="button" onClick={shareProject}>
                 <Copy size={14} aria-hidden="true" />
-                이 챗봇 공유
+                이 웹앱 공유
               </button>
             </footer>
           </section>
@@ -976,5 +1315,44 @@ export function ChatbotStudio() {
         </div>
       )}
     </main>
+  );
+}
+
+type ComponentTreeItemProps = {
+  active: boolean;
+  icon: LucideIcon;
+  name: string;
+  detail: string;
+  tone: "violet" | "yellow" | "mint" | "blue";
+  nested?: boolean;
+  onClick: () => void;
+};
+
+function ComponentTreeItem({
+  active,
+  icon: Icon,
+  name,
+  detail,
+  tone,
+  nested = false,
+  onClick,
+}: ComponentTreeItemProps) {
+  return (
+    <button
+      className={`${active ? "selected" : ""} ${
+        nested ? "nested-tree-item" : ""
+      }`}
+      type="button"
+      onClick={onClick}
+    >
+      <span className="tree-line" aria-hidden="true" />
+      <span className={`tree-icon ${tone}`}>
+        <Icon size={13} aria-hidden="true" />
+      </span>
+      <span>
+        <strong>{name}</strong>
+        <small>{detail}</small>
+      </span>
+    </button>
   );
 }
