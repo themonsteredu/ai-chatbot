@@ -219,14 +219,14 @@ textarea:focus-visible {
   transform: translateY(-2px);
 }
 
-.template-emoji {
+.template-icon {
   display: grid;
   width: 38px;
   height: 38px;
   place-items: center;
   border-radius: 12px;
   background: var(--theme-soft);
-  font-size: 20px;
+  color: var(--theme);
 }
 
 .template-name,
@@ -356,8 +356,8 @@ textarea:focus-visible {
   height: 36px;
   place-items: center;
   border-radius: 10px;
-  background: #f4f5f9;
-  font-size: 18px;
+  background: var(--theme-soft);
+  color: var(--theme);
 }
 
 .catalog-item strong,
@@ -382,9 +382,7 @@ textarea:focus-visible {
   place-items: center;
   border-radius: 7px;
   background: #eef0f5;
-  color: var(--muted);
-  font-size: 16px;
-  font-weight: 500;
+  color: var(--theme);
 }
 
 .tip-card {
@@ -397,6 +395,11 @@ textarea:focus-visible {
   color: #604f17;
   font-size: 10px;
   line-height: 1.5;
+}
+
+.tip-card > svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
 }
 
 .tip-card p {
@@ -443,16 +446,19 @@ textarea:focus-visible {
 
 .form-grid {
   display: grid;
-  grid-template-columns: 74px 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   margin-top: 12px;
 }
 
-.form-grid label {
+.form-grid label,
+.form-grid fieldset {
   min-width: 0;
 }
 
 .form-grid label > span,
+.avatar-field legend,
+.icon-field legend,
 .theme-picker legend {
   display: flex;
   align-items: center;
@@ -495,13 +501,53 @@ textarea:focus-visible {
   border-color: var(--theme);
 }
 
-.emoji-field input {
-  text-align: center;
-  font-size: 18px;
-}
-
 .wide-field {
   grid-column: 1 / -1;
+}
+
+.avatar-field,
+.icon-field {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.avatar-options,
+.icon-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.avatar-options button,
+.icon-options button {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid #dfe3ed;
+  border-radius: 11px;
+  background: #fff;
+  color: #727a8f;
+  cursor: pointer;
+  transition: 140ms ease;
+}
+
+.avatar-options button:hover,
+.icon-options button:hover {
+  border-color: var(--theme);
+  background: var(--theme-soft);
+  color: var(--theme);
+  transform: translateY(-1px);
+}
+
+.avatar-options button.selected,
+.icon-options button.selected {
+  border-color: #172033;
+  background: var(--theme-soft);
+  color: var(--theme);
+  box-shadow: 2px 2px 0 #172033;
 }
 
 .theme-picker {
@@ -605,7 +651,8 @@ textarea:focus-visible {
   height: 32px;
   place-items: center;
   border-radius: 9px;
-  background: #f5f6fa;
+  background: var(--theme-soft);
+  color: var(--theme);
 }
 
 .flow-copy {
@@ -644,10 +691,11 @@ textarea:focus-visible {
   text-align: center;
 }
 
-.empty-flow > span {
+.empty-flow > svg {
   display: block;
   margin-bottom: 7px;
-  font-size: 25px;
+  margin-inline: auto;
+  color: var(--theme);
 }
 
 .empty-flow h3 {
@@ -667,7 +715,14 @@ textarea:focus-visible {
 }
 
 .block-form {
-  grid-template-columns: 74px 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.settings-heading-with-icon,
+.text-danger {
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .text-danger {
@@ -774,7 +829,7 @@ textarea:focus-visible {
   border: 2px solid rgba(255, 255, 255, 0.8);
   border-radius: 12px;
   background: #fff;
-  font-size: 20px;
+  color: var(--theme);
 }
 
 .chat-header strong,
@@ -823,7 +878,7 @@ textarea:focus-visible {
   place-items: center;
   border-radius: 8px;
   background: #fff;
-  font-size: 13px;
+  color: var(--theme);
   box-shadow: 0 2px 8px rgba(23, 32, 51, 0.08);
 }
 
@@ -866,8 +921,9 @@ textarea:focus-visible {
   text-align: center;
 }
 
-.preview-empty span {
-  font-size: 22px;
+.preview-empty svg {
+  margin: 0 auto;
+  color: var(--theme);
 }
 
 .preview-interaction {
@@ -975,6 +1031,10 @@ textarea:focus-visible {
 }
 
 .quick-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   overflow: hidden;
   padding: 8px 5px;
   border: 1px solid #dfe3ed;
@@ -989,10 +1049,6 @@ textarea:focus-visible {
 .quick-actions button:hover {
   border-color: var(--theme);
   background: var(--theme-soft);
-}
-
-.quick-actions button span {
-  margin-right: 3px;
 }
 
 .chat-input {
@@ -1021,6 +1077,7 @@ textarea:focus-visible {
 
 .preview-note {
   display: flex;
+  align-items: center;
   justify-content: center;
   gap: 5px;
   margin: 15px 0 0;
@@ -1144,6 +1201,10 @@ textarea:focus-visible {
   }
 
   .mobile-tabs button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     padding: 9px;
     border: 0;
     border-radius: 9px;
@@ -1176,14 +1237,6 @@ textarea:focus-visible {
   .studio.show-preview .toolbox,
   .studio.show-preview .editor {
     display: none;
-  }
-
-  .form-grid {
-    grid-template-columns: 64px 1fr;
-  }
-
-  .identity-settings .form-grid label:nth-child(3) {
-    grid-column: 1 / -1;
   }
 
   .phone-frame {

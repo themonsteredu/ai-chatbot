@@ -1,6 +1,30 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Bot,
+  BookOpen,
+  CalendarDays,
+  Cat,
+  Check,
+  CircleCheckBig,
+  Hammer,
+  Lightbulb,
+  LockKeyhole,
+  Megaphone,
+  MessageCircle,
+  PencilLine,
+  Puzzle,
+  Rocket,
+  School,
+  Send,
+  Smile,
+  Sparkles,
+  Split,
+  Trash2,
+  WandSparkles,
+  type LucideIcon,
+} from "lucide-react";
 
 type BlockType =
   | "announcement"
@@ -12,10 +36,25 @@ type BlockType =
 
 type ThemeId = "violet" | "mint" | "sunset" | "navy";
 
+type IconName =
+  | "megaphone"
+  | "pencil"
+  | "checklist"
+  | "calendar"
+  | "lightbulb"
+  | "split"
+  | "sparkles"
+  | "rocket"
+  | "school"
+  | "book"
+  | "puzzle";
+
+type AvatarId = "bot" | "cat" | "sparkles" | "rocket" | "book" | "smile";
+
 type BotBlock = {
   id: string;
   type: BlockType;
-  icon: string;
+  icon: IconName;
   title: string;
   description: string;
   items: string[];
@@ -25,7 +64,7 @@ type BotConfig = {
   name: string;
   subtitle: string;
   welcome: string;
-  emoji: string;
+  emoji: AvatarId;
   theme: ThemeId;
   blocks: BotBlock[];
 };
@@ -34,7 +73,7 @@ type Template = {
   id: string;
   name: string;
   tag: string;
-  emoji: string;
+  icon: IconName;
   description: string;
   config: BotConfig;
 };
@@ -46,7 +85,7 @@ const uid = () =>
 
 const makeBlock = (
   type: BlockType,
-  icon: string,
+  icon: IconName,
   title: string,
   description: string,
   items: string[] = [],
@@ -54,12 +93,18 @@ const makeBlock = (
 
 const cloneConfig = (config: BotConfig): BotConfig => ({
   ...config,
-  blocks: config.blocks.map((block) => ({ ...block, id: uid(), items: [...block.items] })),
+  emoji: resolveAvatar(config.emoji),
+  blocks: config.blocks.map((block) => ({
+    ...block,
+    id: uid(),
+    icon: resolveIconName(block.icon, block.type),
+    items: [...block.items],
+  })),
 });
 
 const blockCatalog: Array<{
   type: BlockType;
-  icon: string;
+  icon: IconName;
   name: string;
   hint: string;
   defaultDescription: string;
@@ -67,21 +112,21 @@ const blockCatalog: Array<{
 }> = [
   {
     type: "announcement",
-    icon: "📢",
+    icon: "megaphone",
     name: "안내",
     hint: "소식과 공지를 보여줘요",
     defaultDescription: "새로운 안내 내용을 입력해 주세요.",
   },
   {
     type: "journal",
-    icon: "✏️",
+    icon: "pencil",
     name: "기록",
     hint: "생각과 활동을 남겨요",
     defaultDescription: "오늘의 생각이나 활동을 자유롭게 기록해 보세요.",
   },
   {
     type: "checklist",
-    icon: "✅",
+    icon: "checklist",
     name: "체크리스트",
     hint: "미션을 하나씩 완료해요",
     defaultDescription: "완료한 항목에 체크해 보세요.",
@@ -89,7 +134,7 @@ const blockCatalog: Array<{
   },
   {
     type: "schedule",
-    icon: "🗓️",
+    icon: "calendar",
     name: "일정",
     hint: "순서와 시간을 알려줘요",
     defaultDescription: "오늘의 일정을 확인해 보세요.",
@@ -97,7 +142,7 @@ const blockCatalog: Array<{
   },
   {
     type: "faq",
-    icon: "💡",
+    icon: "lightbulb",
     name: "질문 답변",
     hint: "자주 묻는 질문에 답해요",
     defaultDescription: "궁금한 질문을 선택해 보세요.",
@@ -105,7 +150,7 @@ const blockCatalog: Array<{
   },
   {
     type: "choice",
-    icon: "🔀",
+    icon: "split",
     name: "선택",
     hint: "버튼으로 다음 길을 골라요",
     defaultDescription: "어떤 활동을 해볼까요?",
@@ -118,13 +163,13 @@ const templates: Template[] = [
     id: "blank",
     name: "빈 챗봇",
     tag: "자유 제작",
-    emoji: "✨",
+    icon: "sparkles",
     description: "처음부터 내 아이디어로 만들어요.",
     config: {
       name: "나의 챗봇",
       subtitle: "무엇이든 물어보세요",
       welcome: "안녕하세요! 내가 만든 챗봇이에요. 무엇을 도와드릴까요?",
-      emoji: "🤖",
+      emoji: "bot",
       theme: "violet",
       blocks: [],
     },
@@ -133,38 +178,38 @@ const templates: Template[] = [
     id: "camp",
     name: "AI 캠프 기록봇",
     tag: "추천",
-    emoji: "🚀",
+    icon: "rocket",
     description: "일정, 미션, 배운 내용을 한곳에 모아요.",
     config: {
       name: "나의 AI 캠프봇",
       subtitle: "배우고, 만들고, 기록해요",
       welcome: "반가워요! 오늘 캠프 활동을 함께 시작해 볼까요?",
-      emoji: "🚀",
+      emoji: "rocket",
       theme: "violet",
       blocks: [
         makeBlock(
           "schedule",
-          "🗓️",
+          "calendar",
           "오늘의 일정",
           "오늘 진행할 활동 순서예요.",
           ["09:30 AI 만나기", "10:20 챗봇 기획", "11:10 나만의 봇 만들기"],
         ),
         makeBlock(
           "journal",
-          "✏️",
+          "pencil",
           "오늘 배운 내용",
           "오늘 새롭게 알게 된 점을 한 문장으로 남겨 보세요.",
         ),
         makeBlock(
           "checklist",
-          "✅",
+          "checklist",
           "나의 미션",
           "완료한 미션에 체크해 보세요.",
           ["챗봇 이름 정하기", "대화 기능 3개 넣기", "친구에게 테스트 받기"],
         ),
         makeBlock(
           "faq",
-          "💡",
+          "lightbulb",
           "궁금한 점",
           "자주 묻는 질문을 골라 보세요.",
           ["챗봇은 어떻게 말하나요?", "내 기록은 어디에 있나요?", "친구에게 어떻게 보여주나요?"],
@@ -176,26 +221,26 @@ const templates: Template[] = [
     id: "class",
     name: "우리 반 알림봇",
     tag: "학급",
-    emoji: "🏫",
+    icon: "school",
     description: "공지, 준비물, 할 일을 쉽게 안내해요.",
     config: {
       name: "우리 반 알림봇",
       subtitle: "오늘도 즐거운 하루!",
       welcome: "안녕하세요! 오늘의 알림과 준비물을 확인해 보세요.",
-      emoji: "🏫",
+      emoji: "smile",
       theme: "mint",
       blocks: [
-        makeBlock("announcement", "📢", "오늘의 알림", "내일은 체육 활동이 있어요. 편한 옷을 준비해 주세요."),
+        makeBlock("announcement", "megaphone", "오늘의 알림", "내일은 체육 활동이 있어요. 편한 옷을 준비해 주세요."),
         makeBlock(
           "checklist",
-          "🎒",
+          "checklist",
           "준비물",
           "준비한 물건에 체크해 보세요.",
           ["필기도구", "물병", "체육복"],
         ),
         makeBlock(
           "schedule",
-          "🗓️",
+          "calendar",
           "이번 주 일정",
           "우리 반의 이번 주 중요한 일정이에요.",
           ["월요일 독서 활동", "수요일 체육 활동", "금요일 모둠 발표"],
@@ -207,20 +252,20 @@ const templates: Template[] = [
     id: "reading",
     name: "독서 활동봇",
     tag: "독서",
-    emoji: "📚",
+    icon: "book",
     description: "책을 읽고 생각과 질문을 기록해요.",
     config: {
       name: "나의 독서 친구",
       subtitle: "책 속 생각을 꺼내 봐요",
       welcome: "오늘 읽은 책은 어땠나요? 기억하고 싶은 이야기를 들려주세요.",
-      emoji: "📚",
+      emoji: "book",
       theme: "sunset",
       blocks: [
-        makeBlock("journal", "📝", "인상 깊은 문장", "가장 기억에 남는 문장과 그 이유를 적어 보세요."),
-        makeBlock("journal", "💭", "나의 감상", "책을 읽고 든 생각이나 느낌을 자유롭게 남겨 보세요."),
+        makeBlock("journal", "pencil", "인상 깊은 문장", "가장 기억에 남는 문장과 그 이유를 적어 보세요."),
+        makeBlock("journal", "sparkles", "나의 감상", "책을 읽고 든 생각이나 느낌을 자유롭게 남겨 보세요."),
         makeBlock(
           "choice",
-          "🗣️",
+          "split",
           "토론 질문",
           "친구들과 이야기해 보고 싶은 질문을 선택해 보세요.",
           ["주인공의 선택에 동의하나요?", "나라면 어떻게 행동했을까요?"],
@@ -237,6 +282,118 @@ const themes: Array<{ id: ThemeId; name: string; color: string; soft: string }> 
   { id: "navy", name: "남색", color: "#183153", soft: "#e8f0fb" },
 ];
 
+const iconMap: Record<IconName, LucideIcon> = {
+  megaphone: Megaphone,
+  pencil: PencilLine,
+  checklist: CircleCheckBig,
+  calendar: CalendarDays,
+  lightbulb: Lightbulb,
+  split: Split,
+  sparkles: Sparkles,
+  rocket: Rocket,
+  school: School,
+  book: BookOpen,
+  puzzle: Puzzle,
+};
+
+const avatarMap: Record<AvatarId, LucideIcon> = {
+  bot: Bot,
+  cat: Cat,
+  sparkles: WandSparkles,
+  rocket: Rocket,
+  book: BookOpen,
+  smile: Smile,
+};
+
+const avatarOptions: Array<{ id: AvatarId; label: string }> = [
+  { id: "bot", label: "로봇" },
+  { id: "cat", label: "고양이" },
+  { id: "sparkles", label: "마법" },
+  { id: "rocket", label: "로켓" },
+  { id: "book", label: "책" },
+  { id: "smile", label: "미소" },
+];
+
+const blockIconOptions: IconName[] = [
+  "megaphone",
+  "pencil",
+  "checklist",
+  "calendar",
+  "lightbulb",
+  "split",
+  "sparkles",
+];
+
+const defaultIconByType: Record<BlockType, IconName> = {
+  announcement: "megaphone",
+  journal: "pencil",
+  checklist: "checklist",
+  schedule: "calendar",
+  faq: "lightbulb",
+  choice: "split",
+};
+
+const legacyIconMap: Record<string, IconName> = {
+  "📢": "megaphone",
+  "✏️": "pencil",
+  "📝": "pencil",
+  "💭": "sparkles",
+  "✅": "checklist",
+  "🎒": "checklist",
+  "🗓️": "calendar",
+  "💡": "lightbulb",
+  "🔀": "split",
+  "🗣️": "split",
+};
+
+const legacyAvatarMap: Record<string, AvatarId> = {
+  "🤖": "bot",
+  "🚀": "rocket",
+  "🏫": "smile",
+  "📚": "book",
+  "✨": "sparkles",
+};
+
+function resolveIconName(value: string, type: BlockType): IconName {
+  if (value in iconMap) return value as IconName;
+  return legacyIconMap[value] ?? defaultIconByType[type];
+}
+
+function resolveAvatar(value: string): AvatarId {
+  if (value in avatarMap) return value as AvatarId;
+  return legacyAvatarMap[value] ?? "bot";
+}
+
+function normalizeConfig(config: BotConfig): BotConfig {
+  return {
+    ...config,
+    emoji: resolveAvatar(config.emoji),
+    blocks: config.blocks.map((block) => ({
+      ...block,
+      icon: resolveIconName(block.icon, block.type),
+      items: Array.isArray(block.items) ? block.items : [],
+    })),
+  };
+}
+
+function CuteIcon({
+  name,
+  size = 18,
+  strokeWidth = 2.2,
+}: {
+  name: IconName;
+  size?: number;
+  strokeWidth?: number;
+}) {
+  const Icon = iconMap[name];
+  return <Icon aria-hidden="true" size={size} strokeWidth={strokeWidth} />;
+}
+
+function AvatarIcon({ name, size = 21 }: { name: AvatarId; size?: number }) {
+  const Icon = avatarMap[name];
+  return <Icon aria-hidden="true" size={size} strokeWidth={2.2} />;
+}
+
 function encodeConfig(config: BotConfig) {
   const bytes = new TextEncoder().encode(JSON.stringify(config));
   let binary = "";
@@ -250,7 +407,7 @@ function decodeConfig(value: string): BotConfig | null {
   try {
     const binary = atob(value);
     const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-    return JSON.parse(new TextDecoder().decode(bytes)) as BotConfig;
+    return normalizeConfig(JSON.parse(new TextDecoder().decode(bytes)) as BotConfig);
   } catch {
     return null;
   }
@@ -279,26 +436,28 @@ export default function Home() {
   const theme = themes.find((item) => item.id === config.theme) ?? themes[0];
 
   useEffect(() => {
-    const shared = window.location.hash.startsWith("#bot=")
-      ? decodeConfig(window.location.hash.slice(5))
-      : null;
-    const saved = localStorage.getItem("chatbot-maker-project");
-    if (shared) {
-      setConfig(shared);
-      setToast("공유된 챗봇을 불러왔어요.");
-    } else if (saved) {
-      try {
-        setConfig(JSON.parse(saved) as BotConfig);
-      } catch {
-        localStorage.removeItem("chatbot-maker-project");
+    const timer = window.setTimeout(() => {
+      const shared = window.location.hash.startsWith("#bot=")
+        ? decodeConfig(window.location.hash.slice(5))
+        : null;
+      const saved = localStorage.getItem("chatbot-maker-project");
+      if (shared) {
+        setConfig(shared);
+        setToast("공유된 챗봇을 불러왔어요.");
+      } else if (saved) {
+        try {
+          setConfig(normalizeConfig(JSON.parse(saved) as BotConfig));
+        } catch {
+          localStorage.removeItem("chatbot-maker-project");
+        }
       }
-    }
-    loadedRef.current = true;
+      loadedRef.current = true;
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
     if (!loadedRef.current) return;
-    setSaveStatus("저장 중…");
     const timer = window.setTimeout(() => {
       localStorage.setItem("chatbot-maker-project", JSON.stringify(config));
       setSaveStatus("자동 저장됨");
@@ -428,8 +587,8 @@ export default function Home() {
               type="button"
               onClick={() => applyTemplate(template)}
             >
-              <span className="template-emoji" aria-hidden="true">
-                {template.emoji}
+              <span className="template-icon">
+                <CuteIcon name={template.icon} size={20} />
               </span>
               <span>
                 <span className="template-name">
@@ -449,14 +608,14 @@ export default function Home() {
           className={mobileTab === "build" ? "active" : ""}
           onClick={() => setMobileTab("build")}
         >
-          🛠️ 만들기
+          <Hammer aria-hidden="true" size={16} /> 만들기
         </button>
         <button
           type="button"
           className={mobileTab === "preview" ? "active" : ""}
           onClick={() => setMobileTab("preview")}
         >
-          💬 미리보기
+          <MessageCircle aria-hidden="true" size={16} /> 미리보기
         </button>
       </nav>
 
@@ -477,21 +636,21 @@ export default function Home() {
                 type="button"
                 onClick={() => addBlock(item.type)}
               >
-                <span className="catalog-icon" aria-hidden="true">
-                  {item.icon}
+                <span className="catalog-icon">
+                  <CuteIcon name={item.icon} />
                 </span>
                 <span>
                   <strong>{item.name}</strong>
                   <small>{item.hint}</small>
                 </span>
-                <span className="add-mark" aria-hidden="true">
-                  +
+                <span className="add-mark">
+                  <Sparkles aria-hidden="true" size={13} />
                 </span>
               </button>
             ))}
           </div>
           <div className="tip-card">
-            <span aria-hidden="true">💡</span>
+            <Lightbulb aria-hidden="true" size={18} />
             <p>
               <strong>만들기 팁</strong>
               기능은 3~5개만 골라도 충분히 멋진 챗봇이 돼요.
@@ -514,17 +673,25 @@ export default function Home() {
               <span>챗봇의 첫인상이에요</span>
             </div>
             <div className="form-grid">
-              <label className="emoji-field">
-                <span>캐릭터</span>
-                <input
-                  aria-label="챗봇 캐릭터"
-                  maxLength={4}
-                  value={config.emoji}
-                  onChange={(event) =>
-                    setConfig((current) => ({ ...current, emoji: event.target.value }))
-                  }
-                />
-              </label>
+              <fieldset className="avatar-field">
+                <legend>캐릭터</legend>
+                <div className="avatar-options">
+                  {avatarOptions.map((avatar) => (
+                    <button
+                      aria-label={avatar.label}
+                      aria-pressed={config.emoji === avatar.id}
+                      className={config.emoji === avatar.id ? "selected" : ""}
+                      key={avatar.id}
+                      type="button"
+                      onClick={() =>
+                        setConfig((current) => ({ ...current, emoji: avatar.id }))
+                      }
+                    >
+                      <AvatarIcon name={avatar.id} size={18} />
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
               <label>
                 <span>챗봇 이름</span>
                 <input
@@ -584,7 +751,7 @@ export default function Home() {
 
           {config.blocks.length === 0 ? (
             <div className="empty-flow">
-              <span aria-hidden="true">🧩</span>
+              <Puzzle aria-hidden="true" size={25} />
               <h3>아직 추가한 기능이 없어요</h3>
               <p>왼쪽에서 기능을 골라 나만의 대화 흐름을 만들어 보세요.</p>
             </div>
@@ -598,8 +765,8 @@ export default function Home() {
                   onClick={() => setSelectedId(block.id)}
                 >
                   <span className="flow-index">{index + 1}</span>
-                  <span className="flow-icon" aria-hidden="true">
-                    {block.icon}
+                  <span className="flow-icon">
+                    <CuteIcon name={block.icon} />
                   </span>
                   <span className="flow-copy">
                     <strong>{block.title}</strong>
@@ -614,20 +781,31 @@ export default function Home() {
           {selectedBlock && (
             <div className="settings-card block-settings">
               <div className="settings-title">
-                <h3>{selectedBlock.icon} 선택한 기능 편집</h3>
+                <h3 className="settings-heading-with-icon">
+                  <CuteIcon name={selectedBlock.icon} size={16} /> 선택한 기능 편집
+                </h3>
                 <button className="text-danger" type="button" onClick={removeBlock}>
-                  삭제
+                  <Trash2 aria-hidden="true" size={13} /> 삭제
                 </button>
               </div>
               <div className="form-grid block-form">
-                <label className="emoji-field">
-                  <span>아이콘</span>
-                  <input
-                    maxLength={4}
-                    value={selectedBlock.icon}
-                    onChange={(event) => updateBlock({ icon: event.target.value })}
-                  />
-                </label>
+                <fieldset className="icon-field wide-field">
+                  <legend>아이콘</legend>
+                  <div className="icon-options">
+                    {blockIconOptions.map((icon) => (
+                      <button
+                        aria-label={`${icon} 아이콘`}
+                        aria-pressed={selectedBlock.icon === icon}
+                        className={selectedBlock.icon === icon ? "selected" : ""}
+                        key={icon}
+                        type="button"
+                        onClick={() => updateBlock({ icon })}
+                      >
+                        <CuteIcon name={icon} size={17} />
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
                 <label>
                   <span>버튼 이름</span>
                   <input
@@ -688,7 +866,9 @@ export default function Home() {
           <div className="phone-frame">
             <div className="phone-speaker" aria-hidden="true" />
             <div className="chat-header">
-              <div className="bot-avatar">{config.emoji || "🤖"}</div>
+              <div className="bot-avatar">
+                <AvatarIcon name={resolveAvatar(config.emoji)} size={21} />
+              </div>
               <div>
                 <strong>{config.name || "이름 없는 챗봇"}</strong>
                 <span>
@@ -698,7 +878,9 @@ export default function Home() {
             </div>
             <div className="chat-body">
               <div className="message-row">
-                <div className="mini-avatar">{config.emoji || "🤖"}</div>
+                <div className="mini-avatar">
+                  <AvatarIcon name={resolveAvatar(config.emoji)} size={14} />
+                </div>
                 <div className="message bot-message">{config.welcome || "안녕하세요!"}</div>
               </div>
 
@@ -706,7 +888,9 @@ export default function Home() {
                 <>
                   <div className="message user-message">{activePreview.title}</div>
                   <div className="message-row">
-                    <div className="mini-avatar">{config.emoji || "🤖"}</div>
+                    <div className="mini-avatar">
+                      <AvatarIcon name={resolveAvatar(config.emoji)} size={14} />
+                    </div>
                     <div className="message bot-message">{activePreview.description}</div>
                   </div>
                   <PreviewInteraction block={activePreview} onToast={setToast} />
@@ -718,7 +902,7 @@ export default function Home() {
               )}
               {config.blocks.length === 0 && (
                 <div className="preview-empty">
-                  <span aria-hidden="true">🧩</span>
+                  <Puzzle aria-hidden="true" size={22} />
                   기능을 추가하면 여기에 버튼이 나타나요.
                 </div>
               )}
@@ -726,7 +910,7 @@ export default function Home() {
             <div className="quick-actions">
               {config.blocks.map((block) => (
                 <button key={block.id} type="button" onClick={() => setActivePreviewId(block.id)}>
-                  <span aria-hidden="true">{block.icon}</span>
+                  <CuteIcon name={block.icon} size={13} />
                   {block.title}
                 </button>
               ))}
@@ -734,19 +918,19 @@ export default function Home() {
             <div className="chat-input">
               <span>메시지를 입력해 보세요</span>
               <button type="button" aria-label="메시지 보내기">
-                ↑
+                <Send aria-hidden="true" size={14} />
               </button>
             </div>
           </div>
           <p className="preview-note">
-            <span aria-hidden="true">🔒</span> 지금 만든 내용은 이 기기에 자동으로 저장돼요.
+            <LockKeyhole aria-hidden="true" size={13} /> 지금 만든 내용은 이 기기에 자동으로 저장돼요.
           </p>
         </aside>
       </div>
 
       {toast && (
         <div className="toast" role="status">
-          <span aria-hidden="true">✓</span>
+          <span aria-hidden="true"><Check size={13} strokeWidth={3} /></span>
           {toast}
         </div>
       )}
