@@ -31,3 +31,9 @@ npm run dev
 ```bash
 npm test
 ```
+
+## 배포
+
+이 프로젝트의 기본 배포 대상은 Vercel입니다. GitHub의 `main` 브랜치와
+Vercel 프로젝트를 연결하면 이후 변경 사항도 자동으로 운영 환경에
+배포할 수 있습니다.
