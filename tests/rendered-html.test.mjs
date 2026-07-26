@@ -196,6 +196,32 @@ test("ships printable four-page worksheets for all three school levels", async (
   }
 });
 
+test("keeps the editor and saved web apps responsive across device sizes", async () => {
+  const [studio, styles] = await Promise.all([
+    readFile(
+      new URL("../app/components/chatbot-studio.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(styles, /@media \(max-width: 1360px\)/);
+  assert.match(styles, /@media \(max-width: 1160px\)/);
+  assert.match(styles, /@media \(max-width: 960px\)/);
+  assert.match(styles, /@media \(max-width: 760px\)/);
+  assert.match(styles, /@media \(max-width: 430px\)/);
+  assert.match(styles, /\.mobile-panel-tabs\.blocks-tabs/);
+  assert.match(styles, /min-height: 100dvh/);
+  assert.match(styles, /env\(safe-area-inset-bottom\)/);
+  assert.match(
+    styles,
+    /@media \(max-width: 600px\), \(max-height: 600px\) and \(max-width: 960px\)/,
+  );
+  assert.match(studio, /window\.innerWidth <= 960/);
+  assert.match(studio, /mode === "blocks" \? "blocks-tabs" : ""/);
+  assert.match(studio, /\{mode === "designer" && \(/);
+});
+
 test("uses Korean metadata and the standard Vercel Next.js runtime", async () => {
   const [layout, packageJson] = await Promise.all([
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),

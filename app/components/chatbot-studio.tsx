@@ -551,7 +551,7 @@ export function ChatbotStudio() {
 
   const selectTarget = (target: SelectedTarget) => {
     setSelectedTarget(target);
-    if (window.innerWidth < 760) setMobilePanel("properties");
+    if (window.innerWidth <= 960) setMobilePanel("properties");
   };
 
   const updateChecklistItems = (value: string) => {
@@ -1184,6 +1184,8 @@ export function ChatbotStudio() {
           <Link
             className="header-button"
             href="/worksheets"
+            aria-label="웹앱 기획 활동지 열기"
+            title="웹앱 기획 활동지"
           >
             <Printer size={16} aria-hidden="true" />
             웹앱 기획 활동지
@@ -1191,12 +1193,20 @@ export function ChatbotStudio() {
           <button
             className="header-button"
             type="button"
+            aria-label="저장한 내 웹앱 열기"
+            title="내 웹앱"
             onClick={showSavedApps}
           >
             <LibraryBig size={16} aria-hidden="true" />
             내 웹앱
           </button>
-          <button className="header-button" type="button" onClick={shareProject}>
+          <button
+            className="header-button"
+            type="button"
+            aria-label="현재 웹앱 공유하기"
+            title="공유"
+            onClick={shareProject}
+          >
             <Share2 size={16} aria-hidden="true" />
             공유
           </button>
@@ -1259,15 +1269,22 @@ export function ChatbotStudio() {
         </button>
       </section>
 
-      <nav className="mobile-panel-tabs" aria-label="모바일 편집 영역 전환">
-        <button
-          className={mobilePanel === "palette" ? "active" : ""}
-          type="button"
-          onClick={() => setMobilePanel("palette")}
-        >
-          <Plus size={15} aria-hidden="true" />
-          기능
-        </button>
+      <nav
+        className={`mobile-panel-tabs ${
+          mode === "blocks" ? "blocks-tabs" : ""
+        }`}
+        aria-label="화면별 편집 영역 전환"
+      >
+        {mode === "designer" && (
+          <button
+            className={mobilePanel === "palette" ? "active" : ""}
+            type="button"
+            onClick={() => setMobilePanel("palette")}
+          >
+            <Plus size={15} aria-hidden="true" />
+            기능
+          </button>
+        )}
         <button
           className={mobilePanel === "viewer" ? "active" : ""}
           type="button"
