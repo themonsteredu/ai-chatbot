@@ -116,6 +116,8 @@ test("saves and installs every student project as its own phone web app", async 
     manifestRoute,
     savedWebApps,
     serviceWorker,
+    serviceWorkerRegistration,
+    studioManifest,
     layout,
   ] =
     await Promise.all([
@@ -137,6 +139,11 @@ test("saves and installs every student project as its own phone web app", async 
       ),
       readFile(new URL("../lib/saved-webapps.ts", import.meta.url), "utf8"),
       readFile(new URL("../public/sw.js", import.meta.url), "utf8"),
+      readFile(
+        new URL("../app/components/service-worker.tsx", import.meta.url),
+        "utf8",
+      ),
+      readFile(new URL("../app/manifest.ts", import.meta.url), "utf8"),
       readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     ]);
 
@@ -152,16 +159,43 @@ test("saves and installs every student project as its own phone web app", async 
   assert.match(savedWebApps, /saveWebApp/);
   assert.match(savedWebApps, /listSavedWebApps/);
   assert.match(installer, /api\/webapp-manifest/);
-  assert.match(installer, /student-webapp-manifest/);
   assert.match(installer, /‘\{appName\}’ 설치/);
   assert.match(installer, /beforeinstallprompt/);
-  assert.match(installer, /serviceWorker\.register\("\/sw\.js"\)/);
   assert.match(installer, /홈 화면에 추가/);
+  // 학생 웹앱을 실행하는 동안에는 문서의 매니페스트 링크를 나중에 추가되는 것까지
+  // 그 웹앱 것으로 바꿔 두고, 편집 화면으로 돌아갈 때 원래대로 되돌립니다.
+  assert.match(installer, /link\[rel="manifest"\]/);
+  assert.match(installer, /claimedManifests/);
+  assert.match(installer, /new MutationObserver/);
+  assert.match(installer, /restoreDocumentMetadata/);
+  assert.match(serviceWorkerRegistration, /serviceWorker\.register\("\/sw\.js"\)/);
   assert.match(manifestRoute, /id: `\/student-webapps\/\$\{id\}`/);
   assert.match(manifestRoute, /start_url: `\/\?run=saved&app=\$\{encodeURIComponent\(id\)\}`/);
   assert.match(manifestRoute, /display: "standalone"/);
-  assert.match(serviceWorker, /my-webapp-shell-v2/);
-  assert.doesNotMatch(layout, /manifest:/);
+  assert.match(manifestRoute, /icon-192\.png/);
+  assert.match(manifestRoute, /purpose: "maskable"/);
+  assert.match(serviceWorker, /my-webapp-shell-v3/);
+  assert.match(serviceWorker, /icon-maskable-512\.png/);
+
+  // 제작 도구 자체도 갤럭시에서 ‘앱 설치’가 뜨고 아이폰에서 홈 화면 아이콘이
+  // 제대로 나오도록 매니페스트와 PNG 아이콘을 갖춥니다.
+  assert.match(studioManifest, /display: "standalone"/);
+  assert.match(studioManifest, /start_url: "\/"/);
+  assert.match(studioManifest, /sizes: "192x192"/);
+  assert.match(studioManifest, /sizes: "512x512"/);
+  assert.match(studioManifest, /purpose: "maskable"/);
+  assert.match(layout, /apple-touch-icon\.png/);
+  assert.match(layout, /<ServiceWorkerRegistration \/>/);
+
+  for (const icon of [
+    "icon-192.png",
+    "icon-512.png",
+    "icon-maskable-512.png",
+    "apple-touch-icon.png",
+  ]) {
+    const file = await stat(new URL(`public/${icon}`, root));
+    assert.ok(file.size > 0, `${icon} 아이콘 파일이 있어야 합니다.`);
+  }
 });
 
 test("ships printable four-page worksheets for all three school levels", async () => {

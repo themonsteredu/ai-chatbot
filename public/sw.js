@@ -1,5 +1,12 @@
-const CACHE_NAME = "my-webapp-shell-v2";
-const APP_SHELL = ["/", "/app-icon.svg"];
+const CACHE_NAME = "my-webapp-shell-v3";
+const APP_SHELL = [
+  "/",
+  "/app-icon.svg",
+  "/icon-192.png",
+  "/icon-512.png",
+  "/icon-maskable-512.png",
+  "/apple-touch-icon.png",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

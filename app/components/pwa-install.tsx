@@ -33,31 +33,72 @@ export function PwaInstallButton({
       accent,
     });
     const manifestHref = `/api/webapp-manifest?${manifestParams.toString()}`;
-    let manifestLink = document.querySelector<HTMLLinkElement>(
-      'link[data-student-webapp-manifest="true"]',
-    );
-    if (!manifestLink) {
-      manifestLink = document.createElement("link");
-      manifestLink.rel = "manifest";
-      manifestLink.dataset.studentWebappManifest = "true";
-      document.head.appendChild(manifestLink);
-    }
-    manifestLink.href = manifestHref;
+    // 브라우저는 문서에서 처음 만난 manifest 링크만 사용합니다. 제작 도구용
+    // 매니페스트는 React가 하이드레이션을 마친 뒤에 다시 붙이기 때문에, 지금 있는
+    // 링크뿐 아니라 나중에 추가되는 링크까지 이 웹앱 것으로 바꿔 둡니다. 그래야
+    // 순서와 상관없이 학생이 만든 이름으로 설치되고, 편집 화면으로 돌아갈 때
+    // 원래 주소로 되돌릴 수 있습니다.
+    const claimedManifests = new Map<HTMLLinkElement, string | null>();
+    const claimManifest = (link: HTMLLinkElement) => {
+      if (claimedManifests.has(link)) return;
+      claimedManifests.set(link, link.getAttribute("href"));
+      link.href = manifestHref;
+    };
 
-    let appleTitle = document.querySelector<HTMLMetaElement>(
+    document
+      .querySelectorAll<HTMLLinkElement>('link[rel="manifest"]')
+      .forEach(claimManifest);
+
+    let ownManifest: HTMLLinkElement | null = null;
+    if (claimedManifests.size === 0) {
+      ownManifest = document.createElement("link");
+      ownManifest.rel = "manifest";
+      ownManifest.href = manifestHref;
+      document.head.appendChild(ownManifest);
+    }
+
+    const manifestObserver = new MutationObserver((records) => {
+      for (const record of records) {
+        for (const node of record.addedNodes) {
+          if (
+            node instanceof HTMLLinkElement &&
+            node.rel === "manifest" &&
+            node !== ownManifest
+          ) {
+            claimManifest(node);
+          }
+        }
+      }
+    });
+    manifestObserver.observe(document.head, { childList: true });
+
+    const existingAppleTitle = document.querySelector<HTMLMetaElement>(
       'meta[name="apple-mobile-web-app-title"]',
     );
-    if (!appleTitle) {
-      appleTitle = document.createElement("meta");
+    const appleTitle = existingAppleTitle ?? document.createElement("meta");
+    const previousAppleTitle = existingAppleTitle?.content ?? null;
+    if (!existingAppleTitle) {
       appleTitle.name = "apple-mobile-web-app-title";
       document.head.appendChild(appleTitle);
     }
     appleTitle.content = appName;
+
+    const previousDocumentTitle = document.title;
     document.title = appName;
 
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(() => undefined);
-    }
+    const restoreDocumentMetadata = () => {
+      manifestObserver.disconnect();
+      claimedManifests.forEach((previousHref, link) => {
+        if (previousHref === null) link.removeAttribute("href");
+        else link.setAttribute("href", previousHref);
+      });
+      ownManifest?.remove();
+
+      if (previousAppleTitle === null) appleTitle.remove();
+      else appleTitle.content = previousAppleTitle;
+
+      document.title = previousDocumentTitle;
+    };
 
     const navigatorWithStandalone = navigator as Navigator & {
       standalone?: boolean;
@@ -86,6 +127,7 @@ export function PwaInstallButton({
       window.clearTimeout(installedTimer);
       window.removeEventListener("beforeinstallprompt", capturePrompt);
       window.removeEventListener("appinstalled", markInstalled);
+      restoreDocumentMetadata();
     };
   }, [accent, appId, appName]);
 

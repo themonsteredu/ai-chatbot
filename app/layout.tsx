@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
+import { ServiceWorkerRegistration } from "./components/service-worker";
 import "./globals.css";
 
 const geist = Geist({
@@ -12,8 +13,13 @@ export const metadata: Metadata = {
   description:
     "학생이 App Inventor처럼 기능을 고르고 속성을 바꾸며 활동 기록장, 알림장과 직접 만든 질문·답 챗봇을 담는 교육용 웹앱 제작 도구입니다.",
   icons: {
-    icon: "/app-icon.svg",
-    apple: "/app-icon.svg",
+    // 아이폰·아이패드는 apple-touch-icon으로 SVG를 읽지 못해 PNG를 함께 둡니다.
+    icon: [
+      { url: "/app-icon.svg", type: "image/svg+xml" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
   },
   appleWebApp: {
     capable: true,
@@ -33,7 +39,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko" className={geist.variable}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <ServiceWorkerRegistration />
+      </body>
     </html>
   );
 }
