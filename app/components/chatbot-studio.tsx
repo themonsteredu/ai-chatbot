@@ -63,6 +63,7 @@ import {
 import { BlockWorkspace } from "./block-workspace";
 import { PhonePreview } from "./phone-preview";
 import { ClassSubmit } from "./class-submit";
+import { usePhoneScale } from "./use-phone-scale";
 import { SavedWebAppLibrary } from "./saved-webapp-library";
 import { WebAppPlayer } from "./webapp-player";
 
@@ -187,6 +188,8 @@ export function ChatbotStudio() {
   const [hydrated, setHydrated] = useState(false);
   const [toast, setToast] = useState("");
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 넓은 화면에서 휴대폰 미리보기가 남는 공간만큼 커지게 합니다.
+  const phoneStageRef = usePhoneScale();
 
   const selectedAction = useMemo(
     () => project.actions.find((action) => action.id === selectedTarget),
@@ -1442,6 +1445,7 @@ export function ChatbotStudio() {
               </header>
               <div
                 className="phone-stage"
+                ref={phoneStageRef}
                 onDragOver={(event) => {
                   event.preventDefault();
                   event.dataTransfer.dropEffect = "copy";

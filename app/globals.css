@@ -1524,6 +1524,13 @@ select:focus-visible {
   background: #e9ebf1;
 }
 
+/* 넓은 화면에서는 무대 여백을 줄여 휴대폰이 더 크게 들어가게 합니다. */
+@media (min-width: 1161px) {
+  .phone-stage {
+    padding: 18px 22px 26px;
+  }
+}
+
 .stage-grid {
   position: absolute;
   inset: 0;
@@ -1586,6 +1593,10 @@ select:focus-visible {
     0 30px 70px rgba(37, 41, 55, 0.24),
     0 5px 15px rgba(37, 41, 55, 0.18),
     inset 0 0 0 2px #292d37;
+  /* 넓은 화면에서는 무대의 남는 공간에 맞춰 usePhoneScale이 값을 넣어 줍니다.
+     1160px 이하에서는 아래 반응형 규칙이 그대로 크기를 정합니다. */
+  transform: scale(var(--phone-scale, 1));
+  transition: transform 0.12s ease-out;
 }
 
 .phone-hardware {

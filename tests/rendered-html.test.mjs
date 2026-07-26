@@ -381,3 +381,30 @@ test("stores class submissions in Supabase from the server only", async () => {
   assert.match(schema, /unique \(class_code, student_name, app_id\)/);
   assert.match(schema, /enable row level security/);
 });
+
+test("grows the phone preview to fill the stage on wide screens", async () => {
+  const [hook, studio, css] = await Promise.all([
+    readFile(new URL("app/components/use-phone-scale.ts", root), "utf8"),
+    readFile(new URL("app/components/chatbot-studio.tsx", root), "utf8"),
+    readFile(new URL("app/globals.css", root), "utf8"),
+  ]);
+
+  // 휴대폰 비율을 지켜야 실제 기기와 같은 모습이 유지됩니다.
+  assert.match(hook, /PHONE_WIDTH = 330/);
+  assert.match(hook, /PHONE_HEIGHT = 674/);
+  assert.match(hook, /Math\.min\(/);
+  assert.match(hook, /MAX_SCALE/);
+  // 좁은 화면은 기존 반응형 규칙이 그대로 맡습니다.
+  assert.match(hook, /window\.innerWidth < WIDE_FROM/);
+  assert.match(hook, /removeProperty\("--phone-scale"\)/);
+  // 무대는 불러오기가 끝난 뒤 그려지므로 콜백 ref로 붙는 순간을 잡습니다.
+  assert.match(hook, /new ResizeObserver\(apply\)/);
+  assert.match(hook, /const setStage = useCallback\(/);
+  // 여백이 화면 폭마다 달라도 실제 값을 읽어 계산합니다.
+  assert.match(hook, /getComputedStyle\(stage\)/);
+
+  assert.match(studio, /const phoneStageRef = usePhoneScale\(\)/);
+  assert.match(studio, /ref=\{phoneStageRef\}/);
+  assert.match(css, /transform: scale\(var\(--phone-scale, 1\)\)/);
+  assert.match(css, /@media \(min-width: 1161px\)/);
+});
