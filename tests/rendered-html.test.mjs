@@ -345,3 +345,39 @@ test("keeps the teacher answer key on the server behind an access code", async (
   assert.match(settings, /<TeacherAnswerDownload \/>/);
   assert.match(worksheets, /href="\/settings"/);
 });
+
+test("stores class submissions in Supabase from the server only", async () => {
+  const [route, client, schema, submit, roster, studio] = await Promise.all([
+    readFile(new URL("app/api/class-webapps/route.ts", root), "utf8"),
+    readFile(new URL("app/api/class-webapps/supabase.ts", root), "utf8"),
+    readFile(new URL("supabase/schema.sql", root), "utf8"),
+    readFile(new URL("app/components/class-submit.tsx", root), "utf8"),
+    readFile(new URL("app/components/class-roster.tsx", root), "utf8"),
+    readFile(new URL("app/components/chatbot-studio.tsx", root), "utf8"),
+  ]);
+
+  // 서비스 키는 서버에서만 읽고, 화면 코드에는 절대 들어가면 안 됩니다.
+  assert.match(client, /process\.env\.SUPABASE_SERVICE_ROLE_KEY/);
+  assert.match(client, /process\.env\.SUPABASE_URL/);
+  for (const clientFile of [submit, roster, studio]) {
+    assert.doesNotMatch(clientFile, /SUPABASE_SERVICE_ROLE_KEY/);
+    assert.doesNotMatch(clientFile, /from "[^"]*api\/class-webapps\/supabase"/);
+  }
+
+  // 반 전체 조회는 교사 코드가 있어야 합니다.
+  assert.match(route, /action === "class"/);
+  assert.match(route, /teacherCodes\(\)\.includes\(code\)/);
+  assert.match(route, /교사 코드가 올바르지 않습니다/);
+  // 학생 본인 조회·저장에는 반 코드와 이름이 필요합니다.
+  assert.match(route, /CLASS_CODE\.test\(classCode\)/);
+  assert.match(route, /normalizeProject\(body\.project\)/);
+  // 키가 없으면 기능을 꺼 두고 503으로 알려 줍니다.
+  assert.match(route, /readConfig\(\)\.ready/);
+  assert.match(route, /503/);
+
+  // 같은 학생이 같은 웹앱을 다시 내면 덮어써야 합니다.
+  assert.match(client, /on_conflict=class_code,student_name,app_id/);
+  assert.match(client, /resolution=merge-duplicates/);
+  assert.match(schema, /unique \(class_code, student_name, app_id\)/);
+  assert.match(schema, /enable row level security/);
+});

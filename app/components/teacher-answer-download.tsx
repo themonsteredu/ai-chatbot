@@ -13,6 +13,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { ClassRoster } from "./class-roster";
 
 type Session = {
   code: string;
@@ -230,6 +231,15 @@ export function TeacherAnswerDownload() {
           {error}
         </p>
       )}
+
+      <div className="class-roster-block">
+        <h3>학생 제출 현황</h3>
+        <p>
+          학생이 ‘반에 제출하기’로 올린 웹앱을 반별로 모아 봅니다. 목록에서
+          바로 열어 확인할 수 있습니다.
+        </p>
+        <ClassRoster teacherCode={session.code} />
+      </div>
 
       {session.role === "admin" && session.instructorCode && (
         <div className="teacher-code-box">

@@ -62,6 +62,7 @@ import {
 } from "../../lib/saved-webapps";
 import { BlockWorkspace } from "./block-workspace";
 import { PhonePreview } from "./phone-preview";
+import { ClassSubmit } from "./class-submit";
 import { SavedWebAppLibrary } from "./saved-webapp-library";
 import { WebAppPlayer } from "./webapp-player";
 
@@ -470,6 +471,16 @@ export function ChatbotStudio() {
     setActiveAppId(savedApp.id);
     setSavedApps(listSavedWebApps(window.localStorage));
     return savedApp;
+  };
+
+  /** 반 저장소에서 가져온 웹앱으로 편집을 이어 갑니다. */
+  const restoreClassWebApp = (restored: WebAppProject, restoredId: string) => {
+    setProject(restored);
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(restored));
+    const savedApp = saveWebApp(window.localStorage, restored, restoredId);
+    setActiveAppId(savedApp.id);
+    setSavedApps(listSavedWebApps(window.localStorage));
+    notify("반에서 불러온 웹앱으로 이어서 만들어요.");
   };
 
   const openInstallPage = () => {
@@ -1322,6 +1333,15 @@ export function ChatbotStudio() {
               </span>
               <ChevronRight size={15} aria-hidden="true" />
             </Link>
+            <div className="panel-title">
+              <span>반에 제출</span>
+              <small>선생님이 볼 수 있게 올려요</small>
+            </div>
+            <ClassSubmit
+              ensureAppId={() => saveCurrentAsWebApp().id}
+              project={project}
+              onRestore={restoreClassWebApp}
+            />
             <div className="panel-title">
               <span>시작 예시</span>
               <small>만들고 싶은 웹앱을 골라요</small>
