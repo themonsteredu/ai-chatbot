@@ -42,6 +42,8 @@ import {
   DEFAULT_PROJECT,
   PROJECT_TEMPLATES,
   cloneProject,
+  decodeProject,
+  encodeProject,
   normalizeProject,
   type ActionIcon,
   type QuickAction,
@@ -167,27 +169,6 @@ const colorChoices = [
   { name: "분홍", value: "#e65387" },
 ];
 
-function encodeProject(project: WebAppProject) {
-  const bytes = new TextEncoder().encode(JSON.stringify(project));
-  let binary = "";
-  bytes.forEach((byte) => {
-    binary += String.fromCharCode(byte);
-  });
-  return btoa(binary);
-}
-
-function decodeProject(value: string) {
-  try {
-    const binary = atob(value);
-    const bytes = Uint8Array.from(binary, (character) =>
-      character.charCodeAt(0),
-    );
-    return normalizeProject(JSON.parse(new TextDecoder().decode(bytes)));
-  } catch {
-    return null;
-  }
-}
-
 export function ChatbotStudio() {
   const [project, setProject] = useState<WebAppProject>(() =>
     cloneProject(DEFAULT_PROJECT),
@@ -237,16 +218,32 @@ export function ChatbotStudio() {
           : "";
       let nextProject: WebAppProject | null = null;
 
+      // 설치한 앱의 시작 주소(run=saved)에는 내용이 같이 실려 있습니다. 홈 화면
+      // 앱은 브라우저와 저장 공간이 달라 첫 실행 때 이 값으로 채워 넣어야 열립니다.
+      // 다만 이미 저장된 내용이 있으면 그쪽이 최신이므로 덮어쓰지 않습니다.
+      // 사람이 직접 연 공유 링크(run=install)는 새 내용을 받는 것이 목적이라
+      // 언제나 받아 씁니다.
+      const seedOnly = runMode === "saved";
+      const storedProject =
+        sharedProject && seedOnly && nextAppId
+          ? loadSavedWebApp(window.localStorage, nextAppId)
+          : null;
+
       if (sharedProject) {
-        const savedApp = saveWebApp(
-          window.localStorage,
-          sharedProject,
-          nextAppId || undefined,
-        );
-        nextAppId = savedApp.id;
-        nextProject = sharedProject;
+        if (storedProject) {
+          nextProject = storedProject;
+        } else {
+          const savedApp = saveWebApp(
+            window.localStorage,
+            sharedProject,
+            nextAppId || undefined,
+          );
+          nextAppId = savedApp.id;
+          nextProject = sharedProject;
+        }
 
         if (isStandalone) {
+          // 주소창에 긴 내용이 남지 않도록 정리합니다.
           const installedUrl = new URL("/", window.location.origin);
           installedUrl.searchParams.set(
             "run",

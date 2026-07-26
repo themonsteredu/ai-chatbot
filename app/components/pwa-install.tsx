@@ -1,7 +1,8 @@
 "use client";
 
 import { Check, Download, Share2, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { encodeProject, type WebAppProject } from "../../lib/chatbot-studio";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -12,6 +13,7 @@ type PwaInstallButtonProps = {
   accent: string;
   appId: string;
   appName: string;
+  project: WebAppProject;
   compact?: boolean;
 };
 
@@ -19,6 +21,7 @@ export function PwaInstallButton({
   accent,
   appId,
   appName,
+  project,
   compact = false,
 }: PwaInstallButtonProps) {
   const [installPrompt, setInstallPrompt] =
@@ -26,11 +29,16 @@ export function PwaInstallButton({
   const [installed, setInstalled] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
 
+  // 설치한 앱이 브라우저 저장 공간을 못 읽는 아이폰에서도 열리도록, 설계 내용을
+  // 매니페스트에 실어 시작 주소에 담습니다.
+  const encodedProject = useMemo(() => encodeProject(project), [project]);
+
   useEffect(() => {
     const manifestParams = new URLSearchParams({
       id: appId,
       name: appName,
       accent,
+      project: encodedProject,
     });
     const manifestHref = `/api/webapp-manifest?${manifestParams.toString()}`;
     // 브라우저는 문서에서 처음 만난 manifest 링크만 사용합니다. 제작 도구용
@@ -129,7 +137,7 @@ export function PwaInstallButton({
       window.removeEventListener("appinstalled", markInstalled);
       restoreDocumentMetadata();
     };
-  }, [accent, appId, appName]);
+  }, [accent, appId, appName, encodedProject]);
 
   const install = async () => {
     if (installed) return;

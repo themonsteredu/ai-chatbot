@@ -170,8 +170,19 @@ test("saves and installs every student project as its own phone web app", async 
   assert.match(installer, /restoreDocumentMetadata/);
   assert.match(serviceWorkerRegistration, /serviceWorker\.register\("\/sw\.js"\)/);
   assert.match(manifestRoute, /id: `\/student-webapps\/\$\{id\}`/);
-  assert.match(manifestRoute, /start_url: `\/\?run=saved&app=\$\{encodeURIComponent\(id\)\}`/);
   assert.match(manifestRoute, /display: "standalone"/);
+
+  // 홈 화면에 설치한 앱은 브라우저와 저장 공간이 달라(특히 아이폰) 저장해 둔
+  // 내용을 못 읽습니다. 그래서 설계 내용을 시작 주소에 함께 실어 보냅니다.
+  assert.match(manifestRoute, /start_url: `\/\?\$\{startUrl\.toString\(\)\}`/);
+  assert.match(manifestRoute, /startUrl\.set\("project", project\)/);
+  assert.match(manifestRoute, /MAX_PROJECT_LENGTH/);
+  assert.match(manifestRoute, /BASE64\.test\(requestedProject\)/);
+  assert.match(installer, /project: encodedProject/);
+  assert.match(player, /project=\{project\}/);
+  // 설치한 앱 안에서 고친 내용을 시작 주소가 되돌리면 안 됩니다.
+  assert.match(studio, /const seedOnly = runMode === "saved"/);
+  assert.match(studio, /if \(sharedProject && seedOnly && nextAppId\)|sharedProject && seedOnly && nextAppId/);
   assert.match(manifestRoute, /icon-192\.png/);
   assert.match(manifestRoute, /purpose: "maskable"/);
   assert.match(serviceWorker, /my-webapp-shell-v3/);

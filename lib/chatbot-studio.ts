@@ -391,3 +391,28 @@ export const ACTION_ICON_LABELS: Array<{
   { value: "heart", label: "마음" },
   { value: "message", label: "대화" },
 ];
+
+/**
+ * 웹앱 설계 내용을 주소에 실을 수 있는 문자열로 바꿉니다. 학생이 쓴 글·사진 같은
+ * 실행 기록은 여기 들어가지 않고 기기에만 남습니다.
+ */
+export function encodeProject(project: WebAppProject) {
+  const bytes = new TextEncoder().encode(JSON.stringify(project));
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary);
+}
+
+export function decodeProject(value: string) {
+  try {
+    const binary = atob(value);
+    const bytes = Uint8Array.from(binary, (character) =>
+      character.charCodeAt(0),
+    );
+    return normalizeProject(JSON.parse(new TextDecoder().decode(bytes)));
+  } catch {
+    return null;
+  }
+}

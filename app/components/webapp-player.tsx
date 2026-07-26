@@ -36,6 +36,7 @@ export function WebAppPlayer({
             accent={project.accent}
             appId={appId}
             appName={project.appName}
+            project={project}
             compact
           />
           <button type="button" onClick={onEdit}>
