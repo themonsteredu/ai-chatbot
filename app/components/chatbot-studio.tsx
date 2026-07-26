@@ -1181,15 +1181,13 @@ export function ChatbotStudio() {
           >
             <RotateCcw size={17} aria-hidden="true" />
           </button>
-          <a
+          <Link
             className="header-button"
-            href="/webapp-planning-worksheet.pdf"
-            target="_blank"
-            rel="noreferrer"
+            href="/worksheets"
           >
             <Printer size={16} aria-hidden="true" />
             웹앱 기획 활동지
-          </a>
+          </Link>
           <button
             className="header-button"
             type="button"
@@ -1297,21 +1295,19 @@ export function ChatbotStudio() {
               mobilePanel === "palette" ? "mobile-active" : ""
             }`}
           >
-            <a
+            <Link
               className="worksheet-card"
-              href="/webapp-planning-worksheet.pdf"
-              target="_blank"
-              rel="noreferrer"
+              href="/worksheets"
             >
               <span>
                 <Printer size={18} aria-hidden="true" />
               </span>
               <span>
                 <b>웹앱 기획 활동지 작성</b>
-                <small>인쇄해서 아이디어와 화면을 설계해요</small>
+                <small>초등·중등·고등 학년별 양식을 골라요</small>
               </span>
               <ChevronRight size={15} aria-hidden="true" />
-            </a>
+            </Link>
             <div className="panel-title">
               <span>시작 예시</span>
               <small>만들고 싶은 웹앱을 골라요</small>

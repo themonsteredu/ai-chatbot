@@ -164,22 +164,36 @@ test("saves and installs every student project as its own phone web app", async 
   assert.doesNotMatch(layout, /manifest:/);
 });
 
-test("ships a printable four-page web app planning worksheet", async () => {
-  const [studio, worksheet, worksheetInfo] = await Promise.all([
+test("ships printable four-page worksheets for all three school levels", async () => {
+  const worksheetPaths = [
+    "../public/webapp-planning-worksheet-elementary.pdf",
+    "../public/webapp-planning-worksheet-middle.pdf",
+    "../public/webapp-planning-worksheet-high.pdf",
+  ];
+  const [studio, worksheetPage, ...worksheetFiles] = await Promise.all([
     readFile(
       new URL("../app/components/chatbot-studio.tsx", import.meta.url),
       "utf8",
     ),
-    readFile(
-      new URL("../public/webapp-planning-worksheet.pdf", import.meta.url),
-    ),
-    stat(new URL("../public/webapp-planning-worksheet.pdf", import.meta.url)),
+    readFile(new URL("../app/worksheets/page.tsx", import.meta.url), "utf8"),
+    ...worksheetPaths.flatMap((path) => [
+      readFile(new URL(path, import.meta.url)),
+      stat(new URL(path, import.meta.url)),
+    ]),
   ]);
 
   assert.match(studio, /웹앱 기획 활동지/);
-  assert.match(studio, /\/webapp-planning-worksheet\.pdf/);
-  assert.equal(worksheet.subarray(0, 5).toString(), "%PDF-");
-  assert.ok(worksheetInfo.size > 50_000);
+  assert.match(studio, /\/worksheets/);
+  assert.match(worksheetPage, /초등학생용/);
+  assert.match(worksheetPage, /중학생용/);
+  assert.match(worksheetPage, /고등학생용/);
+
+  for (let index = 0; index < worksheetFiles.length; index += 2) {
+    const worksheet = worksheetFiles[index];
+    const worksheetInfo = worksheetFiles[index + 1];
+    assert.equal(worksheet.subarray(0, 5).toString(), "%PDF-");
+    assert.ok(worksheetInfo.size > 50_000);
+  }
 });
 
 test("uses Korean metadata and the standard Vercel Next.js runtime", async () => {
