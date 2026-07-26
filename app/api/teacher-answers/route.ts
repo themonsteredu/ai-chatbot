@@ -8,6 +8,11 @@ export const dynamic = "force-dynamic";
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MS = 5 * 60 * 1000;
 
+/** 강사 코드를 따로 등록하지 않았을 때 쓰는 값입니다. */
+export const DEFAULT_INSTRUCTOR_CODE = "1234";
+
+type Role = "admin" | "instructor";
+
 /**
  * 서버 인스턴스 안에서만 유지되는 시도 횟수입니다. 서버리스에서는 인스턴스가
  * 여러 개일 수 있어 완전한 차단은 아니고, 한 사람이 빠르게 반복해서 찍어 보는
@@ -40,11 +45,33 @@ function recordFailure(key: string, now: number) {
   record.until = now + LOCKOUT_MS;
 }
 
-function matchesCode(input: string, expected: string) {
+function sameCode(input: string, expected: string) {
   // 길이가 달라도 비교 시간이 같도록 해시로 맞춘 뒤 비교합니다.
   const a = createHash("sha256").update(input, "utf8").digest();
   const b = createHash("sha256").update(expected, "utf8").digest();
   return timingSafeEqual(a, b);
+}
+
+function readCodes() {
+  // TEACHER_ACCESS_CODE는 운영자 코드만 있던 시절의 이름이라 계속 인정합니다.
+  const admin = (
+    process.env.TEACHER_ADMIN_CODE ??
+    process.env.TEACHER_ACCESS_CODE ??
+    ""
+  ).trim();
+  const instructor = (
+    process.env.TEACHER_INSTRUCTOR_CODE ?? DEFAULT_INSTRUCTOR_CODE
+  ).trim();
+  return { admin, instructor };
+}
+
+function resolveRole(code: string, codes: ReturnType<typeof readCodes>) {
+  // 운영자 코드를 먼저 확인합니다. 두 코드가 같게 설정되면 운영자로 봅니다.
+  if (codes.admin && sameCode(code, codes.admin)) return "admin" as Role;
+  if (codes.instructor && sameCode(code, codes.instructor)) {
+    return "instructor" as Role;
+  }
+  return null;
 }
 
 function fail(message: string, status: number) {
@@ -55,10 +82,10 @@ function fail(message: string, status: number) {
 }
 
 export async function POST(request: NextRequest) {
-  const expected = process.env.TEACHER_ACCESS_CODE?.trim();
-  if (!expected) {
+  const codes = readCodes();
+  if (!codes.admin) {
     return fail(
-      "교사 코드가 아직 설정되지 않았습니다. 배포 환경 변수 TEACHER_ACCESS_CODE를 등록한 뒤 다시 시도해 주세요.",
+      "운영자 코드가 아직 설정되지 않았습니다. 배포 환경 변수 TEACHER_ADMIN_CODE를 등록한 뒤 다시 시도해 주세요.",
       503,
     );
   }
@@ -73,19 +100,37 @@ export async function POST(request: NextRequest) {
   }
 
   let code = "";
+  let action = "check";
   try {
     const body = await request.json();
     if (typeof body?.code === "string") code = body.code.trim();
+    if (body?.action === "download") action = "download";
   } catch {
     return fail("요청 형식이 올바르지 않습니다.", 400);
   }
 
-  if (!code || !matchesCode(code, expected)) {
+  const role = code ? resolveRole(code, codes) : null;
+  if (!role) {
     recordFailure(key, now);
-    return fail("교사 코드가 올바르지 않습니다.", 401);
+    return fail("코드가 올바르지 않습니다.", 401);
   }
 
   attempts.delete(key);
+
+  if (action === "check") {
+    return Response.json(
+      {
+        role,
+        // 강사 코드는 운영자에게만 알려 줍니다. 잊어버렸을 때 확인하는 용도입니다.
+        instructorCode: role === "admin" ? codes.instructor : undefined,
+        instructorCodeIsDefault:
+          role === "admin"
+            ? codes.instructor === DEFAULT_INSTRUCTOR_CODE
+            : undefined,
+      },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  }
 
   const generatedAt = new Intl.DateTimeFormat("ko-KR", {
     timeZone: "Asia/Seoul",
@@ -96,8 +141,7 @@ export async function POST(request: NextRequest) {
     status: 200,
     headers: {
       "Content-Type": "text/html; charset=utf-8",
-      "Content-Disposition":
-        'attachment; filename="teacher-answer-key.html"; filename*=UTF-8\'\'%EA%B5%90%EC%82%AC%EC%9A%A9-%EC%98%88%EC%8B%9C-%EB%8B%B5%EC%95%88.html',
+      "Content-Disposition": 'attachment; filename="teacher-answer-key.html"',
       "Cache-Control": "no-store",
       "X-Robots-Tag": "noindex, nofollow",
     },

@@ -861,6 +861,146 @@ select:focus-visible {
   color: var(--violet);
 }
 
+.teacher-session {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 11px;
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px dashed var(--line);
+}
+
+.teacher-session-head {
+  display: flex;
+  flex-basis: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.teacher-role {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.teacher-role.admin {
+  background: var(--violet-soft);
+  color: var(--violet);
+}
+
+.teacher-role.instructor {
+  background: #e4f6ee;
+  color: #1f8a5f;
+}
+
+.teacher-signout {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  background: none;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.teacher-signout:hover {
+  border-color: var(--violet);
+  color: var(--violet);
+}
+
+.teacher-code-box {
+  flex-basis: 100%;
+  padding: 15px 17px;
+  border: 1px solid var(--line-strong);
+  border-radius: 13px;
+  background: #fff;
+}
+
+.teacher-code-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.teacher-code-row > div {
+  flex: 1 1 180px;
+}
+
+.teacher-code-row b {
+  display: block;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.teacher-code-row small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.teacher-code-row code {
+  padding: 8px 16px;
+  border-radius: 9px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+
+.teacher-code-row button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 13px;
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  background: none;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.teacher-code-row button:hover {
+  border-color: var(--violet);
+  color: var(--violet);
+}
+
+.teacher-code-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 13px 0 0;
+  padding: 11px 13px;
+  border-radius: 10px;
+  background: #fff4e5;
+  color: #8a5100;
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+.teacher-code-warning svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.teacher-code-warning code {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: rgba(138, 81, 0, 0.12);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .teacher-panel-note {
   display: flex;
   align-items: flex-start;

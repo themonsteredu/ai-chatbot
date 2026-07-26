@@ -299,14 +299,23 @@ test("keeps the teacher answer key on the server behind an access code", async (
   assert.match(renderer, /escapeHtml/);
 
   // 코드 검사는 서버에서, 값은 환경 변수에서만 읽습니다.
-  assert.match(route, /process\.env\.TEACHER_ACCESS_CODE/);
+  assert.match(route, /process\.env\.TEACHER_ADMIN_CODE/);
+  assert.match(route, /process\.env\.TEACHER_ACCESS_CODE/); // 예전 이름도 인정
+  assert.match(route, /process\.env\.TEACHER_INSTRUCTOR_CODE/);
   assert.match(route, /timingSafeEqual/);
   assert.match(route, /"Cache-Control": "no-store"/);
   assert.match(route, /export async function POST/);
   assert.doesNotMatch(route, /export async function GET/);
-  // 코드가 소스에 박혀 있으면 안 됩니다.
-  assert.doesNotMatch(answerKey, /TEACHER_ACCESS_CODE\s*=/);
-  assert.doesNotMatch(gate, /TEACHER_ACCESS_CODE/);
+  // 운영자 코드는 소스에 박혀 있으면 안 됩니다.
+  assert.doesNotMatch(answerKey, /TEACHER_ADMIN_CODE\s*=/);
+  assert.doesNotMatch(gate, /TEACHER_ADMIN_CODE/);
+
+  // 강사 코드는 운영자로 확인했을 때만 응답에 실립니다.
+  assert.match(route, /role === "admin" \? codes\.instructor : undefined/);
+  assert.match(route, /DEFAULT_INSTRUCTOR_CODE = "1234"/);
+  // 기본 강사 코드는 클라이언트 코드에 값으로 들어 있으면 안 됩니다.
+  assert.doesNotMatch(gate, /"1234"/);
+  assert.match(gate, /instructorCodeIsDefault/);
 
   // 답안 원본은 라우트와 렌더러 외 어디에서도 불러오지 않아야 합니다.
   // 클라이언트 컴포넌트가 import하면 브라우저 번들에 실려 학생에게 노출됩니다.

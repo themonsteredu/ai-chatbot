@@ -96,7 +96,8 @@ export default function WorksheetsPage() {
           <span>
             <b>교사용 설정</b>
             <small>
-              예시 답안과 평가 기준표는 교사 코드를 입력해야 내려받을 수 있어요
+              예시 답안과 평가 기준표는 운영자·강사 코드를 입력해야 내려받을 수
+              있어요
             </small>
           </span>
           <ChevronRight size={16} aria-hidden="true" />

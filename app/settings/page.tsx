@@ -21,8 +21,9 @@ export default function SettingsPage() {
           <span className="worksheets-kicker">TEACHER SETTINGS</span>
           <h1>교사용 설정</h1>
           <p>
-            수업을 준비하는 선생님을 위한 자료입니다. 예시 답안은 교사 코드를
-            입력해야 내려받을 수 있습니다.
+            수업을 준비하는 선생님을 위한 자료입니다. 예시 답안은 운영자 또는
+            강사 코드를 입력해야 내려받을 수 있고, 운영자로 확인하면 강사용
+            코드를 다시 볼 수 있습니다.
           </p>
         </header>
 
