@@ -1,4 +1,11 @@
-import { ArrowLeft, Download, FileText, Printer } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronRight,
+  Download,
+  FileText,
+  Lock,
+  Printer,
+} from "lucide-react";
 import Link from "next/link";
 
 const worksheets = [
@@ -83,6 +90,17 @@ export default function WorksheetsPage() {
             <span>A4 · 세로 · 실제 크기 또는 100% · 양면 인쇄 가능</span>
           </div>
         </aside>
+
+        <Link className="worksheet-teacher-link" href="/settings">
+          <Lock size={20} aria-hidden="true" />
+          <span>
+            <b>교사용 설정</b>
+            <small>
+              예시 답안과 평가 기준표는 교사 코드를 입력해야 내려받을 수 있어요
+            </small>
+          </span>
+          <ChevronRight size={16} aria-hidden="true" />
+        </Link>
       </div>
     </main>
   );

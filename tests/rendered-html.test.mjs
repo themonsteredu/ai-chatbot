@@ -271,3 +271,57 @@ test("uses Korean metadata and the standard Vercel Next.js runtime", async () =>
   );
   await assert.rejects(access(new URL(".openai/hosting.json", root)));
 });
+
+test("keeps the teacher answer key on the server behind an access code", async () => {
+  const [answerKey, renderer, route, gate, settings, worksheets] =
+    await Promise.all([
+      readFile(
+        new URL("app/api/teacher-answers/answer-key.ts", root),
+        "utf8",
+      ),
+      readFile(new URL("app/api/teacher-answers/render.ts", root), "utf8"),
+      readFile(new URL("app/api/teacher-answers/route.ts", root), "utf8"),
+      readFile(
+        new URL("app/components/teacher-answer-download.tsx", root),
+        "utf8",
+      ),
+      readFile(new URL("app/settings/page.tsx", root), "utf8"),
+      readFile(new URL("app/worksheets/page.tsx", root), "utf8"),
+    ]);
+
+  // 학년군 3종과 활동지 12종, 지도 포인트, 평가 기준표가 모두 들어 있어야 합니다.
+  assert.match(answerKey, /tone: "elementary"/);
+  assert.match(answerKey, /tone: "middle"/);
+  assert.match(answerKey, /tone: "high"/);
+  assert.equal((answerKey.match(/order: "\d\/4"/g) ?? []).length, 12);
+  assert.equal((answerKey.match(/rubric: \[/g) ?? []).length, 3);
+  assert.match(renderer, /지도 포인트/);
+  assert.match(renderer, /escapeHtml/);
+
+  // 코드 검사는 서버에서, 값은 환경 변수에서만 읽습니다.
+  assert.match(route, /process\.env\.TEACHER_ACCESS_CODE/);
+  assert.match(route, /timingSafeEqual/);
+  assert.match(route, /"Cache-Control": "no-store"/);
+  assert.match(route, /export async function POST/);
+  assert.doesNotMatch(route, /export async function GET/);
+  // 코드가 소스에 박혀 있으면 안 됩니다.
+  assert.doesNotMatch(answerKey, /TEACHER_ACCESS_CODE\s*=/);
+  assert.doesNotMatch(gate, /TEACHER_ACCESS_CODE/);
+
+  // 답안 원본은 라우트와 렌더러 외 어디에서도 불러오지 않아야 합니다.
+  // 클라이언트 컴포넌트가 import하면 브라우저 번들에 실려 학생에게 노출됩니다.
+  assert.doesNotMatch(gate, /from "[^"]*answer-key"/);
+  assert.doesNotMatch(settings, /from "[^"]*answer-key"/);
+  assert.match(route, /from "\.\/render"/);
+  assert.match(renderer, /from "\.\/answer-key"/);
+
+  // 크로뮴이 한글 download 속성을 버리므로 파일 이름은 영문이어야 합니다.
+  const download = gate.match(/link\.download = "([^"]+)"/);
+  assert.ok(download, "다운로드 파일 이름을 지정해야 합니다.");
+  assert.match(download[1], /^[\x20-\x7e]+\.html$/);
+
+  // 교사용 화면은 검색에 노출되지 않고, 활동지 화면에서 찾아갈 수 있어야 합니다.
+  assert.match(settings, /robots: \{ index: false, follow: false \}/);
+  assert.match(settings, /<TeacherAnswerDownload \/>/);
+  assert.match(worksheets, /href="\/settings"/);
+});
