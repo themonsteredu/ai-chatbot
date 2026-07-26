@@ -9,10 +9,16 @@ type BeforeInstallPromptEvent = Event & {
 };
 
 type PwaInstallButtonProps = {
+  accent: string;
+  appId: string;
+  appName: string;
   compact?: boolean;
 };
 
 export function PwaInstallButton({
+  accent,
+  appId,
+  appName,
   compact = false,
 }: PwaInstallButtonProps) {
   const [installPrompt, setInstallPrompt] =
@@ -21,6 +27,34 @@ export function PwaInstallButton({
   const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => {
+    const manifestParams = new URLSearchParams({
+      id: appId,
+      name: appName,
+      accent,
+    });
+    const manifestHref = `/api/webapp-manifest?${manifestParams.toString()}`;
+    let manifestLink = document.querySelector<HTMLLinkElement>(
+      'link[data-student-webapp-manifest="true"]',
+    );
+    if (!manifestLink) {
+      manifestLink = document.createElement("link");
+      manifestLink.rel = "manifest";
+      manifestLink.dataset.studentWebappManifest = "true";
+      document.head.appendChild(manifestLink);
+    }
+    manifestLink.href = manifestHref;
+
+    let appleTitle = document.querySelector<HTMLMetaElement>(
+      'meta[name="apple-mobile-web-app-title"]',
+    );
+    if (!appleTitle) {
+      appleTitle = document.createElement("meta");
+      appleTitle.name = "apple-mobile-web-app-title";
+      document.head.appendChild(appleTitle);
+    }
+    appleTitle.content = appName;
+    document.title = appName;
+
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => undefined);
     }
@@ -53,7 +87,7 @@ export function PwaInstallButton({
       window.removeEventListener("beforeinstallprompt", capturePrompt);
       window.removeEventListener("appinstalled", markInstalled);
     };
-  }, []);
+  }, [accent, appId, appName]);
 
   const install = async () => {
     if (installed) return;
@@ -79,7 +113,7 @@ export function PwaInstallButton({
         ) : (
           <>
             <Download size={14} aria-hidden="true" />
-            홈 화면에 저장
+            ‘{appName}’ 설치
           </>
         )}
       </button>
@@ -94,7 +128,7 @@ export function PwaInstallButton({
           </button>
           <Share2 size={16} aria-hidden="true" />
           <p>
-            <b>아이폰</b>은 Safari의 공유 버튼을 누른 뒤
+            <b>‘{appName}’</b>을 저장하려면 아이폰은 Safari의 공유 버튼을 누른 뒤
             <strong> ‘홈 화면에 추가’</strong>를 선택하세요. 안드로이드는
             브라우저 메뉴의 <strong>‘앱 설치’</strong>를 선택하면 됩니다.
           </p>

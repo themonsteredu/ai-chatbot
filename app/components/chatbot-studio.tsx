@@ -15,15 +15,16 @@ import {
   GripVertical,
   Info,
   LayoutPanelTop,
+  LibraryBig,
   ListChecks,
   MousePointerClick,
   NotebookPen,
   Palette,
   Play,
   Plus,
+  Printer,
   Rocket,
   RotateCcw,
-  Save,
   Settings2,
   Share2,
   Smartphone,
@@ -34,6 +35,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
+import Link from "next/link";
 import { DragEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   ACTION_ICON_LABELS,
@@ -48,13 +50,21 @@ import {
   type TemplateId,
   type WebAppProject,
 } from "../../lib/chatbot-studio";
+import {
+  deleteSavedWebApp,
+  isValidWebAppId,
+  listSavedWebApps,
+  loadSavedWebApp,
+  saveWebApp,
+  type SavedWebAppSummary,
+} from "../../lib/saved-webapps";
 import { BlockWorkspace } from "./block-workspace";
 import { PhonePreview } from "./phone-preview";
-import { PwaInstallButton } from "./pwa-install";
+import { SavedWebAppLibrary } from "./saved-webapp-library";
 import { WebAppPlayer } from "./webapp-player";
 
 const STORAGE_KEY = "my-webapp-inventor-project-v3";
-const INSTALLED_PROJECT_KEY = "my-webapp-installed-project-v1";
+const LEGACY_INSTALLED_PROJECT_KEY = "my-webapp-installed-project-v1";
 
 type PaletteKind =
   | "screen"
@@ -187,7 +197,11 @@ export function ChatbotStudio() {
     useState<SelectedTarget>("screen");
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>("viewer");
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const [standalone, setStandalone] = useState(false);
+  const [activeAppId, setActiveAppId] = useState("");
+  const [savedApps, setSavedApps] = useState<SavedWebAppSummary[]>([]);
+  const [loadError, setLoadError] = useState("");
   const [hydrated, setHydrated] = useState(false);
   const [toast, setToast] = useState("");
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -210,22 +224,80 @@ export function ChatbotStudio() {
     const timer = window.setTimeout(() => {
       const params = new URLSearchParams(window.location.search);
       const runMode = params.get("run");
+      const requestedAppId = params.get("app");
+      const editingAppId = params.get("edit");
       const shared = params.get("project");
       const sharedProject = shared ? decodeProject(shared) : null;
-      const savedKey =
-        runMode === "saved" ? INSTALLED_PROJECT_KEY : STORAGE_KEY;
-      const saved = window.localStorage.getItem(savedKey);
+      const isStandalone =
+        runMode === "1" || runMode === "install" || runMode === "saved";
+      let nextAppId = isValidWebAppId(requestedAppId)
+        ? requestedAppId!
+        : isValidWebAppId(editingAppId)
+          ? editingAppId!
+          : "";
+      let nextProject: WebAppProject | null = null;
 
       if (sharedProject) {
-        setProject(sharedProject);
-      } else if (saved) {
-        try {
-          setProject(normalizeProject(JSON.parse(saved)));
-        } catch {
-          setProject(cloneProject(DEFAULT_PROJECT));
+        const savedApp = saveWebApp(
+          window.localStorage,
+          sharedProject,
+          nextAppId || undefined,
+        );
+        nextAppId = savedApp.id;
+        nextProject = sharedProject;
+
+        if (isStandalone) {
+          const installedUrl = new URL("/", window.location.origin);
+          installedUrl.searchParams.set(
+            "run",
+            runMode === "saved" ? "saved" : "install",
+          );
+          installedUrl.searchParams.set("app", nextAppId);
+          window.history.replaceState(null, "", installedUrl);
+        }
+      } else if (nextAppId) {
+        nextProject = loadSavedWebApp(window.localStorage, nextAppId);
+      } else if (runMode === "saved") {
+        const legacySaved = window.localStorage.getItem(
+          LEGACY_INSTALLED_PROJECT_KEY,
+        );
+        if (legacySaved) {
+          try {
+            nextProject = normalizeProject(JSON.parse(legacySaved));
+            const migrated = saveWebApp(window.localStorage, nextProject);
+            nextAppId = migrated.id;
+            const migratedUrl = new URL("/", window.location.origin);
+            migratedUrl.searchParams.set("run", "saved");
+            migratedUrl.searchParams.set("app", nextAppId);
+            window.history.replaceState(null, "", migratedUrl);
+          } catch {
+            nextProject = null;
+          }
+        }
+      } else {
+        const saved = window.localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          try {
+            nextProject = normalizeProject(JSON.parse(saved));
+          } catch {
+            nextProject = cloneProject(DEFAULT_PROJECT);
+          }
         }
       }
-      setStandalone(runMode === "1" || runMode === "saved");
+
+      if (nextProject) {
+        setProject(nextProject);
+      } else if (isStandalone) {
+        setLoadError(
+          "이 기기에서 이 웹앱의 저장 내용을 찾지 못했어요. 만든 기기에서 다시 공유 링크를 열어 주세요.",
+        );
+      } else {
+        setProject(cloneProject(DEFAULT_PROJECT));
+      }
+
+      setActiveAppId(nextAppId);
+      setSavedApps(listSavedWebApps(window.localStorage));
+      setStandalone(isStandalone);
       setHydrated(true);
     }, 0);
 
@@ -233,19 +305,24 @@ export function ChatbotStudio() {
   }, []);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || standalone) return;
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(project));
-    window.localStorage.setItem(INSTALLED_PROJECT_KEY, JSON.stringify(project));
-  }, [hydrated, project]);
+
+    if (activeAppId) {
+      saveWebApp(window.localStorage, project, activeAppId);
+    }
+  }, [activeAppId, hydrated, project, standalone]);
 
   useEffect(() => {
-    if (!previewOpen) return;
+    if (!previewOpen && !libraryOpen) return;
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setPreviewOpen(false);
+      if (event.key !== "Escape") return;
+      setPreviewOpen(false);
+      setLibraryOpen(false);
     };
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [previewOpen]);
+  }, [libraryOpen, previewOpen]);
 
   useEffect(
     () => () => {
@@ -386,9 +463,24 @@ export function ChatbotStudio() {
     }
   };
 
-  const saveNow = () => {
+  const saveCurrentAsWebApp = () => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(project));
-    notify("이 기기에 웹앱 프로젝트를 저장했어요.");
+    const savedApp = saveWebApp(
+      window.localStorage,
+      project,
+      activeAppId || undefined,
+    );
+    setActiveAppId(savedApp.id);
+    setSavedApps(listSavedWebApps(window.localStorage));
+    return savedApp;
+  };
+
+  const openInstallPage = () => {
+    const savedApp = saveCurrentAsWebApp();
+    const url = new URL("/", window.location.origin);
+    url.searchParams.set("run", "install");
+    url.searchParams.set("app", savedApp.id);
+    window.location.href = url.toString();
   };
 
   const resetProject = () => {
@@ -401,9 +493,10 @@ export function ChatbotStudio() {
   };
 
   const shareProject = async () => {
-    const url = new URL(window.location.href);
-    url.search = "";
-    url.searchParams.set("run", "1");
+    const savedApp = saveCurrentAsWebApp();
+    const url = new URL("/", window.location.origin);
+    url.searchParams.set("run", "install");
+    url.searchParams.set("app", savedApp.id);
     url.searchParams.set("project", encodeProject(project));
 
     try {
@@ -415,9 +508,45 @@ export function ChatbotStudio() {
   };
 
   const editStandalone = () => {
-    const url = new URL(window.location.href);
-    url.search = "";
+    const url = new URL("/", window.location.origin);
+    if (activeAppId) url.searchParams.set("edit", activeAppId);
     window.location.href = url.toString();
+  };
+
+  const openSavedApp = (app: SavedWebAppSummary) => {
+    const url = new URL("/", window.location.origin);
+    url.searchParams.set("run", "install");
+    url.searchParams.set("app", app.id);
+    window.location.href = url.toString();
+  };
+
+  const showSavedApps = () => {
+    setSavedApps(listSavedWebApps(window.localStorage));
+    setLibraryOpen(true);
+  };
+
+  const editSavedApp = (app: SavedWebAppSummary) => {
+    const url = new URL("/", window.location.origin);
+    url.searchParams.set("edit", app.id);
+    window.location.href = url.toString();
+  };
+
+  const removeSavedApp = (app: SavedWebAppSummary) => {
+    if (
+      !window.confirm(
+        `‘${app.appName}’을 보관함에서 삭제할까요? 홈 화면에 추가한 아이콘은 기기에서 따로 지워야 해요.`,
+      )
+    ) {
+      return;
+    }
+
+    deleteSavedWebApp(window.localStorage, app.id);
+    setSavedApps(listSavedWebApps(window.localStorage));
+    if (app.id === activeAppId) {
+      setActiveAppId("");
+      window.history.replaceState(null, "", "/");
+    }
+    notify("웹앱을 보관함에서 삭제했어요.");
   };
 
   const selectTarget = (target: SelectedTarget) => {
@@ -970,8 +1099,28 @@ export function ChatbotStudio() {
     );
   }
 
+  if (standalone && loadError) {
+    return (
+      <main className="missing-webapp">
+        <span>
+          <Smartphone size={27} aria-hidden="true" />
+        </span>
+        <small>WEB APP NOT FOUND</small>
+        <h1>저장한 웹앱을 찾지 못했어요</h1>
+        <p>{loadError}</p>
+        <Link href="/">웹앱 만들기로 돌아가기</Link>
+      </main>
+    );
+  }
+
   if (standalone) {
-    return <WebAppPlayer project={project} onEdit={editStandalone} />;
+    return (
+      <WebAppPlayer
+        appId={activeAppId}
+        project={project}
+        onEdit={editStandalone}
+      />
+    );
   }
 
   return (
@@ -1032,13 +1181,36 @@ export function ChatbotStudio() {
           >
             <RotateCcw size={17} aria-hidden="true" />
           </button>
-          <button className="header-button" type="button" onClick={saveNow}>
-            <Save size={16} aria-hidden="true" />
-            저장
+          <a
+            className="header-button"
+            href="/webapp-planning-worksheet.pdf"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <Printer size={16} aria-hidden="true" />
+            웹앱 기획 활동지
+          </a>
+          <button
+            className="header-button"
+            type="button"
+            onClick={showSavedApps}
+          >
+            <LibraryBig size={16} aria-hidden="true" />
+            내 웹앱
           </button>
           <button className="header-button" type="button" onClick={shareProject}>
             <Share2 size={16} aria-hidden="true" />
             공유
+          </button>
+          <button
+            className="save-app-button"
+            type="button"
+            aria-label="완성한 내용을 내 웹앱으로 저장"
+            title="완성한 내용을 내 웹앱으로 저장"
+            onClick={openInstallPage}
+          >
+            <Smartphone size={16} aria-hidden="true" />
+            내 웹앱으로 저장
           </button>
           <button
             className="run-button"
@@ -1125,6 +1297,21 @@ export function ChatbotStudio() {
               mobilePanel === "palette" ? "mobile-active" : ""
             }`}
           >
+            <a
+              className="worksheet-card"
+              href="/webapp-planning-worksheet.pdf"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <span>
+                <Printer size={18} aria-hidden="true" />
+              </span>
+              <span>
+                <b>웹앱 기획 활동지 작성</b>
+                <small>인쇄해서 아이디어와 화면을 설계해요</small>
+              </span>
+              <ChevronRight size={15} aria-hidden="true" />
+            </a>
             <div className="panel-title">
               <span>시작 예시</span>
               <small>만들고 싶은 웹앱을 골라요</small>
@@ -1424,7 +1611,14 @@ export function ChatbotStudio() {
                 <Check size={14} aria-hidden="true" />
                 작동하는 기능 {visibleFeatureCount - 1}개가 들어 있어요
               </span>
-              <PwaInstallButton compact />
+              <button
+                className="preview-save-app"
+                type="button"
+                onClick={openInstallPage}
+              >
+                <Smartphone size={14} aria-hidden="true" />
+                내 웹앱으로 저장
+              </button>
               <button type="button" onClick={shareProject}>
                 <Copy size={14} aria-hidden="true" />
                 이 웹앱 공유
@@ -1432,6 +1626,17 @@ export function ChatbotStudio() {
             </footer>
           </section>
         </div>
+      )}
+
+      {libraryOpen && (
+        <SavedWebAppLibrary
+          activeAppId={activeAppId}
+          apps={savedApps}
+          onClose={() => setLibraryOpen(false)}
+          onDelete={removeSavedApp}
+          onEdit={editSavedApp}
+          onOpen={openSavedApp}
+        />
       )}
 
       {toast && (

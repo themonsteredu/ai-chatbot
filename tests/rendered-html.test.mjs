@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { access, readFile } from "node:fs/promises";
+import { access, readFile, stat } from "node:fs/promises";
 import test from "node:test";
 
 const root = new URL("../", import.meta.url);
@@ -108,8 +108,16 @@ test("runs only student-authored chatbot questions and answers", async () => {
   );
 });
 
-test("is installable as a persistent phone web app", async () => {
-  const [studio, player, installer, manifest, serviceWorker, layout] =
+test("saves and installs every student project as its own phone web app", async () => {
+  const [
+    studio,
+    player,
+    installer,
+    manifestRoute,
+    savedWebApps,
+    serviceWorker,
+    layout,
+  ] =
     await Promise.all([
       readFile(
         new URL("../app/components/chatbot-studio.tsx", import.meta.url),
@@ -123,23 +131,55 @@ test("is installable as a persistent phone web app", async () => {
         new URL("../app/components/pwa-install.tsx", import.meta.url),
         "utf8",
       ),
-      readFile(new URL("../app/manifest.ts", import.meta.url), "utf8"),
+      readFile(
+        new URL("../app/api/webapp-manifest/route.ts", import.meta.url),
+        "utf8",
+      ),
+      readFile(new URL("../lib/saved-webapps.ts", import.meta.url), "utf8"),
       readFile(new URL("../public/sw.js", import.meta.url), "utf8"),
       readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     ]);
 
-  assert.match(studio, /my-webapp-installed-project-v1/);
+  assert.match(studio, /saveCurrentAsWebApp/);
+  assert.match(studio, /내 웹앱 보관함|SavedWebAppLibrary/);
+  assert.match(studio, /내 웹앱으로 저장/);
+  assert.match(studio, /searchParams\.set\("app", savedApp\.id\)/);
   assert.match(studio, /runMode === "saved"/);
   assert.match(studio, /<WebAppPlayer/);
   assert.match(player, /<PwaInstallButton/);
-  assert.match(installer, /홈 화면/);
+  assert.match(savedWebApps, /my-webapp-project-v1:/);
+  assert.match(savedWebApps, /crypto\.randomUUID/);
+  assert.match(savedWebApps, /saveWebApp/);
+  assert.match(savedWebApps, /listSavedWebApps/);
+  assert.match(installer, /api\/webapp-manifest/);
+  assert.match(installer, /student-webapp-manifest/);
+  assert.match(installer, /‘\{appName\}’ 설치/);
   assert.match(installer, /beforeinstallprompt/);
   assert.match(installer, /serviceWorker\.register\("\/sw\.js"\)/);
   assert.match(installer, /홈 화면에 추가/);
-  assert.match(manifest, /start_url: "\/\?run=saved"/);
-  assert.match(manifest, /display: "standalone"/);
-  assert.match(serviceWorker, /my-webapp-shell-v1/);
-  assert.match(layout, /manifest: "\/manifest\.webmanifest"/);
+  assert.match(manifestRoute, /id: `\/student-webapps\/\$\{id\}`/);
+  assert.match(manifestRoute, /start_url: `\/\?run=saved&app=\$\{encodeURIComponent\(id\)\}`/);
+  assert.match(manifestRoute, /display: "standalone"/);
+  assert.match(serviceWorker, /my-webapp-shell-v2/);
+  assert.doesNotMatch(layout, /manifest:/);
+});
+
+test("ships a printable four-page web app planning worksheet", async () => {
+  const [studio, worksheet, worksheetInfo] = await Promise.all([
+    readFile(
+      new URL("../app/components/chatbot-studio.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../public/webapp-planning-worksheet.pdf", import.meta.url),
+    ),
+    stat(new URL("../public/webapp-planning-worksheet.pdf", import.meta.url)),
+  ]);
+
+  assert.match(studio, /웹앱 기획 활동지/);
+  assert.match(studio, /\/webapp-planning-worksheet\.pdf/);
+  assert.equal(worksheet.subarray(0, 5).toString(), "%PDF-");
+  assert.ok(worksheetInfo.size > 50_000);
 });
 
 test("uses Korean metadata and the standard Vercel Next.js runtime", async () => {

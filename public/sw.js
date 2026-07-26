@@ -1,5 +1,5 @@
-const CACHE_NAME = "my-webapp-shell-v1";
-const APP_SHELL = ["/?run=saved", "/app-icon.svg", "/manifest.webmanifest"];
+const CACHE_NAME = "my-webapp-shell-v2";
+const APP_SHELL = ["/", "/app-icon.svg"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -31,6 +31,7 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith("/api/")) return;
 
   if (request.mode === "navigate") {
     event.respondWith(
@@ -48,7 +49,7 @@ self.addEventListener("fetch", (event) => {
         .catch(
           () =>
             caches.match(request).then(
-              (cached) => cached || caches.match("/?run=saved"),
+              (cached) => cached || caches.match("/"),
             ),
         ),
     );

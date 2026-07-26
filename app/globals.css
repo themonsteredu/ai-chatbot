@@ -71,7 +71,7 @@ select:focus-visible {
   position: relative;
   z-index: 30;
   display: grid;
-  grid-template-columns: minmax(240px, 1fr) minmax(180px, 0.75fr) auto minmax(360px, 1.1fr);
+  grid-template-columns: minmax(220px, 0.9fr) minmax(160px, 0.6fr) auto minmax(560px, 1.7fr);
   align-items: center;
   min-height: 72px;
   border-bottom: 1px solid var(--line);
@@ -223,6 +223,7 @@ select:focus-visible {
 
 .icon-action,
 .header-button,
+.save-app-button,
 .run-button {
   display: inline-flex;
   height: 38px;
@@ -250,6 +251,18 @@ select:focus-visible {
   padding: 0 11px;
   border: 1px solid var(--line);
   background: #fff;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.save-app-button {
+  min-width: 132px;
+  padding: 0 12px;
+  border: 1px solid var(--ink);
+  background: var(--yellow);
+  color: var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+  white-space: nowrap;
 }
 
 .run-button {
@@ -263,8 +276,13 @@ select:focus-visible {
 
 .icon-action:hover,
 .header-button:hover,
+.save-app-button:hover,
 .run-button:hover {
   transform: translateY(-1px);
+}
+
+.save-app-button:hover {
+  box-shadow: 3px 4px 0 var(--ink);
 }
 
 .run-button:hover {
@@ -376,6 +394,58 @@ select:focus-visible {
 .palette-panel {
   padding: 19px 14px;
   border-right: 1px solid var(--line);
+}
+
+.worksheet-card {
+  display: grid;
+  grid-template-columns: 35px minmax(0, 1fr) 14px;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 16px;
+  padding: 10px;
+  border: 1px solid #cfc7ff;
+  border-radius: 12px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.88), transparent),
+    var(--violet-soft);
+  color: var(--ink);
+  text-decoration: none;
+  box-shadow: 0 7px 20px rgba(67, 51, 155, 0.08);
+}
+
+.worksheet-card > span:first-child {
+  display: grid;
+  width: 35px;
+  height: 35px;
+  place-items: center;
+  border: 1px solid var(--ink);
+  border-radius: 9px;
+  background: var(--yellow);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.worksheet-card b,
+.worksheet-card small {
+  display: block;
+}
+
+.worksheet-card b {
+  font-size: 9px;
+}
+
+.worksheet-card small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 7px;
+  line-height: 1.45;
+}
+
+.worksheet-card > svg {
+  color: var(--violet);
+}
+
+.worksheet-card:hover {
+  border-color: var(--violet);
 }
 
 .panel-title {
@@ -1627,6 +1697,215 @@ select:focus-visible {
   cursor: pointer;
 }
 
+.preview-dialog > footer > button.preview-save-app {
+  border-color: var(--ink);
+  background: var(--yellow);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.library-backdrop {
+  position: fixed;
+  z-index: 120;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(18, 21, 31, 0.72);
+  backdrop-filter: blur(12px);
+}
+
+.library-dialog {
+  width: min(720px, 100%);
+  max-height: min(720px, calc(100vh - 30px));
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 22px;
+  background: #f5f6fa;
+  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.34);
+}
+
+.library-dialog > header {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 36px;
+  align-items: start;
+  gap: 12px;
+  padding: 20px 22px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+}
+
+.library-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 2px solid var(--ink);
+  border-radius: 12px 12px 12px 4px;
+  background: var(--yellow);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.library-dialog > header small {
+  color: var(--violet);
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.library-dialog > header h2 {
+  margin: 3px 0 0;
+  font-size: 18px;
+  letter-spacing: -0.04em;
+}
+
+.library-dialog > header p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.library-dialog > header > button {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.library-list {
+  display: grid;
+  gap: 10px;
+  max-height: 560px;
+  overflow: auto;
+  padding: 16px;
+}
+
+.library-list article {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.library-list article.active {
+  border-color: #bcb2ff;
+  box-shadow: 0 0 0 2px var(--violet-soft);
+}
+
+.saved-app-icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--saved-app-accent) 14%, white);
+  color: var(--saved-app-accent);
+}
+
+.library-list article > div {
+  min-width: 0;
+}
+
+.library-list article > div > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.library-list article > div b {
+  padding: 3px 6px;
+  border-radius: 99px;
+  background: var(--violet-soft);
+  color: var(--violet);
+  font-size: 7px;
+}
+
+.library-list article > div small {
+  color: #9299aa;
+  font-size: 7px;
+}
+
+.library-list article > div strong {
+  display: block;
+  overflow: hidden;
+  margin-top: 4px;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.library-list article > div p {
+  overflow: hidden;
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.library-list article nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.library-list article nav button {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #fff;
+  font-size: 8px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.library-list article nav button:first-child {
+  border-color: #d0c9ff;
+  background: var(--violet-soft);
+  color: var(--violet);
+}
+
+.library-list article nav button.danger {
+  width: 34px;
+  padding: 0;
+  color: var(--danger);
+}
+
+.library-empty {
+  display: grid;
+  min-height: 280px;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  padding: 30px;
+  color: #9aa1b1;
+  text-align: center;
+}
+
+.library-empty strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.library-empty p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 9px;
+}
+
 .studio-toast {
   position: fixed;
   z-index: 150;
@@ -2601,6 +2880,31 @@ select:focus-visible {
     left: 12px;
     justify-content: center;
   }
+
+  .library-backdrop {
+    padding: 0;
+  }
+
+  .library-dialog {
+    width: 100%;
+    max-height: 100dvh;
+    min-height: 100dvh;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .library-list {
+    max-height: calc(100dvh - 104px);
+  }
+
+  .library-list article {
+    grid-template-columns: 40px minmax(0, 1fr);
+  }
+
+  .library-list article nav {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
 }
 
 @media (max-width: 430px) {
@@ -2611,6 +2915,18 @@ select:focus-visible {
 
   .topbar-actions {
     padding-right: 8px;
+  }
+
+  .save-app-button {
+    width: 38px;
+    min-width: 38px;
+    padding: 0;
+    font-size: 0;
+  }
+
+  .save-app-button svg {
+    width: 17px;
+    height: 17px;
   }
 
   .palette-list {
@@ -3199,6 +3515,63 @@ select:focus-visible {
   color: #555d70;
   font-size: 9px;
   line-height: 1.6;
+}
+
+.missing-webapp {
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 50% 32%, rgba(105, 86, 232, 0.13), transparent 20rem),
+    var(--page);
+  text-align: center;
+}
+
+.missing-webapp > span {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  margin-bottom: 7px;
+  border: 2px solid var(--ink);
+  border-radius: 17px 17px 17px 6px;
+  background: var(--yellow);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.missing-webapp small {
+  color: var(--violet);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.missing-webapp h1 {
+  margin: 0;
+  font-size: clamp(21px, 5vw, 30px);
+  letter-spacing: -0.05em;
+}
+
+.missing-webapp p {
+  max-width: 470px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.missing-webapp a {
+  margin-top: 12px;
+  padding: 11px 15px;
+  border-radius: 10px;
+  background: var(--violet);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 850;
+  text-decoration: none;
 }
 
 .standalone-app-shell {

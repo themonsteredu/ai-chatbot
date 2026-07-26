@@ -6,11 +6,16 @@ import { PhonePreview } from "./phone-preview";
 import { PwaInstallButton } from "./pwa-install";
 
 type WebAppPlayerProps = {
+  appId: string;
   project: WebAppProject;
   onEdit: () => void;
 };
 
-export function WebAppPlayer({ project, onEdit }: WebAppPlayerProps) {
+export function WebAppPlayer({
+  appId,
+  project,
+  onEdit,
+}: WebAppPlayerProps) {
   return (
     <main
       className="standalone-app-shell"
@@ -27,7 +32,12 @@ export function WebAppPlayer({ project, onEdit }: WebAppPlayerProps) {
           </span>
         </span>
         <nav>
-          <PwaInstallButton compact />
+          <PwaInstallButton
+            accent={project.accent}
+            appId={appId}
+            appName={project.appName}
+            compact
+          />
           <button type="button" onClick={onEdit}>
             <Pencil size={13} aria-hidden="true" />
             편집하기
