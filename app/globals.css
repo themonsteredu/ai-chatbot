@@ -2645,3 +2645,960 @@ select:focus-visible {
     transition-duration: 0.01ms !important;
   }
 }
+
+.studio-loading {
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  align-content: center;
+  gap: 12px;
+  background:
+    radial-gradient(circle, rgba(105, 86, 232, 0.12), transparent 20rem),
+    var(--page);
+  color: var(--violet);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.camp-structure-note {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px;
+  border: 1px solid #cfe0ff;
+  border-radius: 10px;
+  background: #f2f7ff;
+  color: var(--blue);
+}
+
+.camp-structure-note > span,
+.camp-structure-note b,
+.camp-structure-note small {
+  display: block;
+}
+
+.camp-structure-note b {
+  font-size: 9px;
+}
+
+.camp-structure-note small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 7px;
+  line-height: 1.45;
+}
+
+.camp-report-card {
+  padding: 10px;
+  cursor: pointer;
+}
+
+.camp-report-heading {
+  display: grid;
+  grid-template-columns: 31px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+}
+
+.camp-report-heading small,
+.camp-report-heading strong,
+.camp-report-heading em {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.camp-report-heading small {
+  color: var(--blue);
+  font-size: 5px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.camp-report-heading strong {
+  margin-top: 2px;
+  font-size: 9px;
+}
+
+.camp-report-heading em {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 5px;
+  font-style: normal;
+}
+
+.camp-day-preview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.camp-day-preview > span {
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  padding: 6px 3px;
+  border: 1px solid #dce7fb;
+  border-radius: 8px;
+  background: #f5f8ff;
+}
+
+.camp-day-preview b {
+  color: #335b9e;
+  font-size: 6px;
+}
+
+.camp-day-preview small {
+  color: var(--muted);
+  font-size: 5px;
+}
+
+.camp-report-card > button {
+  display: flex;
+  min-height: 29px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  margin-top: 7px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--phone-accent);
+  color: #fff;
+  font-size: 6px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.camp-report-sheet {
+  position: absolute;
+  z-index: 12;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+  padding-top: 7px;
+  border-radius: 36px;
+  background: #f3f6fc;
+  animation: sheet-in 180ms ease both;
+}
+
+.camp-report-sheet > header {
+  display: grid;
+  grid-template-columns: 29px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 82px;
+  margin: 0 7px;
+  padding: 25px 10px 10px;
+  border-radius: 30px 30px 14px 14px;
+  background:
+    radial-gradient(circle at 92% 4%, rgba(255, 255, 255, 0.28), transparent 5rem),
+    var(--phone-accent);
+  color: #fff;
+}
+
+.camp-report-sheet > header > button {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  cursor: pointer;
+}
+
+.camp-report-sheet > header small,
+.camp-report-sheet > header strong {
+  display: block;
+}
+
+.camp-report-sheet > header small {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 5px;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+}
+
+.camp-report-sheet > header strong {
+  margin-top: 3px;
+  overflow: hidden;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.camp-report-sheet > header > b {
+  display: grid;
+  min-width: 36px;
+  height: 24px;
+  place-items: center;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 7px;
+}
+
+.camp-report-scroll {
+  min-height: 0;
+  padding: 9px 10px 18px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.student-name-field {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 8px 9px;
+  border: 1px solid #dde4f0;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.student-name-field span {
+  color: #596174;
+  font-size: 7px;
+  font-weight: 850;
+}
+
+.student-name-field input {
+  min-width: 0;
+  height: 27px;
+  padding: 0 8px;
+  border: 1px solid #e0e5ee;
+  border-radius: 7px;
+  outline: 0;
+  font-size: 7px;
+}
+
+.camp-day-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  margin: 8px 0;
+}
+
+.camp-day-tabs button {
+  display: grid;
+  gap: 2px;
+  padding: 7px 3px;
+  border: 1px solid #dce2ed;
+  border-radius: 9px;
+  background: #fff;
+  color: #555e70;
+  cursor: pointer;
+}
+
+.camp-day-tabs button.active {
+  border-color: var(--phone-accent);
+  background: color-mix(in srgb, var(--phone-accent) 9%, white);
+  color: var(--phone-accent);
+  box-shadow: inset 0 -2px 0 var(--phone-accent);
+}
+
+.camp-day-tabs b {
+  font-size: 7px;
+}
+
+.camp-day-tabs span {
+  font-size: 5px;
+}
+
+.camp-session-list {
+  display: grid;
+  gap: 7px;
+}
+
+.camp-session-entry {
+  overflow: hidden;
+  border: 1px solid #dde3ed;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.camp-session-entry summary {
+  display: flex;
+  min-height: 35px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 9px;
+  color: #384052;
+  font-size: 7px;
+  font-weight: 850;
+  cursor: pointer;
+  list-style: none;
+}
+
+.camp-session-entry summary::-webkit-details-marker {
+  display: none;
+}
+
+.camp-session-entry summary::after {
+  content: "+";
+  margin-left: 5px;
+  color: var(--phone-accent);
+  font-size: 12px;
+}
+
+.camp-session-entry[open] summary::after {
+  content: "−";
+}
+
+.camp-session-entry summary strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+  color: #188260;
+  font-size: 5px;
+}
+
+.camp-session-fields {
+  display: grid;
+  gap: 9px;
+  padding: 9px;
+  border-top: 1px solid #edf0f5;
+  background: #fbfcfe;
+}
+
+.camp-session-fields > label,
+.camp-photo-field {
+  display: grid;
+  gap: 5px;
+}
+
+.camp-session-fields > label > span,
+.camp-photo-field > span {
+  color: #4f5769;
+  font-size: 6px;
+  font-weight: 850;
+}
+
+.camp-session-fields textarea,
+.camp-final-reflection textarea {
+  width: 100%;
+  min-height: 66px;
+  padding: 8px;
+  border: 1px solid #dfe4ed;
+  border-radius: 8px;
+  outline: 0;
+  background: #fff;
+  color: #343b4c;
+  font-size: 7px;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.camp-photo-upload {
+  display: grid;
+  min-height: 74px;
+  place-items: center;
+  align-content: center;
+  gap: 3px;
+  border: 1px dashed #b9c9e5;
+  border-radius: 9px;
+  background: #f4f8ff;
+  color: var(--blue);
+  text-align: center;
+  cursor: pointer;
+}
+
+.camp-photo-upload strong {
+  font-size: 7px;
+}
+
+.camp-photo-upload small {
+  color: var(--muted);
+  font-size: 5px;
+}
+
+.camp-photo-upload input,
+.camp-photo-preview input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.camp-photo-preview {
+  overflow: hidden;
+  border: 1px solid #dfe5ef;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.camp-photo-preview > img {
+  display: block;
+  width: 100%;
+  height: 115px;
+  object-fit: cover;
+}
+
+.camp-photo-preview > div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 5px;
+  padding: 6px;
+}
+
+.camp-photo-preview label,
+.camp-photo-preview button {
+  display: inline-flex;
+  min-height: 25px;
+  align-items: center;
+  gap: 4px;
+  padding: 0 7px;
+  border: 1px solid #dce2eb;
+  border-radius: 7px;
+  background: #fff;
+  color: #555d70;
+  font-size: 6px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.camp-photo-preview button {
+  color: var(--danger);
+}
+
+.camp-final-reflection {
+  display: grid;
+  gap: 7px;
+  margin-top: 9px;
+  padding: 10px;
+  border: 1px solid #f0d988;
+  border-radius: 11px;
+  background: #fffaf0;
+}
+
+.camp-final-reflection > span,
+.camp-final-reflection b,
+.camp-final-reflection small {
+  display: block;
+}
+
+.camp-final-reflection b {
+  font-size: 8px;
+}
+
+.camp-final-reflection small {
+  margin-top: 3px;
+  color: #8a7442;
+  font-size: 5px;
+}
+
+.camp-report-sheet > footer {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 7px 11px 10px;
+  border-top: 1px solid #dce2ec;
+  background: #fff;
+}
+
+.camp-report-sheet > footer > span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #667084;
+  font-size: 5px;
+}
+
+.camp-report-sheet > footer > button {
+  display: flex;
+  min-height: 29px;
+  align-items: center;
+  gap: 5px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--phone-accent);
+  color: #fff;
+  font-size: 6px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.chatbot-empty-help {
+  margin: 8px 0 0;
+  padding: 7px;
+  border: 1px dashed #d7d1fc;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 6px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.print-report {
+  display: none;
+}
+
+.pwa-install {
+  position: relative;
+}
+
+.pwa-install > button,
+.standalone-toolbar nav > button {
+  display: flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 11px;
+  border: 1px solid color-mix(in srgb, var(--standalone-accent, var(--violet)) 24%, #dfe3ee);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--standalone-accent, var(--violet)) 7%, white);
+  color: var(--standalone-accent, var(--violet));
+  font-size: 8px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.pwa-install-help {
+  position: absolute;
+  z-index: 40;
+  right: 0;
+  bottom: calc(100% + 8px);
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 7px;
+  width: min(310px, calc(100vw - 24px));
+  padding: 12px;
+  border: 1px solid #d9d4ff;
+  border-radius: 12px;
+  background: #fff;
+  color: var(--violet);
+  box-shadow: 0 14px 40px rgba(34, 29, 78, 0.18);
+}
+
+.pwa-install-help > button {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.pwa-install-help p {
+  margin: 0;
+  color: #555d70;
+  font-size: 9px;
+  line-height: 1.6;
+}
+
+.standalone-app-shell {
+  min-height: 100dvh;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 10% 0%, color-mix(in srgb, var(--standalone-accent) 15%, transparent), transparent 30rem),
+    #eef0f6;
+}
+
+.standalone-toolbar {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  min-height: 68px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 10px clamp(14px, 3vw, 34px);
+  border-bottom: 1px solid #dfe3ec;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(14px);
+}
+
+.standalone-toolbar > span,
+.standalone-toolbar nav {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.standalone-toolbar > span > i {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 2px solid var(--ink);
+  border-radius: 12px 12px 12px 4px;
+  background: var(--yellow);
+  box-shadow: 3px 3px 0 var(--ink);
+  color: var(--ink);
+}
+
+.standalone-toolbar small,
+.standalone-toolbar strong {
+  display: block;
+}
+
+.standalone-toolbar small {
+  color: var(--standalone-accent);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.standalone-toolbar strong {
+  margin-top: 2px;
+  font-size: 14px;
+}
+
+.standalone-phone-wrap {
+  display: grid;
+  min-height: calc(100dvh - 68px);
+  place-items: center;
+  padding: 28px;
+}
+
+.standalone-phone {
+  width: min(390px, calc(100vw - 28px));
+  height: min(800px, calc(100dvh - 98px));
+  transform: none !important;
+}
+
+.standalone-phone .app-hero strong {
+  font-size: 16px;
+}
+
+.standalone-phone .app-hero em,
+.standalone-phone .notice-card p,
+.standalone-phone .journal-card textarea,
+.standalone-phone .action-feature > button,
+.standalone-phone .chatbot-feature-heading em,
+.standalone-phone .chatbot-action-preview button,
+.standalone-phone .open-chatbot-button,
+.standalone-phone .chatbot-empty-help,
+.standalone-phone .camp-report-heading em,
+.standalone-phone .camp-day-preview b,
+.standalone-phone .camp-report-card > button {
+  font-size: 10px;
+}
+
+.standalone-phone .app-hero small,
+.standalone-phone .card-eyebrow,
+.standalone-phone .checklist-card header small,
+.standalone-phone .journal-card header small,
+.standalone-phone .chatbot-feature-heading small,
+.standalone-phone .camp-report-heading small,
+.standalone-phone .camp-day-preview small {
+  font-size: 8px;
+}
+
+.standalone-phone .notice-card h3,
+.standalone-phone .checklist-card header strong,
+.standalone-phone .journal-card header strong,
+.standalone-phone .chatbot-feature-heading strong,
+.standalone-phone .camp-report-heading strong {
+  font-size: 14px;
+}
+
+.standalone-phone .phone-checklist label,
+.standalone-phone .journal-save-button {
+  font-size: 10px;
+}
+
+.standalone-phone .camp-report-sheet > header strong,
+.standalone-phone .phone-chatbot-sheet > header strong {
+  font-size: 14px;
+}
+
+.standalone-phone .camp-report-sheet > header small,
+.standalone-phone .camp-report-sheet > header > b,
+.standalone-phone .phone-chatbot-sheet > header small {
+  font-size: 9px;
+}
+
+.standalone-phone .student-name-field span,
+.standalone-phone .student-name-field input,
+.standalone-phone .camp-day-tabs b,
+.standalone-phone .camp-session-entry summary,
+.standalone-phone .camp-session-fields textarea,
+.standalone-phone .camp-final-reflection textarea {
+  font-size: 12px;
+}
+
+.standalone-phone .camp-day-tabs span,
+.standalone-phone .camp-session-entry summary strong,
+.standalone-phone .camp-session-fields > label > span,
+.standalone-phone .camp-photo-field > span,
+.standalone-phone .camp-photo-upload small,
+.standalone-phone .camp-report-sheet > footer > span {
+  font-size: 9px;
+}
+
+.standalone-phone .camp-photo-upload strong,
+.standalone-phone .camp-photo-preview label,
+.standalone-phone .camp-photo-preview button,
+.standalone-phone .camp-report-sheet > footer > button {
+  font-size: 11px;
+}
+
+.standalone-phone .quick-question,
+.standalone-phone .phone-input input {
+  font-size: 11px;
+}
+
+@media (max-width: 600px) {
+  .standalone-toolbar {
+    min-height: 58px;
+    padding: 8px 10px;
+  }
+
+  .standalone-toolbar > span > i,
+  .standalone-toolbar > span > span small,
+  .standalone-toolbar nav > button {
+    display: none;
+  }
+
+  .standalone-toolbar strong {
+    max-width: 38vw;
+    overflow: hidden;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .standalone-phone-wrap {
+    min-height: calc(100dvh - 58px);
+    padding: 0;
+  }
+
+  .standalone-phone {
+    width: 100%;
+    height: calc(100dvh - 58px);
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .standalone-phone .phone-hardware,
+  .standalone-phone .phone-home-bar {
+    display: none;
+  }
+
+  .standalone-phone .phone-screen,
+  .standalone-phone .camp-report-sheet,
+  .standalone-phone .phone-chatbot-sheet {
+    border-radius: 0;
+  }
+
+  .standalone-phone .app-hero,
+  .standalone-phone .camp-report-sheet > header,
+  .standalone-phone .phone-chatbot-sheet > header {
+    margin: 0;
+    width: 100%;
+    border-radius: 0 0 18px 18px;
+  }
+
+  .standalone-phone .app-hero {
+    min-height: 90px;
+    padding-top: 16px;
+  }
+
+  .standalone-phone .camp-report-sheet,
+  .standalone-phone .phone-chatbot-sheet {
+    padding-top: 0;
+  }
+
+  .standalone-phone .camp-report-sheet > header,
+  .standalone-phone .phone-chatbot-sheet > header {
+    min-height: 82px;
+    padding-top: 15px;
+  }
+
+  .pwa-install-help {
+    position: fixed;
+    right: 12px;
+    bottom: 68px;
+  }
+}
+
+@media (display-mode: standalone) {
+  .standalone-toolbar {
+    display: none;
+  }
+
+  .standalone-phone-wrap {
+    min-height: 100dvh;
+    padding: 0;
+  }
+
+  .standalone-phone {
+    width: 100%;
+    max-width: none;
+    height: 100dvh;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .standalone-phone .phone-hardware,
+  .standalone-phone .phone-home-bar {
+    display: none;
+  }
+
+  .standalone-phone .phone-screen,
+  .standalone-phone .camp-report-sheet,
+  .standalone-phone .phone-chatbot-sheet {
+    border-radius: 0;
+  }
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 11mm;
+  }
+
+  body {
+    background: #fff !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .print-report,
+  .print-report * {
+    visibility: visible !important;
+  }
+
+  .print-report {
+    position: absolute;
+    inset: 0;
+    display: block !important;
+    width: 100%;
+    color: #152038;
+    font-family: "Noto Sans KR", "Apple SD Gothic Neo", sans-serif;
+  }
+
+  .print-report > header {
+    padding: 0 0 8mm;
+    border-bottom: 2px solid #25355d;
+  }
+
+  .print-report > header > span {
+    color: #536486;
+    font-size: 9pt;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+  }
+
+  .print-report h1 {
+    margin: 2mm 0 4mm;
+    font-size: 22pt;
+  }
+
+  .print-report > header p {
+    margin: 0;
+    font-size: 11pt;
+  }
+
+  .print-day {
+    padding-top: 7mm;
+    break-before: page;
+  }
+
+  .print-day:first-of-type {
+    break-before: auto;
+  }
+
+  .print-day h2,
+  .print-final h2 {
+    margin: 0 0 4mm;
+    padding: 3mm 4mm;
+    border-left: 5px solid #6956e8;
+    background: #f1efff;
+    font-size: 15pt;
+  }
+
+  .print-session-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4mm;
+  }
+
+  .print-session {
+    min-height: 100mm;
+    padding: 4mm;
+    border: 1px solid #bcc5d6;
+    border-radius: 3mm;
+    break-inside: avoid;
+  }
+
+  .print-session h3 {
+    margin: 0 0 3mm;
+    font-size: 13pt;
+  }
+
+  .print-session-body {
+    display: grid;
+    gap: 3mm;
+  }
+
+  .print-session h4 {
+    margin: 2mm 0 1mm;
+    color: #465576;
+    font-size: 9pt;
+  }
+
+  .print-session p {
+    min-height: 11mm;
+    margin: 0;
+    white-space: pre-wrap;
+    font-size: 9pt;
+    line-height: 1.55;
+  }
+
+  .print-photo {
+    display: grid;
+    min-height: 42mm;
+    overflow: hidden;
+    place-items: center;
+    border: 1px dashed #abb5c8;
+    border-radius: 2mm;
+    color: #7d8799;
+    font-size: 9pt;
+  }
+
+  .print-photo img {
+    display: block;
+    width: 100%;
+    height: 42mm;
+    object-fit: cover;
+  }
+
+  .print-final {
+    padding-top: 7mm;
+    break-before: page;
+  }
+
+  .print-final p {
+    min-height: 150mm;
+    margin: 0;
+    padding: 7mm;
+    border: 1px solid #bcc5d6;
+    border-radius: 3mm;
+    white-space: pre-wrap;
+    font-size: 12pt;
+    line-height: 1.8;
+  }
+}

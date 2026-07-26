@@ -23,6 +23,7 @@ import {
   FormEvent,
   KeyboardEvent,
   MouseEvent,
+  useEffect,
   useRef,
   useState,
 } from "react";
@@ -31,6 +32,7 @@ import type {
   SelectedTarget,
   WebAppProject,
 } from "../../lib/chatbot-studio";
+import { CampReport } from "./camp-report";
 
 type ChatMessage = {
   id: string;
@@ -41,6 +43,7 @@ type ChatMessage = {
 type PhonePreviewProps = {
   project: WebAppProject;
   interactive?: boolean;
+  standalone?: boolean;
   selectedTarget?: SelectedTarget;
   onSelect?: (target: SelectedTarget) => void;
 };
@@ -56,6 +59,7 @@ const iconMap: Record<ActionIcon, LucideIcon> = {
 
 const tokenize = (value: string) =>
   value
+    .toLocaleLowerCase()
     .replace(/[?!.,]/g, " ")
     .split(/\s+/)
     .map((token) => token.trim())
@@ -64,6 +68,7 @@ const tokenize = (value: string) =>
 export function PhonePreview({
   project,
   interactive = false,
+  standalone = false,
   selectedTarget,
   onSelect,
 }: PhonePreviewProps) {
@@ -74,7 +79,58 @@ export function PhonePreview({
   const [chatOpen, setChatOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
+  const [runtimeReady, setRuntimeReady] = useState(false);
   const messageSequence = useRef(0);
+  const runtimeStorageKey = `my-webapp-runtime-v1:${project.title}`;
+
+  useEffect(() => {
+    if (!interactive) return;
+    const timer = window.setTimeout(() => {
+      try {
+        const saved = window.localStorage.getItem(runtimeStorageKey);
+        if (saved) {
+          const runtime = JSON.parse(saved) as {
+            checkedItems?: unknown;
+            journalText?: unknown;
+          };
+          if (Array.isArray(runtime.checkedItems)) {
+            setCheckedItems(
+              runtime.checkedItems.filter(
+                (item): item is string => typeof item === "string",
+              ),
+            );
+          }
+          if (typeof runtime.journalText === "string") {
+            setJournalText(runtime.journalText);
+          }
+        }
+      } catch {
+        // A damaged local record should not block the web app from opening.
+      } finally {
+        setRuntimeReady(true);
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [interactive, runtimeStorageKey]);
+
+  useEffect(() => {
+    if (!interactive || !runtimeReady) return;
+    try {
+      window.localStorage.setItem(
+        runtimeStorageKey,
+        JSON.stringify({ checkedItems, journalText }),
+      );
+    } catch {
+      // The dedicated save actions still provide visible feedback when possible.
+    }
+  }, [
+    checkedItems,
+    interactive,
+    journalText,
+    runtimeReady,
+    runtimeStorageKey,
+  ]);
 
   const select = (target: SelectedTarget) => {
     if (!interactive) onSelect?.(target);
@@ -125,12 +181,22 @@ export function PhonePreview({
     if (!question) return;
 
     const questionTokens = tokenize(question);
+    const normalizedQuestion = question
+      .toLocaleLowerCase()
+      .replace(/[?!.,\s]/g, "");
     const matched = project.actions.find((action) => {
       const labelTokens = tokenize(action.label);
-      return labelTokens.some((label) =>
-        questionTokens.some(
+      const normalizedLabel = action.label
+        .toLocaleLowerCase()
+        .replace(/[?!.,\s]/g, "");
+      return (
+        normalizedQuestion === normalizedLabel ||
+        (labelTokens.length > 0 &&
+          labelTokens.every((label) =>
+            questionTokens.some(
           (token) => label.includes(token) || token.includes(label),
-        ),
+            ),
+          ))
       );
     });
 
@@ -159,7 +225,9 @@ export function PhonePreview({
 
   return (
     <div
-      className={`phone ${interactive ? "phone-interactive" : ""}`}
+      className={`phone ${interactive ? "phone-interactive" : ""} ${
+        standalone ? "standalone-phone" : ""
+      }`}
       style={
         {
           "--phone-accent": project.accent,
@@ -301,6 +369,15 @@ export function PhonePreview({
             </section>
           )}
 
+          {project.campReportEnabled && (
+            <CampReport
+              project={project}
+              interactive={interactive}
+              selectedTarget={selectedTarget}
+              onSelect={onSelect}
+            />
+          )}
+
           {project.buttonEnabled && (
             <section
               className={`action-feature ${
@@ -340,35 +417,41 @@ export function PhonePreview({
                   <Bot size={18} strokeWidth={2.4} aria-hidden="true" />
                 </span>
                 <span>
-                  <small>AI CHATBOT</small>
+                  <small>MY CHATBOT</small>
                   <strong>{project.botName}</strong>
                   <em>{project.greeting}</em>
                 </span>
               </div>
-              <div className="chatbot-action-preview">
-                {project.actions.slice(0, 3).map((action) => {
-                  const Icon = iconMap[action.icon];
-                  return (
-                    <button
-                      className={
-                        selectedTarget === action.id
-                          ? "component-selected"
-                          : ""
-                      }
-                      key={action.id}
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        if (interactive) setChatOpen(true);
-                        else select(action.id);
-                      }}
-                    >
-                      <Icon size={11} aria-hidden="true" />
-                      {action.label}
-                    </button>
-                  );
-                })}
-              </div>
+              {project.actions.length ? (
+                <div className="chatbot-action-preview">
+                  {project.actions.slice(0, 3).map((action) => {
+                    const Icon = iconMap[action.icon];
+                    return (
+                      <button
+                        className={
+                          selectedTarget === action.id
+                            ? "component-selected"
+                            : ""
+                        }
+                        key={action.id}
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          if (interactive) setChatOpen(true);
+                          else select(action.id);
+                        }}
+                      >
+                        <Icon size={11} aria-hidden="true" />
+                        {action.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="chatbot-empty-help">
+                  이 챗봇을 만들 학생이 질문과 답을 추가해요.
+                </p>
+              )}
               <button
                 className="open-chatbot-button"
                 type="button"
@@ -379,7 +462,7 @@ export function PhonePreview({
                 }}
               >
                 <MessageCircle size={13} aria-hidden="true" />
-                AI 챗봇 열기
+                챗봇 열기
               </button>
             </section>
           )}
@@ -387,6 +470,7 @@ export function PhonePreview({
           {!project.noticeEnabled &&
             !project.checklistEnabled &&
             !project.journalEnabled &&
+            !project.campReportEnabled &&
             !project.buttonEnabled &&
             !project.chatbotEnabled && (
               <div className="empty-phone-state">
@@ -398,7 +482,7 @@ export function PhonePreview({
         </div>
 
         {interactive && chatOpen && (
-          <section className="phone-chatbot-sheet" aria-label="AI 챗봇">
+          <section className="phone-chatbot-sheet" aria-label="내가 만든 챗봇">
             <header>
               <button
                 type="button"
@@ -414,7 +498,7 @@ export function PhonePreview({
                 <strong>{project.botName}</strong>
                 <small>
                   <i aria-hidden="true" />
-                  지금 질문할 수 있어요
+                  내가 만든 질문·답만 사용해요
                 </small>
               </span>
             </header>
@@ -457,7 +541,7 @@ export function PhonePreview({
             {project.inputEnabled && (
               <form className="phone-input" onSubmit={submitQuestion}>
                 <input
-                  aria-label="AI 챗봇에게 질문하기"
+                  aria-label="내가 만든 챗봇에게 질문하기"
                   placeholder={project.inputPlaceholder}
                   value={input}
                   onChange={(event) => setInput(event.target.value)}

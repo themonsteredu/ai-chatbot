@@ -4,7 +4,81 @@ import test from "node:test";
 
 const root = new URL("../", import.meta.url);
 
-test("implements the App Inventor-inspired personal web app studio", async () => {
+test("starts with a blank App Inventor-style web app project", async () => {
+  const [studio, phone, model] = await Promise.all([
+    readFile(
+      new URL("../app/components/chatbot-studio.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../app/components/phone-preview.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(new URL("../lib/chatbot-studio.ts", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(studio, /AI WEB APP LAB/);
+  assert.match(studio, /나만의 웹앱 만들기/);
+  assert.match(studio, /디자이너/);
+  assert.match(studio, /블록/);
+  assert.match(studio, /팔레트/);
+  assert.match(studio, /컴포넌트/);
+  assert.match(studio, /속성/);
+  assert.match(studio, /my-webapp-inventor-project-v3/);
+  assert.match(studio, /application\/x-webapp-component/);
+  assert.match(phone, /첫 기능을 추가해 보세요/);
+  assert.match(model, /export const DEFAULT_PROJECT = BLANK_PROJECT/);
+  assert.ok(
+    model.indexOf('id: "blank"') < model.indexOf('id: "camp"'),
+    "빈 웹앱이 템플릿 목록의 첫 항목이어야 합니다.",
+  );
+  assert.match(model, /name: "빈 웹앱"/);
+  assert.match(model, /name: "3일 캠프 기록"/);
+  assert.match(model, /name: "우리 반 알림장"/);
+});
+
+test("provides a persistent 3-day, 12-session printable camp report", async () => {
+  const [studio, phone, blocks, camp, model] = await Promise.all([
+    readFile(
+      new URL("../app/components/chatbot-studio.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../app/components/phone-preview.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../app/components/block-workspace.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../app/components/camp-report.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(new URL("../lib/chatbot-studio.ts", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(model, /campReportEnabled: true/);
+  assert.match(studio, /3일 × 하루 4차시/);
+  assert.match(studio, /총 12차시/);
+  assert.match(studio, /CampReport1/);
+  assert.match(phone, /<CampReport/);
+  assert.match(camp, /const DAYS = \[1, 2, 3\]/);
+  assert.match(camp, /const PERIODS = \[1, 2, 3, 4\]/);
+  assert.match(camp, /배운 내용과 활동/);
+  assert.match(camp, /느낀 점/);
+  assert.match(camp, /3일 캠프 전체 소감/);
+  assert.match(camp, /accept="image\/\*"/);
+  assert.match(camp, /capture="environment"/);
+  assert.match(camp, /canvas\.toDataURL/);
+  assert.match(camp, /my-webapp-camp-report-v1/);
+  assert.match(camp, /window\.print\(\)/);
+  assert.match(camp, /print-report/);
+  assert.match(blocks, /12차시 기록을 이 휴대폰에 자동 저장하기/);
+  assert.match(blocks, /3일·12차시 활동 보고서 만들기/);
+});
+
+test("runs only student-authored chatbot questions and answers", async () => {
   const [studio, phone, blocks, model] = await Promise.all([
     readFile(
       new URL("../app/components/chatbot-studio.tsx", import.meta.url),
@@ -20,41 +94,52 @@ test("implements the App Inventor-inspired personal web app studio", async () =>
     ),
     readFile(new URL("../lib/chatbot-studio.ts", import.meta.url), "utf8"),
   ]);
-  const implementation = [studio, phone, blocks, model].join("\n");
+  const chatbotImplementation = [studio, phone, blocks, model].join("\n");
 
-  assert.match(studio, /AI WEB APP LAB/);
-  assert.match(studio, /나만의 웹앱 만들기/);
-  assert.match(studio, /디자이너/);
-  assert.match(studio, /블록/);
-  assert.match(studio, /팔레트/);
-  assert.match(studio, /컴포넌트/);
-  assert.match(studio, /속성/);
-  assert.match(studio, /my-webapp-inventor-project-v2/);
-  assert.match(studio, /application\/x-webapp-component/);
-  assert.match(implementation, /우리 반 알림장/);
-  assert.match(implementation, /캠프 1일차/);
-  assert.match(implementation, /빈 웹앱/);
-  assert.match(studio, /안내 카드/);
-  assert.match(studio, /활동 체크/);
-  assert.match(studio, /나의 기록/);
-  assert.match(studio, /일반 버튼/);
-  assert.match(studio, /AI 챗봇/);
-  assert.match(model, /AI 캠프 1일차/);
-  assert.match(model, /오늘의 미션/);
-  assert.match(model, /1일차 활동/);
-  assert.match(model, /오늘의 배움 기록/);
-  assert.match(model, /오늘 숙제/);
-  assert.match(model, /내일 준비물/);
-  assert.match(model, /AI에게 질문해 보기/);
-  assert.match(phone, /toggleChecklistItem/);
-  assert.match(phone, /saveJournal/);
-  assert.match(phone, /my-webapp-record/);
-  assert.match(phone, /AI 챗봇 열기/);
-  assert.match(phone, /submitQuestion/);
-  assert.match(blocks, /활동을 체크했을 때/);
-  assert.match(blocks, /기록을 저장했을 때/);
-  assert.match(blocks, /AI 챗봇에게 물었을 때/);
-  assert.doesNotMatch(implementation, /모아랩|광주 길동무/);
+  assert.match(studio, /내 질문과 답/);
+  assert.match(studio, /질문과 답 추가/);
+  assert.match(phone, /내가 만든 질문·답만 사용해요/);
+  assert.match(phone, /matched\?\.response \?\? project\.fallbackResponse/);
+  assert.match(model, /아직 내가 답을 만들지 않은 질문/);
+  assert.match(blocks, /내가 만든 답/);
+  assert.doesNotMatch(
+    chatbotImplementation,
+    /api\.openai\.com|OPENAI_API_KEY|generateText|chat\.completions/i,
+  );
+});
+
+test("is installable as a persistent phone web app", async () => {
+  const [studio, player, installer, manifest, serviceWorker, layout] =
+    await Promise.all([
+      readFile(
+        new URL("../app/components/chatbot-studio.tsx", import.meta.url),
+        "utf8",
+      ),
+      readFile(
+        new URL("../app/components/webapp-player.tsx", import.meta.url),
+        "utf8",
+      ),
+      readFile(
+        new URL("../app/components/pwa-install.tsx", import.meta.url),
+        "utf8",
+      ),
+      readFile(new URL("../app/manifest.ts", import.meta.url), "utf8"),
+      readFile(new URL("../public/sw.js", import.meta.url), "utf8"),
+      readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
+    ]);
+
+  assert.match(studio, /my-webapp-installed-project-v1/);
+  assert.match(studio, /runMode === "saved"/);
+  assert.match(studio, /<WebAppPlayer/);
+  assert.match(player, /<PwaInstallButton/);
+  assert.match(installer, /홈 화면/);
+  assert.match(installer, /beforeinstallprompt/);
+  assert.match(installer, /serviceWorker\.register\("\/sw\.js"\)/);
+  assert.match(installer, /홈 화면에 추가/);
+  assert.match(manifest, /start_url: "\/\?run=saved"/);
+  assert.match(manifest, /display: "standalone"/);
+  assert.match(serviceWorker, /my-webapp-shell-v1/);
+  assert.match(layout, /manifest: "\/manifest\.webmanifest"/);
 });
 
 test("uses Korean metadata and the standard Vercel Next.js runtime", async () => {

@@ -5,12 +5,15 @@ import {
   ArrowUp,
   Bot,
   Braces,
+  Camera,
   CheckCircle2,
+  FileText,
   ListChecks,
   MonitorPlay,
   MousePointerClick,
   NotebookPen,
   Plus,
+  Printer,
   Save,
   Trash2,
 } from "lucide-react";
@@ -40,6 +43,7 @@ export function BlockWorkspace({
     1 +
     Number(project.checklistEnabled) +
     Number(project.journalEnabled) +
+    Number(project.campReportEnabled) * 2 +
     Number(project.buttonEnabled) +
     (project.chatbotEnabled ? project.actions.length : 0);
 
@@ -77,10 +81,18 @@ export function BlockWorkspace({
         <button
           className="block-chip action"
           type="button"
+          onClick={() => onSelect("camp-report")}
+        >
+          <FileText size={16} aria-hidden="true" />
+          캠프 기록을 저장했을 때
+        </button>
+        <button
+          className="block-chip action"
+          type="button"
           onClick={() => onSelect("chatbot")}
         >
           <Bot size={16} aria-hidden="true" />
-          AI 챗봇에게 물었을 때
+          내 챗봇에게 물었을 때
         </button>
         <div className="block-tip">
           <strong>기능을 넣으면 블록도 생겨요</strong>
@@ -165,6 +177,47 @@ export function BlockWorkspace({
             </article>
           )}
 
+          {project.campReportEnabled && (
+            <>
+              <article
+                className={`block-stack feature-logic-stack ${
+                  selectedTarget === "camp-report" ? "selected" : ""
+                }`}
+                onClick={() => onSelect("camp-report")}
+              >
+                <div className="event-block">
+                  <Camera size={17} aria-hidden="true" />
+                  <span>
+                    차시별 <b>활동·사진·느낀 점</b>을 입력했을 때
+                  </span>
+                </div>
+                <div className="block-connector" aria-hidden="true" />
+                <div className="action-block blue-block">
+                  <Save size={17} aria-hidden="true" />
+                  <span>12차시 기록을 이 휴대폰에 자동 저장하기</span>
+                </div>
+              </article>
+              <article
+                className={`block-stack feature-logic-stack ${
+                  selectedTarget === "camp-report" ? "selected" : ""
+                }`}
+                onClick={() => onSelect("camp-report")}
+              >
+                <div className="event-block">
+                  <Printer size={17} aria-hidden="true" />
+                  <span>
+                    <b>보고서 인쇄</b>를 눌렀을 때
+                  </span>
+                </div>
+                <div className="block-connector" aria-hidden="true" />
+                <div className="action-block pink-block">
+                  <FileText size={17} aria-hidden="true" />
+                  <span>3일·12차시 활동 보고서 만들기</span>
+                </div>
+              </article>
+            </>
+          )}
+
           {project.buttonEnabled && (
             <article
               className={`block-stack feature-logic-stack ${
@@ -201,14 +254,14 @@ export function BlockWorkspace({
                   <span className="block-number">{index + 1}</span>
                   <MousePointerClick size={17} aria-hidden="true" />
                   <span>
-                    AI 챗봇에서 <b>{action.label}</b>을 눌렀을 때
+                    내 챗봇에서 <b>{action.label}</b>을 눌렀을 때
                   </span>
                 </div>
                 <div className="block-connector" aria-hidden="true" />
                 <div className="action-block">
                   <Bot size={17} aria-hidden="true" />
                   <span>
-                    AI가 <b>“{action.response}”</b>라고 말하기
+                    내가 만든 답 <b>“{action.response}”</b> 보여 주기
                   </span>
                 </div>
                 <div className="block-order-actions">
@@ -256,7 +309,7 @@ export function BlockWorkspace({
               onClick={onAddAction}
             >
               <Plus size={18} aria-hidden="true" />
-              AI 챗봇 질문·답 블록 추가
+              내 챗봇 질문·답 블록 추가
             </button>
           )}
         </div>

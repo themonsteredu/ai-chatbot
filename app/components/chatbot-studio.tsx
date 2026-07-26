@@ -10,6 +10,7 @@ import {
   CircleHelp,
   ClipboardCheck,
   Copy,
+  FileText,
   FilePlus2,
   GripVertical,
   Info,
@@ -49,8 +50,11 @@ import {
 } from "../../lib/chatbot-studio";
 import { BlockWorkspace } from "./block-workspace";
 import { PhonePreview } from "./phone-preview";
+import { PwaInstallButton } from "./pwa-install";
+import { WebAppPlayer } from "./webapp-player";
 
-const STORAGE_KEY = "my-webapp-inventor-project-v2";
+const STORAGE_KEY = "my-webapp-inventor-project-v3";
+const INSTALLED_PROJECT_KEY = "my-webapp-installed-project-v1";
 
 type PaletteKind =
   | "screen"
@@ -58,6 +62,7 @@ type PaletteKind =
   | "notice"
   | "checklist"
   | "journal"
+  | "camp-report"
   | "button"
   | "chatbot";
 type MobilePanel = "palette" | "viewer" | "properties";
@@ -107,6 +112,13 @@ const paletteItems: PaletteItem[] = [
     tone: "blue",
   },
   {
+    kind: "camp-report",
+    name: "3일 캠프 기록",
+    hint: "12차시·사진·소감을 모아요",
+    icon: FileText,
+    tone: "blue",
+  },
+  {
     kind: "button",
     name: "일반 버튼",
     hint: "누르면 안내를 보여줘요",
@@ -115,8 +127,8 @@ const paletteItems: PaletteItem[] = [
   },
   {
     kind: "chatbot",
-    name: "AI 챗봇",
-    hint: "웹앱 안에서 질문해요",
+    name: "나만의 챗봇",
+    hint: "내 질문과 답으로 만들어요",
     icon: Bot,
     tone: "violet",
   },
@@ -132,6 +144,7 @@ const featureEnabledKey = {
   notice: "noticeEnabled",
   checklist: "checklistEnabled",
   journal: "journalEnabled",
+  "camp-report": "campReportEnabled",
   button: "buttonEnabled",
   chatbot: "chatbotEnabled",
 } as const;
@@ -174,6 +187,7 @@ export function ChatbotStudio() {
     useState<SelectedTarget>("screen");
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>("viewer");
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [standalone, setStandalone] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [toast, setToast] = useState("");
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -188,14 +202,19 @@ export function ChatbotStudio() {
     Number(project.noticeEnabled) +
     Number(project.checklistEnabled) +
     Number(project.journalEnabled) +
+    Number(project.campReportEnabled) +
     Number(project.buttonEnabled) +
     Number(project.chatbotEnabled);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      const shared = new URLSearchParams(window.location.search).get("project");
+      const params = new URLSearchParams(window.location.search);
+      const runMode = params.get("run");
+      const shared = params.get("project");
       const sharedProject = shared ? decodeProject(shared) : null;
-      const saved = window.localStorage.getItem(STORAGE_KEY);
+      const savedKey =
+        runMode === "saved" ? INSTALLED_PROJECT_KEY : STORAGE_KEY;
+      const saved = window.localStorage.getItem(savedKey);
 
       if (sharedProject) {
         setProject(sharedProject);
@@ -206,6 +225,7 @@ export function ChatbotStudio() {
           setProject(cloneProject(DEFAULT_PROJECT));
         }
       }
+      setStandalone(runMode === "1" || runMode === "saved");
       setHydrated(true);
     }, 0);
 
@@ -215,6 +235,7 @@ export function ChatbotStudio() {
   useEffect(() => {
     if (!hydrated) return;
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(project));
+    window.localStorage.setItem(INSTALLED_PROJECT_KEY, JSON.stringify(project));
   }, [hydrated, project]);
 
   useEffect(() => {
@@ -260,7 +281,7 @@ export function ChatbotStudio() {
 
   const addAction = () => {
     if (project.actions.length >= 12) {
-      notify("AI 질문 버튼은 12개까지 만들 수 있어요.");
+      notify("질문·답은 12개까지 만들 수 있어요.");
       return;
     }
 
@@ -277,15 +298,15 @@ export function ChatbotStudio() {
         ...current.actions,
         {
           id,
-          label: `새 도움 ${order}`,
-          response: "이 버튼을 눌렀을 때 AI가 말할 답을 적어 주세요.",
+          label: `새 질문 ${order}`,
+          response: "이 질문을 눌렀을 때 보여 줄 답을 적어 주세요.",
           icon: "message",
         },
       ],
     }));
     setSelectedTarget(id);
     setMobilePanel("properties");
-    notify("AI 챗봇에 새 질문 버튼을 추가했어요.");
+    notify("나만의 챗봇에 새 질문과 답을 추가했어요.");
   };
 
   const removeAction = (id: string) => {
@@ -371,17 +392,18 @@ export function ChatbotStudio() {
   };
 
   const resetProject = () => {
-    if (!window.confirm("지금 만든 내용을 지우고 알림장 예제로 돌아갈까요?"))
+    if (!window.confirm("지금 만든 내용을 지우고 빈 웹앱으로 돌아갈까요?"))
       return;
     setProject(cloneProject(DEFAULT_PROJECT));
     setSelectedTarget("screen");
     setMode("designer");
-    notify("우리 반 알림장 예제로 돌아왔어요.");
+    notify("빈 웹앱으로 돌아왔어요.");
   };
 
   const shareProject = async () => {
     const url = new URL(window.location.href);
     url.search = "";
+    url.searchParams.set("run", "1");
     url.searchParams.set("project", encodeProject(project));
 
     try {
@@ -390,6 +412,12 @@ export function ChatbotStudio() {
     } catch {
       window.prompt("아래 링크를 복사해 주세요.", url.toString());
     }
+  };
+
+  const editStandalone = () => {
+    const url = new URL(window.location.href);
+    url.search = "";
+    window.location.href = url.toString();
   };
 
   const selectTarget = (target: SelectedTarget) => {
@@ -421,7 +449,7 @@ export function ChatbotStudio() {
               <MousePointerClick size={16} aria-hidden="true" />
             </span>
             <div>
-              <strong>AI 질문 버튼</strong>
+              <strong>내 질문과 답</strong>
               <small>ChatbotQuestion</small>
             </div>
           </div>
@@ -436,7 +464,7 @@ export function ChatbotStudio() {
             />
           </label>
           <label>
-            <span>AI가 말할 답</span>
+            <span>이 질문에 보여 줄 답</span>
             <textarea
               rows={5}
               value={selectedAction.response}
@@ -661,6 +689,80 @@ export function ChatbotStudio() {
       );
     }
 
+    if (selectedTarget === "camp-report") {
+      return (
+        <div className="property-form">
+          <div className="selected-component-heading">
+            <span className="component-symbol blue">
+              <FileText size={16} aria-hidden="true" />
+            </span>
+            <div>
+              <strong>3일 캠프 기록</strong>
+              <small>CampReport</small>
+            </div>
+          </div>
+          <div className="camp-structure-note">
+            <FileText size={16} aria-hidden="true" />
+            <span>
+              <b>3일 × 하루 4차시 = 총 12차시</b>
+              <small>각 차시에 활동·사진·느낀 점을 기록해요.</small>
+            </span>
+          </div>
+          <label>
+            <span>보고서 제목</span>
+            <input
+              value={project.campReportTitle}
+              maxLength={36}
+              onChange={(event) =>
+                updateProject("campReportTitle", event.target.value)
+              }
+            />
+          </label>
+          <label>
+            <span>활동 입력 안내</span>
+            <textarea
+              rows={4}
+              value={project.campActivityPrompt}
+              maxLength={140}
+              onChange={(event) =>
+                updateProject("campActivityPrompt", event.target.value)
+              }
+            />
+          </label>
+          <label>
+            <span>차시별 느낀 점 안내</span>
+            <textarea
+              rows={4}
+              value={project.campReflectionPrompt}
+              maxLength={140}
+              onChange={(event) =>
+                updateProject("campReflectionPrompt", event.target.value)
+              }
+            />
+          </label>
+          <label>
+            <span>마지막 전체 소감 안내</span>
+            <textarea
+              rows={4}
+              value={project.campFinalPrompt}
+              maxLength={160}
+              onChange={(event) =>
+                updateProject("campFinalPrompt", event.target.value)
+              }
+            />
+          </label>
+          <button
+            className="danger-button"
+            type="button"
+            onClick={() => hideFeature("camp-report")}
+          >
+            <Trash2 size={15} aria-hidden="true" />
+            3일 캠프 기록 화면에서 빼기
+          </button>
+        </div>
+      );
+    }
+
     if (selectedTarget === "button") {
       return (
         <div className="property-form">
@@ -714,8 +816,8 @@ export function ChatbotStudio() {
               <Bot size={16} aria-hidden="true" />
             </span>
             <div>
-              <strong>AI 챗봇</strong>
-              <small>AIChatbot</small>
+              <strong>나만의 챗봇</strong>
+              <small>MyChatbot</small>
             </div>
           </div>
           <label>
@@ -740,7 +842,7 @@ export function ChatbotStudio() {
           <label className="toggle-row">
             <span>
               <b>직접 질문 입력</b>
-              <small>사용자가 문장으로 질문할 수 있어요.</small>
+              <small>내가 만든 질문과 비슷한 문장을 찾아 답해요.</small>
             </span>
             <input
               type="checkbox"
@@ -777,7 +879,7 @@ export function ChatbotStudio() {
           )}
           <button className="secondary-button" type="button" onClick={addAction}>
             <Plus size={15} aria-hidden="true" />
-            AI 질문 버튼 추가
+            질문과 답 추가
           </button>
           <button
             className="danger-button"
@@ -785,7 +887,7 @@ export function ChatbotStudio() {
             onClick={() => hideFeature("chatbot")}
           >
             <Trash2 size={15} aria-hidden="true" />
-            AI 챗봇 화면에서 빼기
+            나만의 챗봇 화면에서 빼기
           </button>
         </div>
       );
@@ -858,6 +960,19 @@ export function ChatbotStudio() {
       </div>
     );
   };
+
+  if (!hydrated) {
+    return (
+      <main className="studio-loading" aria-label="나만의 웹앱 불러오는 중">
+        <Rocket size={28} aria-hidden="true" />
+        <span>나만의 웹앱을 불러오고 있어요</span>
+      </main>
+    );
+  }
+
+  if (standalone) {
+    return <WebAppPlayer project={project} onEdit={editStandalone} />;
+  }
 
   return (
     <main className="studio-shell">
@@ -941,7 +1056,7 @@ export function ChatbotStudio() {
           <span>1</span>
           <p>
             <strong>예시 고르기</strong>
-            <small>알림장·캠프·빈 웹앱에서 시작</small>
+            <small>빈 웹앱·3일 캠프·알림장에서 시작</small>
           </p>
         </div>
         <ChevronRight size={15} aria-hidden="true" />
@@ -949,7 +1064,7 @@ export function ChatbotStudio() {
           <span>2</span>
           <p>
             <strong>기능과 내용 바꾸기</strong>
-            <small>체크·기록·버튼·챗봇을 꾸며요</small>
+            <small>캠프 기록·버튼·챗봇을 꾸며요</small>
           </p>
         </div>
         <ChevronRight size={15} aria-hidden="true" />
@@ -1212,6 +1327,16 @@ export function ChatbotStudio() {
                     onClick={() => selectTarget("journal")}
                   />
                 )}
+                {project.campReportEnabled && (
+                  <ComponentTreeItem
+                    active={selectedTarget === "camp-report"}
+                    icon={FileText}
+                    name="CampReport1"
+                    detail="3일 · 12차시 · 인쇄"
+                    tone="blue"
+                    onClick={() => selectTarget("camp-report")}
+                  />
+                )}
                 {project.buttonEnabled && (
                   <ComponentTreeItem
                     active={selectedTarget === "button"}
@@ -1227,7 +1352,7 @@ export function ChatbotStudio() {
                     <ComponentTreeItem
                       active={selectedTarget === "chatbot"}
                       icon={Bot}
-                      name="AIChatbot1"
+                      name="MyChatbot1"
                       detail={project.botName}
                       tone="violet"
                       onClick={() => selectTarget("chatbot")}
@@ -1237,7 +1362,7 @@ export function ChatbotStudio() {
                         active={selectedTarget === action.id}
                         icon={MousePointerClick}
                         key={action.id}
-                        name={`ChatQuestion${index + 1}`}
+                        name={`MyQuestion${index + 1}`}
                         detail={action.label}
                         tone="yellow"
                         nested
@@ -1281,7 +1406,7 @@ export function ChatbotStudio() {
                   LIVE TEST
                 </span>
                 <h2 id="preview-title">내 웹앱 실행하기</h2>
-                <p>활동을 체크하고, 기록을 저장하고, AI에게 물어보세요.</p>
+                <p>활동 기록과 사진 저장, 챗봇 질문·답을 직접 시험해 보세요.</p>
               </div>
               <button
                 type="button"
@@ -1299,6 +1424,7 @@ export function ChatbotStudio() {
                 <Check size={14} aria-hidden="true" />
                 작동하는 기능 {visibleFeatureCount - 1}개가 들어 있어요
               </span>
+              <PwaInstallButton compact />
               <button type="button" onClick={shareProject}>
                 <Copy size={14} aria-hidden="true" />
                 이 웹앱 공유

@@ -1,5 +1,5 @@
 export type StudioMode = "designer" | "blocks";
-export type TemplateId = "notice" | "camp" | "blank";
+export type TemplateId = "blank" | "camp" | "notice";
 
 export type ActionIcon =
   | "book"
@@ -38,6 +38,11 @@ export type WebAppProject = {
   journalTitle: string;
   journalPrompt: string;
   journalButtonLabel: string;
+  campReportEnabled: boolean;
+  campReportTitle: string;
+  campActivityPrompt: string;
+  campReflectionPrompt: string;
+  campFinalPrompt: string;
   buttonEnabled: boolean;
   buttonLabel: string;
   buttonMessage: string;
@@ -56,17 +61,90 @@ export type SelectedTarget =
   | "notice"
   | "checklist"
   | "journal"
+  | "camp-report"
   | "button"
   | "chatbot"
   | string;
 
+const BASE_PROJECT: WebAppProject = {
+  template: "blank",
+  title: "나만의 웹앱",
+  appName: "나만의 웹앱",
+  subtitle: "내 아이디어를 화면에 담아 보세요",
+  accent: "#6956e8",
+  screenBackground: "#f4f2ff",
+  noticeEnabled: false,
+  noticeTitle: "안내 제목",
+  noticeBody: "웹앱에서 알려 줄 내용을 적어 보세요.",
+  checklistEnabled: false,
+  checklistTitle: "나의 할 일",
+  checklistItems: [
+    { id: "check-1", text: "첫 번째 할 일" },
+    { id: "check-2", text: "두 번째 할 일" },
+  ],
+  journalEnabled: false,
+  journalTitle: "나의 기록",
+  journalPrompt: "오늘 기억하고 싶은 내용을 적어 보세요.",
+  journalButtonLabel: "기록 저장",
+  campReportEnabled: false,
+  campReportTitle: "나의 3일 캠프 활동 보고서",
+  campActivityPrompt: "이번 차시에 배우고 활동한 내용을 적어 보세요.",
+  campReflectionPrompt: "활동하면서 느낀 점이나 새롭게 알게 된 점을 적어 보세요.",
+  campFinalPrompt:
+    "3일 동안 가장 기억에 남은 활동과 앞으로 해 보고 싶은 것을 적어 보세요.",
+  buttonEnabled: false,
+  buttonLabel: "확인",
+  buttonMessage: "버튼을 잘 눌렀어요!",
+  chatbotEnabled: false,
+  botName: "나의 챗봇",
+  greeting: "안녕하세요! 아래에서 궁금한 내용을 골라 주세요.",
+  inputPlaceholder: "내가 만든 질문을 입력해 보세요",
+  fallbackResponse:
+    "아직 내가 답을 만들지 않은 질문이에요. 아래 질문 버튼 중 하나를 골라 주세요.",
+  inputEnabled: true,
+  actions: [
+    {
+      id: "first-help",
+      label: "도움 요청",
+      response: "내가 이 챗봇에 직접 만든 답이에요.",
+      icon: "message",
+    },
+  ],
+};
+
+export const BLANK_PROJECT: WebAppProject = {
+  ...BASE_PROJECT,
+  checklistItems: BASE_PROJECT.checklistItems.map((item) => ({ ...item })),
+  actions: BASE_PROJECT.actions.map((action) => ({ ...action })),
+};
+
+export const CAMP_PROJECT: WebAppProject = {
+  ...BASE_PROJECT,
+  template: "camp",
+  title: "3일 캠프 활동 기록",
+  appName: "나의 3일 캠프 기록",
+  subtitle: "하루 4차시, 배움과 사진을 차곡차곡",
+  accent: "#3478f6",
+  screenBackground: "#eef5ff",
+  noticeEnabled: true,
+  noticeTitle: "나의 캠프 기록 방법",
+  noticeBody:
+    "매 차시가 끝날 때 활동 내용, 사진, 느낀 점을 남겨요. 3일차에는 전체 소감을 쓰고 보고서를 인쇄할 수 있어요.",
+  checklistEnabled: false,
+  journalEnabled: false,
+  campReportEnabled: true,
+  campReportTitle: "나의 3일 캠프 활동 보고서",
+  buttonEnabled: false,
+  chatbotEnabled: false,
+  actions: [],
+};
+
 export const NOTICE_PROJECT: WebAppProject = {
+  ...BASE_PROJECT,
   template: "notice",
   title: "우리 반 알림장",
   appName: "우리 반 알림장",
   subtitle: "오늘도 차근차근, 우리 반 하루",
-  accent: "#6956e8",
-  screenBackground: "#f4f2ff",
   noticeEnabled: true,
   noticeTitle: "오늘의 알림",
   noticeBody:
@@ -82,16 +160,16 @@ export const NOTICE_PROJECT: WebAppProject = {
   journalTitle: "오늘의 한 줄",
   journalPrompt: "오늘 가장 기억에 남는 일을 적어 보세요.",
   journalButtonLabel: "기록 저장",
+  campReportEnabled: false,
   buttonEnabled: true,
   buttonLabel: "오늘 알림 확인 완료",
   buttonMessage: "좋아요! 오늘 알림을 모두 확인했어요.",
   chatbotEnabled: true,
-  botName: "알림장 AI 도우미",
+  botName: "알림장 도우미",
   greeting: "안녕하세요! 궁금한 내용을 골라 주세요.",
-  inputPlaceholder: "궁금한 내용을 직접 입력해 보세요",
+  inputPlaceholder: "내가 만든 질문을 입력해 보세요",
   fallbackResponse:
-    "아직 배우지 못한 질문이에요. 아래 도움 버튼 중 하나를 눌러 주세요.",
-  inputEnabled: true,
+    "이 챗봇을 만든 학생이 아직 답을 등록하지 않은 질문이에요. 아래 질문 버튼 중 하나를 골라 주세요.",
   actions: [
     {
       id: "homework",
@@ -114,84 +192,7 @@ export const NOTICE_PROJECT: WebAppProject = {
   ],
 };
 
-export const CAMP_PROJECT: WebAppProject = {
-  template: "camp",
-  title: "AI 캠프 1일차",
-  appName: "AI 캠프 1일차",
-  subtitle: "오늘의 활동을 하고, 나의 생각을 남겨요",
-  accent: "#3478f6",
-  screenBackground: "#eef5ff",
-  noticeEnabled: true,
-  noticeTitle: "오늘의 미션",
-  noticeBody:
-    "AI와 친해지고, 내 아이디어를 정한 뒤 작은 웹앱을 직접 만들어 봐요.",
-  checklistEnabled: true,
-  checklistTitle: "1일차 활동",
-  checklistItems: [
-    { id: "ask-ai", text: "AI에게 질문해 보기" },
-    { id: "make-image", text: "AI 그림 만들어 보기" },
-    { id: "choose-idea", text: "나만의 웹앱 아이디어 정하기" },
-  ],
-  journalEnabled: true,
-  journalTitle: "오늘의 배움 기록",
-  journalPrompt: "가장 신기했던 것과 새롭게 알게 된 것을 적어 보세요.",
-  journalButtonLabel: "내 기록 저장",
-  buttonEnabled: true,
-  buttonLabel: "1일차 활동 완료",
-  buttonMessage: "멋져요! AI 캠프 1일차 활동을 모두 마쳤어요.",
-  chatbotEnabled: true,
-  botName: "캠프 AI 도우미",
-  greeting: "막히는 활동이 있나요? 제가 같이 생각해 드릴게요.",
-  inputPlaceholder: "활동에 대해 질문해 보세요",
-  fallbackResponse:
-    "좋은 질문이에요! 활동 안내를 다시 읽고, 궁금한 부분을 조금 더 자세히 적어 주세요.",
-  inputEnabled: true,
-  actions: [
-    {
-      id: "schedule",
-      label: "오늘 일정",
-      response: "AI 알아보기, 그림 만들기, 웹앱 아이디어 정하기 순서예요.",
-      icon: "sparkles",
-    },
-    {
-      id: "materials",
-      label: "준비물",
-      response: "노트북 또는 태블릿, 필기도구, 나만의 아이디어가 필요해요.",
-      icon: "backpack",
-    },
-    {
-      id: "activity-help",
-      label: "활동 도움",
-      response: "먼저 만들고 싶은 사람과 해결하고 싶은 문제를 한 문장으로 적어 보세요.",
-      icon: "heart",
-    },
-  ],
-};
-
-export const BLANK_PROJECT: WebAppProject = {
-  ...NOTICE_PROJECT,
-  template: "blank",
-  title: "나만의 웹앱",
-  appName: "나만의 웹앱",
-  subtitle: "내 아이디어를 화면에 담아 보세요",
-  noticeEnabled: false,
-  checklistEnabled: false,
-  journalEnabled: false,
-  buttonEnabled: false,
-  chatbotEnabled: true,
-  botName: "나의 AI 도우미",
-  greeting: "안녕하세요! 무엇을 도와드릴까요?",
-  actions: [
-    {
-      id: "first-help",
-      label: "도움 요청",
-      response: "어떤 웹앱을 만들고 싶은지 한 문장으로 말해 주세요.",
-      icon: "message",
-    },
-  ],
-};
-
-export const DEFAULT_PROJECT = NOTICE_PROJECT;
+export const DEFAULT_PROJECT = BLANK_PROJECT;
 
 export const PROJECT_TEMPLATES: Array<{
   id: TemplateId;
@@ -200,22 +201,22 @@ export const PROJECT_TEMPLATES: Array<{
   project: WebAppProject;
 }> = [
   {
-    id: "notice",
-    name: "우리 반 알림장",
-    hint: "알림·준비물·기록",
-    project: NOTICE_PROJECT,
+    id: "blank",
+    name: "빈 웹앱",
+    hint: "아무 기능 없이 시작",
+    project: BLANK_PROJECT,
   },
   {
     id: "camp",
-    name: "캠프 1일차",
-    hint: "활동·체크·배움 기록",
+    name: "3일 캠프 기록",
+    hint: "12차시·사진·소감·인쇄",
     project: CAMP_PROJECT,
   },
   {
-    id: "blank",
-    name: "빈 웹앱",
-    hint: "AI 챗봇부터 시작",
-    project: BLANK_PROJECT,
+    id: "notice",
+    name: "우리 반 알림장",
+    hint: "알림·준비물·기록·챗봇",
+    project: NOTICE_PROJECT,
   },
 ];
 
@@ -261,7 +262,7 @@ export function normalizeProject(value: unknown): WebAppProject {
           label: textOr(action.label, `도움 ${index + 1}`),
           response: textOr(
             action.response,
-            "이 버튼을 눌렀을 때 AI가 말할 답을 적어 주세요.",
+            "이 버튼을 눌렀을 때 챗봇이 말할 답을 적어 주세요.",
           ),
           icon: VALID_ICONS.includes(action.icon as ActionIcon)
             ? (action.icon as ActionIcon)
@@ -287,7 +288,7 @@ export function normalizeProject(value: unknown): WebAppProject {
     candidate.template === "blank" ||
     candidate.template === "notice"
       ? candidate.template
-      : "notice";
+      : "blank";
 
   return {
     template,
@@ -327,6 +328,26 @@ export function normalizeProject(value: unknown): WebAppProject {
     journalButtonLabel: textOr(
       candidate.journalButtonLabel,
       DEFAULT_PROJECT.journalButtonLabel,
+    ),
+    campReportEnabled: booleanOr(
+      candidate.campReportEnabled,
+      DEFAULT_PROJECT.campReportEnabled,
+    ),
+    campReportTitle: textOr(
+      candidate.campReportTitle,
+      DEFAULT_PROJECT.campReportTitle,
+    ),
+    campActivityPrompt: textOr(
+      candidate.campActivityPrompt,
+      DEFAULT_PROJECT.campActivityPrompt,
+    ),
+    campReflectionPrompt: textOr(
+      candidate.campReflectionPrompt,
+      DEFAULT_PROJECT.campReflectionPrompt,
+    ),
+    campFinalPrompt: textOr(
+      candidate.campFinalPrompt,
+      DEFAULT_PROJECT.campFinalPrompt,
     ),
     buttonEnabled: booleanOr(
       candidate.buttonEnabled,
