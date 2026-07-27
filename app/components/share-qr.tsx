@@ -8,10 +8,12 @@ type ShareQrDialogProps = {
   appName: string;
   /** QR에 담을 공유 주소입니다. 웹앱 내용이 함께 실려 있어야 합니다. */
   url: string;
+  /** QR이 안 찍힐 때 손으로 입력할 6자리 숫자 코드입니다. 없으면 숨깁니다. */
+  code?: string;
   onClose: () => void;
 };
 
-export function ShareQrDialog({ appName, url, onClose }: ShareQrDialogProps) {
+export function ShareQrDialog({ appName, url, code, onClose }: ShareQrDialogProps) {
   const [result, setResult] = useState<{ url: string; image: string }>({
     url: "",
     image: "",
@@ -97,7 +99,19 @@ export function ShareQrDialog({ appName, url, onClose }: ShareQrDialogProps) {
           <li>휴대폰 카메라로 이 QR을 찍어요.</li>
           <li>열린 화면에서 ‘설치’ 또는 ‘홈 화면에 추가’를 눌러요.</li>
           <li>아이폰은 Safari에서 공유 버튼 → ‘홈 화면에 추가’예요.</li>
+          <li>갤럭시에서 안 찍히면 카메라 설정의 ‘QR 코드 스캔’을 켜 보세요.</li>
         </ol>
+
+        {code && (
+          <div className="qr-code-alt">
+            <b>QR이 안 되면 번호로 받아요</b>
+            <p>
+              휴대폰에서 사이트를 열고 <strong>‘번호로 앱 받기’</strong>에 이
+              번호를 넣어요.
+            </p>
+            <code>{code}</code>
+          </div>
+        )}
       </section>
     </div>
   );

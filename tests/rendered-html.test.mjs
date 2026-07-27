@@ -540,3 +540,25 @@ test("keeps QR codes sparse with server-stored share codes", async () => {
   // QR 여백은 규격(4모듈)을 지켜야 화면 반사 속에서도 경계를 찾습니다.
   assert.match(qr, /margin: 4,/);
 });
+
+test("offers a six-digit code path when QR scanning fails", async () => {
+  const [route, receive, studio, qr, health] = await Promise.all([
+    readFile(new URL("app/api/share/route.ts", root), "utf8"),
+    readFile(new URL("app/components/code-receive.tsx", root), "utf8"),
+    readFile(new URL("app/components/chatbot-studio.tsx", root), "utf8"),
+    readFile(new URL("app/components/share-qr.tsx", root), "utf8"),
+    readFile(new URL("app/api/health/route.ts", root), "utf8"),
+  ]);
+
+  // 새 공유 코드는 손으로 넣을 수 있는 6자리 숫자이고, 예전 12자 코드도 열립니다.
+  assert.match(route, /randomInt\(100000, 1000000\)/);
+  assert.match(route, /\\d\{6\}|d\{6\}/);
+  assert.match(route, /SUPABASE_409/);
+  // QR 대화 상자에 번호가 크게 보이고, 학생은 편집 화면에서 번호로 받습니다.
+  assert.match(qr, /qr-code-alt/);
+  assert.match(receive, /번호로 앱 받기/);
+  assert.match(receive, /run=install&sid=/);
+  assert.match(studio, /<CodeReceive \/>/);
+  // 점검 주소는 표가 만들어졌는지도 알려 줍니다.
+  assert.match(health, /probeTables/);
+});

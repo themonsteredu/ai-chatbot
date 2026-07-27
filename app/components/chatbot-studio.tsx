@@ -66,6 +66,7 @@ import {
 import { BlockWorkspace } from "./block-workspace";
 import { PhonePreview } from "./phone-preview";
 import { ClassSubmit } from "./class-submit";
+import { CodeReceive } from "./code-receive";
 import { ShareQrDialog } from "./share-qr";
 import { usePhoneScale } from "./use-phone-scale";
 import { SavedWebAppLibrary } from "./saved-webapp-library";
@@ -202,9 +203,11 @@ export function ChatbotStudio() {
     null,
   );
   // QR 대화 상자에 담을 공유 주소입니다. 비어 있으면 닫힌 상태입니다.
-  const [qrShare, setQrShare] = useState<{ appName: string; url: string } | null>(
-    null,
-  );
+  const [qrShare, setQrShare] = useState<{
+    appName: string;
+    url: string;
+    code: string;
+  } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // 넓은 화면에서 휴대폰 미리보기가 남는 공간만큼 커지게 합니다.
   const phoneStageRef = usePhoneScale();
@@ -601,14 +604,15 @@ export function ChatbotStudio() {
       const json = await response.json().catch(() => null);
       if (!response.ok || !json?.id) throw new Error("share unavailable");
       url.searchParams.set("sid", json.id);
+      return { url: url.toString(), code: String(json.id) };
     } catch {
       url.searchParams.set("project", encodeProject(project));
+      return { url: url.toString(), code: "" };
     }
-    return url.toString();
   };
 
   const shareProject = async () => {
-    const url = await buildShareUrl();
+    const { url } = await buildShareUrl();
     try {
       await navigator.clipboard.writeText(url);
       notify("내 웹앱 공유 링크를 복사했어요.");
@@ -619,9 +623,9 @@ export function ChatbotStudio() {
 
   /** 휴대폰 카메라로 찍으면 설치 화면이 열리는 QR을 띄웁니다. */
   const showShareQr = async () => {
-    setQrShare({ appName: project.appName, url: "" });
-    const url = await buildShareUrl();
-    setQrShare({ appName: project.appName, url });
+    setQrShare({ appName: project.appName, url: "", code: "" });
+    const { url, code } = await buildShareUrl();
+    setQrShare({ appName: project.appName, url, code });
   };
 
   const editStandalone = () => {
@@ -1472,6 +1476,7 @@ export function ChatbotStudio() {
               </span>
               <ChevronRight size={15} aria-hidden="true" />
             </Link>
+            <CodeReceive />
             <div className="panel-title">
               <span>반에 제출</span>
               <small>선생님이 볼 수 있게 올려요</small>
@@ -1840,6 +1845,7 @@ export function ChatbotStudio() {
         <ShareQrDialog
           appName={qrShare.appName}
           url={qrShare.url}
+          code={qrShare.code}
           onClose={() => setQrShare(null)}
         />
       )}

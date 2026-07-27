@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomInt } from "node:crypto";
 import type { NextRequest } from "next/server";
 import { normalizeProject } from "../../../lib/chatbot-studio";
 import {
@@ -10,7 +10,8 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const SHARE_ID = /^[a-f0-9]{12}$/;
+// 새 코드는 외우기 쉬운 6자리 숫자입니다. 예전 12자 코드도 계속 열립니다.
+const SHARE_ID = /^(\d{6}|[a-f0-9]{12})$/;
 
 function fail(message: string, status: number) {
   return Response.json(
@@ -41,8 +42,21 @@ export async function POST(request: NextRequest) {
       if (JSON.stringify(project).length > 200_000) {
         return fail("내용이 너무 큽니다.", 413);
       }
-      const id = randomUUID().replace(/-/g, "").slice(0, 12);
-      await saveSharedProject(id, project);
+      // 겹치면 다른 번호로 다시 시도합니다.
+      let id = "";
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const candidate = String(randomInt(100000, 1000000));
+        try {
+          await saveSharedProject(candidate, project);
+          id = candidate;
+          break;
+        } catch (caught) {
+          const message = caught instanceof Error ? caught.message : "";
+          // 기본키 충돌(409)일 때만 새 번호로 재시도합니다.
+          if (!message.includes("SUPABASE_409")) throw caught;
+        }
+      }
+      if (!id) return fail("공유 코드를 만들지 못했습니다.", 502);
       return Response.json(
         { id },
         { headers: { "Cache-Control": "no-store" } },
