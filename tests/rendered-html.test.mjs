@@ -513,8 +513,8 @@ test("builds share and QR links on the public production domain", async () => {
   assert.match(model, /NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL/);
   // 공유와 QR은 같은 buildShareUrl을 쓰므로 공개 주소 사용은 한 곳에 모입니다.
   assert.match(studio, /new URL\("\/", canonicalShareOrigin\(\)\)/);
-  assert.match(studio, /const shareProject = async \(\) => \{\n    const url = await buildShareUrl\(\)/);
-  assert.match(studio, /const url = await buildShareUrl\(\);\n    setQrShare/);
+  assert.match(studio, /const \{ url \} = await buildShareUrl\(\)/);
+  assert.match(studio, /const \{ url, code \} = await buildShareUrl\(\)/);
 });
 
 test("keeps QR codes sparse with server-stored share codes", async () => {
@@ -534,7 +534,7 @@ test("keeps QR codes sparse with server-stored share codes", async () => {
   // 링크를 여는 쪽은 짧은 코드로 서버에서 내용을 받아 옵니다.
   assert.match(studio, /action: "get", id: sid/);
   assert.match(shareRoute, /normalizeProject/);
-  assert.match(shareRoute, /randomUUID/);
+  assert.match(shareRoute, /randomInt/);
   assert.match(client, /shared_webapps/);
   assert.match(schema, /shared_webapps/);
   // QR 여백은 규격(4모듈)을 지켜야 화면 반사 속에서도 경계를 찾습니다.
