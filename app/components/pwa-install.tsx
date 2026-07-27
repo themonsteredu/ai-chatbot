@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Download, Share2, X } from "lucide-react";
+import { ArrowUp, Check, Download, Share2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { encodeProject, type WebAppProject } from "../../lib/chatbot-studio";
 
@@ -27,6 +27,9 @@ export function PwaInstallButton({
   const [installPrompt, setInstallPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(false);
+  // 브라우저의 설치 확인창은 주소창 근처에 작게 떠서 놓치기 쉽습니다.
+  // 확인창이 떠 있는 동안 어디를 봐야 하는지 화면에 크게 알려 줍니다.
+  const [prompting, setPrompting] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
 
   // 설치한 앱이 브라우저 저장 공간을 못 읽는 아이폰에서도 열리도록, 설계 내용을
@@ -146,10 +149,15 @@ export function PwaInstallButton({
       return;
     }
 
-    await installPrompt.prompt();
-    const choice = await installPrompt.userChoice;
-    if (choice.outcome === "accepted") setInstalled(true);
-    setInstallPrompt(null);
+    setPrompting(true);
+    try {
+      await installPrompt.prompt();
+      const choice = await installPrompt.userChoice;
+      if (choice.outcome === "accepted") setInstalled(true);
+      setInstallPrompt(null);
+    } finally {
+      setPrompting(false);
+    }
   };
 
   return (
@@ -167,6 +175,15 @@ export function PwaInstallButton({
           </>
         )}
       </button>
+      {prompting && !installed && (
+        <div className="pwa-install-pointer" role="status">
+          <ArrowUp size={15} aria-hidden="true" />
+          <p>
+            화면 <b>위쪽 주소창 근처</b>에 작은 설치 확인창이 떴어요.
+            거기에서 <strong>‘설치’</strong>를 눌러 주세요.
+          </p>
+        </div>
+      )}
       {showHelp && !installed && (
         <div className="pwa-install-help" role="status">
           <button
