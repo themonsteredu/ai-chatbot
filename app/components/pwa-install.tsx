@@ -2,6 +2,7 @@
 
 import { ArrowUp, Check, Download, Share2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { encodeProject, type WebAppProject } from "../../lib/chatbot-studio";
 
 type BeforeInstallPromptEvent = Event & {
@@ -175,32 +176,41 @@ export function PwaInstallButton({
           </>
         )}
       </button>
-      {prompting && !installed && (
-        <div className="pwa-install-pointer" role="status">
-          <ArrowUp size={15} aria-hidden="true" />
-          <p>
-            화면 <b>위쪽 주소창 근처</b>에 작은 설치 확인창이 떴어요.
-            거기에서 <strong>‘설치’</strong>를 눌러 주세요.
-          </p>
-        </div>
-      )}
-      {showHelp && !installed && (
-        <div className="pwa-install-help" role="status">
-          <button
-            type="button"
-            aria-label="설치 안내 닫기"
-            onClick={() => setShowHelp(false)}
-          >
-            <X size={13} aria-hidden="true" />
-          </button>
-          <Share2 size={16} aria-hidden="true" />
-          <p>
-            <b>‘{appName}’</b>을 저장하려면 아이폰은 Safari의 공유 버튼을 누른 뒤
-            <strong> ‘홈 화면에 추가’</strong>를 선택하세요. 안드로이드는
-            브라우저 메뉴의 <strong>‘앱 설치’</strong>를 선택하면 됩니다.
-          </p>
-        </div>
-      )}
+      {/* 툴바의 backdrop-filter가 fixed의 기준을 툴바로 바꿔 말풍선이 화면
+          밖에 그려지므로, 안내는 body에 직접 붙입니다. */}
+      {prompting &&
+        !installed &&
+        createPortal(
+          <div className="pwa-install-pointer" role="status">
+            <ArrowUp size={15} aria-hidden="true" />
+            <p>
+              화면 <b>위쪽 주소창 근처</b>에 작은 설치 확인창이 떴어요.
+              거기에서 <strong>‘설치’</strong>를 눌러 주세요.
+            </p>
+          </div>,
+          document.body,
+        )}
+      {showHelp &&
+        !installed &&
+        createPortal(
+          <div className="pwa-install-help" role="status">
+            <button
+              type="button"
+              aria-label="설치 안내 닫기"
+              onClick={() => setShowHelp(false)}
+            >
+              <X size={13} aria-hidden="true" />
+            </button>
+            <Share2 size={16} aria-hidden="true" />
+            <p>
+              <b>‘{appName}’</b>을 저장하려면 아이폰은 Safari 아래쪽의
+              공유 버튼을 누른 뒤 <strong>‘홈 화면에 추가’</strong>를
+              선택하세요. 안드로이드는 브라우저 메뉴의
+              <strong> ‘앱 설치’</strong>를 선택하면 됩니다.
+            </p>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

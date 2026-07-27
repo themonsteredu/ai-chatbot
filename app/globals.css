@@ -4804,10 +4804,10 @@ select:focus-visible {
 }
 
 .pwa-install-help {
-  position: absolute;
-  z-index: 40;
-  right: 0;
-  bottom: calc(100% + 8px);
+  position: fixed;
+  z-index: 60;
+  top: calc(70px + env(safe-area-inset-top));
+  right: 14px;
   display: grid;
   grid-template-columns: 20px minmax(0, 1fr);
   gap: 7px;
@@ -5161,11 +5161,6 @@ select:focus-visible {
     padding-top: 15px;
   }
 
-  .pwa-install-help {
-    position: fixed;
-    right: 12px;
-    bottom: calc(68px + env(safe-area-inset-bottom));
-  }
 }
 
 @media (display-mode: standalone) {

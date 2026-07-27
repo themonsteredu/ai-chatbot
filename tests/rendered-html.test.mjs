@@ -484,3 +484,19 @@ test("collects camp records for the teacher and shares apps by QR", async () => 
   assert.match(preview, /onReorder\(moving, kind\)/);
   assert.match(studio, /onReorder=\{reorderFeature\}/);
 });
+
+test("keeps install guidance visible above the blurred toolbar", async () => {
+  const [installer, css] = await Promise.all([
+    readFile(new URL("app/components/pwa-install.tsx", root), "utf8"),
+    readFile(new URL("app/globals.css", root), "utf8"),
+  ]);
+
+  // 툴바의 backdrop-filter가 fixed의 기준을 툴바로 바꿔 안내가 화면 밖에
+  // 그려졌습니다. 안내는 body에 직접 붙여야 합니다.
+  assert.match(installer, /createPortal/);
+  assert.match(installer, /document\.body/);
+  // 브라우저 설치 확인창이 떠 있는 동안 시선을 위로 이끕니다.
+  assert.match(installer, /pwa-install-pointer/);
+  assert.match(css, /\.pwa-install-help \{\n  position: fixed;/);
+  assert.doesNotMatch(css, /\.pwa-install-help \{\n  position: absolute;/);
+});
