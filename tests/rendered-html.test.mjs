@@ -408,3 +408,34 @@ test("grows the phone preview to fill the stage on wide screens", async () => {
   assert.match(css, /transform: scale\(var\(--phone-scale, 1\)\)/);
   assert.match(css, /@media \(min-width: 1161px\)/);
 });
+
+test("lets students write to-dos, reorder cards, and keep typing with Enter", async () => {
+  const [studio, phone, model] = await Promise.all([
+    readFile(new URL("app/components/chatbot-studio.tsx", root), "utf8"),
+    readFile(new URL("app/components/phone-preview.tsx", root), "utf8"),
+    readFile(new URL("lib/chatbot-studio.ts", root), "utf8"),
+  ]);
+
+  // 속성 판의 체크 항목 칸: 빈 줄을 지우면 엔터로 줄을 못 바꿉니다.
+  // 화면에는 적은 그대로 두고, 웹앱에 넣을 때만 빈 줄을 걸러야 합니다.
+  assert.match(studio, /checklistDraft/);
+  assert.match(studio, /setChecklistDraft\(lines\.join\("\\n"\)\)/);
+  assert.match(studio, /value=\{checklistText\}/);
+
+  // 실행 화면에서 쓰는 사람이 직접 할 일을 적고(엔터 포함) 지울 수 있습니다.
+  assert.match(phone, /addCustomItem/);
+  assert.match(phone, /removeCustomItem/);
+  assert.match(phone, /className="checklist-add"/);
+  assert.match(phone, /onSubmit=\{\(event\) => \{/);
+  assert.match(phone, /할 일을 적고 엔터를 눌러요/);
+  // 직접 적은 할 일도 기기에 저장되어 다시 열어도 남습니다.
+  assert.match(phone, /JSON\.stringify\(\{ checkedItems, customItems, journalText \}\)/);
+
+  // 기능 카드 순서는 모델에 저장되고, 미리보기와 컴포넌트 목록이 함께 따릅니다.
+  assert.match(model, /featureOrder: FeatureKind\[\]/);
+  assert.match(model, /DEFAULT_FEATURE_ORDER/);
+  assert.match(phone, /project\.featureOrder\.map/);
+  assert.match(studio, /reorderFeature/);
+  assert.match(studio, /featureReorderProps/);
+  assert.match(studio, /application\/x-webapp-reorder/);
+});

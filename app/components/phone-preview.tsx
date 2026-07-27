@@ -13,22 +13,28 @@ import {
   Info,
   MessageCircle,
   NotebookPen,
+  Plus,
   Rocket,
   Send,
   Sparkles,
   Wifi,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import {
   FormEvent,
+  Fragment,
   KeyboardEvent,
   MouseEvent,
+  ReactNode,
   useEffect,
   useRef,
   useState,
 } from "react";
 import type {
   ActionIcon,
+  ChecklistItem,
+  FeatureKind,
   SelectedTarget,
   WebAppProject,
 } from "../../lib/chatbot-studio";
@@ -73,6 +79,10 @@ export function PhonePreview({
   onSelect,
 }: PhonePreviewProps) {
   const [checkedItems, setCheckedItems] = useState<string[]>([]);
+  // 이 웹앱을 쓰는 사람이 직접 적어 넣은 할 일입니다. 설계에 있는 항목과 달리
+  // 그 기기에만 저장됩니다.
+  const [customItems, setCustomItems] = useState<ChecklistItem[]>([]);
+  const [newItemText, setNewItemText] = useState("");
   const [journalText, setJournalText] = useState("");
   const [journalSaved, setJournalSaved] = useState(false);
   const [buttonResult, setButtonResult] = useState("");
@@ -91,6 +101,7 @@ export function PhonePreview({
         if (saved) {
           const runtime = JSON.parse(saved) as {
             checkedItems?: unknown;
+            customItems?: unknown;
             journalText?: unknown;
           };
           if (Array.isArray(runtime.checkedItems)) {
@@ -98,6 +109,24 @@ export function PhonePreview({
               runtime.checkedItems.filter(
                 (item): item is string => typeof item === "string",
               ),
+            );
+          }
+          if (Array.isArray(runtime.customItems)) {
+            setCustomItems(
+              runtime.customItems
+                .filter(
+                  (item): item is Record<string, unknown> =>
+                    Boolean(item) && typeof item === "object",
+                )
+                .slice(0, 20)
+                .map((item, index) => ({
+                  id:
+                    typeof item.id === "string" && item.id
+                      ? item.id
+                      : `my-${index + 1}`,
+                  text: typeof item.text === "string" ? item.text : "",
+                }))
+                .filter((item) => item.text),
             );
           }
           if (typeof runtime.journalText === "string") {
@@ -119,13 +148,14 @@ export function PhonePreview({
     try {
       window.localStorage.setItem(
         runtimeStorageKey,
-        JSON.stringify({ checkedItems, journalText }),
+        JSON.stringify({ checkedItems, customItems, journalText }),
       );
     } catch {
       // The dedicated save actions still provide visible feedback when possible.
     }
   }, [
     checkedItems,
+    customItems,
     interactive,
     journalText,
     runtimeReady,
@@ -144,6 +174,29 @@ export function PhonePreview({
       event.preventDefault();
       select(target);
     }
+  };
+
+  // 설계에 들어 있는 항목 뒤에, 쓰는 사람이 직접 적은 항목을 붙입니다.
+  const allChecklistItems = [...project.checklistItems, ...customItems];
+
+  const addCustomItem = () => {
+    const text = newItemText.trim().slice(0, 40);
+    if (!text) return;
+    setCustomItems((items) => [
+      ...items.slice(0, 19),
+      {
+        id: `my-${Date.now().toString(36)}-${Math.random()
+          .toString(36)
+          .slice(2, 7)}`,
+        text,
+      },
+    ]);
+    setNewItemText("");
+  };
+
+  const removeCustomItem = (id: string) => {
+    setCustomItems((items) => items.filter((item) => item.id !== id));
+    setCheckedItems((items) => items.filter((item) => item !== id));
   };
 
   const toggleChecklistItem = (id: string) => {
@@ -189,7 +242,7 @@ export function PhonePreview({
       const normalizedLabel = action.label
         .toLocaleLowerCase()
         .replace(/[?!.,\s]/g, "");
-      return (
+        return (
         normalizedQuestion === normalizedLabel ||
         (labelTokens.length > 0 &&
           labelTokens.every((label) =>
@@ -223,52 +276,10 @@ export function PhonePreview({
             selectOnKeyboard(event, target),
         };
 
-  return (
-    <div
-      className={`phone ${interactive ? "phone-interactive" : ""} ${
-        standalone ? "standalone-phone" : ""
-      }`}
-      style={
-        {
-          "--phone-accent": project.accent,
-          "--phone-bg": project.screenBackground,
-        } as React.CSSProperties
-      }
-    >
-      <div className="phone-hardware">
-        <span>9:41</span>
-        <span className="phone-island" aria-hidden="true" />
-        <span className="phone-status-icons">
-          <Wifi size={11} aria-hidden="true" />
-          <span className="battery" aria-hidden="true" />
-        </span>
-      </div>
-
+  // 기능 카드는 학생이 정한 순서(featureOrder)대로 그립니다.
+  const featureSections: Record<FeatureKind, ReactNode> = {
+    "notice": project.noticeEnabled ? (
       <section
-        className={`phone-screen webapp-screen ${
-          selectedTarget === "screen" ? "component-selected" : ""
-        }`}
-        onClick={() => select("screen")}
-      >
-        <header
-          className={`app-hero ${
-            selectedTarget === "header" ? "component-selected" : ""
-          }`}
-          {...selectableProps("header")}
-        >
-          <span className="app-hero-icon">
-            <Rocket size={21} strokeWidth={2.4} aria-hidden="true" />
-          </span>
-          <span>
-            <small>MY WEB APP</small>
-            <strong>{project.appName}</strong>
-            <em>{project.subtitle}</em>
-          </span>
-        </header>
-
-        <div className="webapp-scroll">
-          {project.noticeEnabled && (
-            <section
               className={`webapp-card notice-card ${
                 selectedTarget === "notice" ? "component-selected" : ""
               }`}
@@ -283,10 +294,9 @@ export function PhonePreview({
                 <p>{project.noticeBody}</p>
               </div>
             </section>
-          )}
-
-          {project.checklistEnabled && (
-            <section
+    ) : null,
+    "checklist": project.checklistEnabled ? (
+      <section
               className={`webapp-card checklist-card ${
                 selectedTarget === "checklist" ? "component-selected" : ""
               }`}
@@ -301,11 +311,16 @@ export function PhonePreview({
                   <strong>{project.checklistTitle}</strong>
                 </span>
                 <b>
-                  {checkedItems.length}/{project.checklistItems.length}
+                  {
+                    checkedItems.filter((id) =>
+                      allChecklistItems.some((item) => item.id === id),
+                    ).length
+                  }
+                  /{allChecklistItems.length}
                 </b>
               </header>
               <div className="phone-checklist">
-                {project.checklistItems.map((item) => (
+                {allChecklistItems.map((item) => (
                   <label key={item.id}>
                     <input
                       type="checkbox"
@@ -314,14 +329,53 @@ export function PhonePreview({
                       onChange={() => toggleChecklistItem(item.id)}
                     />
                     <span>{item.text}</span>
+                    {interactive && item.id.startsWith("my-") && (
+                      <button
+                        className="checklist-remove"
+                        type="button"
+                        aria-label={`‘${item.text}’ 지우기`}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          removeCustomItem(item.id);
+                        }}
+                      >
+                        <X size={12} aria-hidden="true" />
+                      </button>
+                    )}
                   </label>
                 ))}
+                <form
+                  className="checklist-add"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    if (interactive) addCustomItem();
+                  }}
+                >
+                  <input
+                    aria-label="할 일 직접 추가"
+                    placeholder="할 일을 적고 엔터를 눌러요"
+                    value={interactive ? newItemText : ""}
+                    maxLength={40}
+                    readOnly={!interactive}
+                    onClick={(event) => event.stopPropagation()}
+                    onChange={(event) => setNewItemText(event.target.value)}
+                  />
+                  <button
+                    type="submit"
+                    aria-label="할 일 추가"
+                    disabled={interactive && !newItemText.trim()}
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <Plus size={13} aria-hidden="true" />
+                  </button>
+                </form>
               </div>
             </section>
-          )}
-
-          {project.journalEnabled && (
-            <section
+    ) : null,
+    "journal": project.journalEnabled ? (
+      <section
               className={`webapp-card journal-card ${
                 selectedTarget === "journal" ? "component-selected" : ""
               }`}
@@ -367,19 +421,17 @@ export function PhonePreview({
                 )}
               </button>
             </section>
-          )}
-
-          {project.campReportEnabled && (
-            <CampReport
+    ) : null,
+    "camp-report": project.campReportEnabled ? (
+      <CampReport
               project={project}
               interactive={interactive}
               selectedTarget={selectedTarget}
               onSelect={onSelect}
             />
-          )}
-
-          {project.buttonEnabled && (
-            <section
+    ) : null,
+    "button": project.buttonEnabled ? (
+      <section
               className={`action-feature ${
                 selectedTarget === "button" ? "component-selected" : ""
               }`}
@@ -403,10 +455,9 @@ export function PhonePreview({
                 </p>
               )}
             </section>
-          )}
-
-          {project.chatbotEnabled && (
-            <section
+    ) : null,
+    "chatbot": project.chatbotEnabled ? (
+      <section
               className={`webapp-card chatbot-feature ${
                 selectedTarget === "chatbot" ? "component-selected" : ""
               }`}
@@ -465,7 +516,56 @@ export function PhonePreview({
                 챗봇 열기
               </button>
             </section>
-          )}
+    ) : null,
+  };
+
+  return (
+    <div
+      className={`phone ${interactive ? "phone-interactive" : ""} ${
+        standalone ? "standalone-phone" : ""
+      }`}
+      style={
+        {
+          "--phone-accent": project.accent,
+          "--phone-bg": project.screenBackground,
+        } as React.CSSProperties
+      }
+    >
+      <div className="phone-hardware">
+        <span>9:41</span>
+        <span className="phone-island" aria-hidden="true" />
+        <span className="phone-status-icons">
+          <Wifi size={11} aria-hidden="true" />
+          <span className="battery" aria-hidden="true" />
+        </span>
+      </div>
+
+      <section
+        className={`phone-screen webapp-screen ${
+          selectedTarget === "screen" ? "component-selected" : ""
+        }`}
+        onClick={() => select("screen")}
+      >
+        <header
+          className={`app-hero ${
+            selectedTarget === "header" ? "component-selected" : ""
+          }`}
+          {...selectableProps("header")}
+        >
+          <span className="app-hero-icon">
+            <Rocket size={21} strokeWidth={2.4} aria-hidden="true" />
+          </span>
+          <span>
+            <small>MY WEB APP</small>
+            <strong>{project.appName}</strong>
+            <em>{project.subtitle}</em>
+          </span>
+        </header>
+
+        <div className="webapp-scroll">
+          {project.featureOrder.map((kind) => (
+            <Fragment key={kind}>{featureSections[kind]}</Fragment>
+          ))}
 
           {!project.noticeEnabled &&
             !project.checklistEnabled &&

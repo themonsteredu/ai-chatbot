@@ -1959,6 +1959,27 @@ select:focus-visible {
   grid-template-columns: 5px 27px minmax(0, 1fr);
 }
 
+/* 끌 수 있는 기능 항목: 손잡이를 오른쪽에 보여 줍니다. */
+.tree-children button[draggable="true"] {
+  grid-template-columns: 5px 27px minmax(0, 1fr) 14px;
+  cursor: grab;
+}
+
+.tree-children button[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.tree-grip {
+  display: grid;
+  place-items: center;
+  color: #b6bcca;
+}
+
+.tree-children button.tree-drop-target {
+  box-shadow: inset 0 2px 0 var(--violet);
+  background: var(--violet-soft);
+}
+
 .tree-line {
   width: 5px;
   height: 1px;
@@ -3095,6 +3116,72 @@ select:focus-visible {
   height: 12px;
   margin: 0;
   accent-color: var(--phone-accent);
+}
+
+.phone-checklist label span {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.checklist-remove {
+  display: grid;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #e6e8f0;
+  color: #6b7189;
+  cursor: pointer;
+}
+
+.checklist-remove:hover {
+  background: #f3d4dd;
+  color: #c2185b;
+}
+
+.checklist-add {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 26px;
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.checklist-add input {
+  width: 100%;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px dashed #c9cede;
+  border-radius: 7px;
+  background: #fff;
+  color: #383f52;
+  font-size: 7.5px;
+}
+
+.checklist-add input:focus {
+  border-color: var(--phone-accent);
+  border-style: solid;
+  outline: none;
+}
+
+.checklist-add button {
+  display: grid;
+  height: 26px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: var(--phone-accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+.checklist-add button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .phone-checklist input:checked + span {

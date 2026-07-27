@@ -53,7 +53,27 @@ export type WebAppProject = {
   fallbackResponse: string;
   inputEnabled: boolean;
   actions: QuickAction[];
+  /** 화면에 기능 카드가 놓이는 순서입니다. 드래그로 바꿀 수 있습니다. */
+  featureOrder: FeatureKind[];
 };
+
+/** 화면에 놓을 수 있는 기능 카드의 종류입니다. 머리글은 항상 맨 위라 제외합니다. */
+export type FeatureKind =
+  | "notice"
+  | "checklist"
+  | "journal"
+  | "camp-report"
+  | "button"
+  | "chatbot";
+
+export const DEFAULT_FEATURE_ORDER: FeatureKind[] = [
+  "notice",
+  "checklist",
+  "journal",
+  "camp-report",
+  "button",
+  "chatbot",
+];
 
 export type SelectedTarget =
   | "screen"
@@ -110,6 +130,7 @@ const BASE_PROJECT: WebAppProject = {
       icon: "message",
     },
   ],
+  featureOrder: [...DEFAULT_FEATURE_ORDER],
 };
 
 export const BLANK_PROJECT: WebAppProject = {
@@ -137,6 +158,7 @@ export const CAMP_PROJECT: WebAppProject = {
   buttonEnabled: false,
   chatbotEnabled: false,
   actions: [],
+  featureOrder: [...DEFAULT_FEATURE_ORDER],
 };
 
 export const NOTICE_PROJECT: WebAppProject = {
@@ -190,6 +212,7 @@ export const NOTICE_PROJECT: WebAppProject = {
       icon: "home",
     },
   ],
+  featureOrder: [...DEFAULT_FEATURE_ORDER],
 };
 
 export const DEFAULT_PROJECT = BLANK_PROJECT;
@@ -282,6 +305,23 @@ export function normalizeProject(value: unknown): WebAppProject {
           text: textOr(item.text, `활동 ${index + 1}`),
         }))
     : cloneProject(DEFAULT_PROJECT).checklistItems;
+
+  const featureOrder: FeatureKind[] = (() => {
+    const requested = Array.isArray(candidate.featureOrder)
+      ? (candidate.featureOrder as unknown[]).filter(
+          (kind): kind is FeatureKind =>
+            DEFAULT_FEATURE_ORDER.includes(kind as FeatureKind),
+        )
+      : [];
+    const seen = new Set<FeatureKind>();
+    const ordered: FeatureKind[] = [];
+    for (const kind of [...requested, ...DEFAULT_FEATURE_ORDER]) {
+      if (seen.has(kind)) continue;
+      seen.add(kind);
+      ordered.push(kind);
+    }
+    return ordered;
+  })();
 
   const template: TemplateId =
     candidate.template === "camp" ||
@@ -377,6 +417,7 @@ export function normalizeProject(value: unknown): WebAppProject {
       DEFAULT_PROJECT.inputEnabled,
     ),
     actions,
+    featureOrder,
   };
 }
 

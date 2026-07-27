@@ -46,6 +46,7 @@ import {
   encodeProject,
   normalizeProject,
   type ActionIcon,
+  type FeatureKind,
   type QuickAction,
   type SelectedTarget,
   type StudioMode,
@@ -68,6 +69,7 @@ import { SavedWebAppLibrary } from "./saved-webapp-library";
 import { WebAppPlayer } from "./webapp-player";
 
 const STORAGE_KEY = "my-webapp-inventor-project-v3";
+const MAX_CHECKLIST_ITEMS = 10;
 const LEGACY_INSTALLED_PROJECT_KEY = "my-webapp-installed-project-v1";
 
 type PaletteKind =
@@ -187,6 +189,15 @@ export function ChatbotStudio() {
   const [loadError, setLoadError] = useState("");
   const [hydrated, setHydrated] = useState(false);
   const [toast, setToast] = useState("");
+  // 체크 항목을 적는 중에는 빈 줄까지 그대로 들고 있습니다.
+  const [checklistDraft, setChecklistDraft] = useState<string | null>(null);
+  // 컴포넌트 목록에서 끌고 있는 기능과, 지금 그 위에 올라가 있는 기능입니다.
+  const [draggingFeature, setDraggingFeature] = useState<FeatureKind | null>(
+    null,
+  );
+  const [dragOverFeature, setDragOverFeature] = useState<FeatureKind | null>(
+    null,
+  );
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // 넓은 화면에서 휴대폰 미리보기가 남는 공간만큼 커지게 합니다.
   const phoneStageRef = usePhoneScale();
@@ -476,6 +487,44 @@ export function ChatbotStudio() {
     return savedApp;
   };
 
+  /** 끌어다 놓은 기능을 목표 기능 자리 앞으로 옮깁니다. */
+  const reorderFeature = (moving: FeatureKind, target: FeatureKind) => {
+    if (moving === target) return;
+    const order = project.featureOrder.filter((kind) => kind !== moving);
+    const at = order.indexOf(target);
+    order.splice(at < 0 ? order.length : at, 0, moving);
+    // 바뀐 순서가 화면에 바로 보이므로 따로 알림을 띄우지 않습니다.
+    updateProject("featureOrder", order);
+  };
+
+  const featureReorderProps = (kind: FeatureKind) => ({
+    kind,
+    dragOver: dragOverFeature === kind && draggingFeature !== kind,
+    onDragStart: (event: DragEvent<HTMLButtonElement>) => {
+      event.dataTransfer.setData("application/x-webapp-reorder", kind);
+      event.dataTransfer.effectAllowed = "move";
+      setDraggingFeature(kind);
+    },
+    onDragOver: (event: DragEvent<HTMLButtonElement>) => {
+      if (!draggingFeature) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+      setDragOverFeature(kind);
+    },
+    onDragLeave: () => {
+      setDragOverFeature((current) => (current === kind ? null : current));
+    },
+    onDrop: (event: DragEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      const moving = event.dataTransfer.getData(
+        "application/x-webapp-reorder",
+      ) as FeatureKind;
+      if (moving) reorderFeature(moving, kind);
+      setDraggingFeature(null);
+      setDragOverFeature(null);
+    },
+  });
+
   /** 반 저장소에서 가져온 웹앱으로 편집을 이어 갑니다. */
   const restoreClassWebApp = (restored: WebAppProject, restoredId: string) => {
     setProject(restored);
@@ -565,20 +614,42 @@ export function ChatbotStudio() {
     if (window.innerWidth <= 960) setMobilePanel("properties");
   };
 
+  /**
+   * 적는 동안에는 빈 줄이 남아 있어야 엔터로 다음 줄에 이어 쓸 수 있습니다.
+   * 화면에 보이는 글자는 적은 그대로 두고, 웹앱에 넣을 항목을 만들 때만 빈 줄을
+   * 걸러냅니다.
+   */
   const updateChecklistItems = (value: string) => {
-    const lines = value
+    const lines = value.split("\n").slice(0, MAX_CHECKLIST_ITEMS);
+    setChecklistDraft(lines.join("\n"));
+    updateProject(
+      "checklistItems",
+      lines
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((text, index) => ({
+          id: project.checklistItems[index]?.id ?? `check-${index + 1}`,
+          text,
+        })),
+    );
+  };
+
+  /**
+   * 적던 글자를 보여 주되, 예시를 고르는 등으로 항목이 바깥에서 바뀌었으면
+   * 바뀐 쪽을 따릅니다.
+   */
+  const checklistText = (() => {
+    const fromProject = project.checklistItems
+      .map((item) => item.text)
+      .join("\n");
+    if (checklistDraft === null) return fromProject;
+    const draftItems = checklistDraft
       .split("\n")
       .map((line) => line.trim())
       .filter(Boolean)
-      .slice(0, 10);
-    updateProject(
-      "checklistItems",
-      lines.map((text, index) => ({
-        id: project.checklistItems[index]?.id ?? `check-${index + 1}`,
-        text,
-      })),
-    );
-  };
+      .join("\n");
+    return draftItems === fromProject ? checklistDraft : fromProject;
+  })();
 
   const renderProperties = () => {
     if (selectedAction) {
@@ -753,13 +824,11 @@ export function ChatbotStudio() {
             <span>체크할 항목 · 한 줄에 하나</span>
             <textarea
               rows={7}
-              value={project.checklistItems
-                .map((item) => item.text)
-                .join("\n")}
+              value={checklistText}
               onChange={(event) => updateChecklistItems(event.target.value)}
             />
             <small className="property-help">
-              최대 10개까지 만들 수 있어요.
+              최대 {MAX_CHECKLIST_ITEMS}개까지 만들 수 있어요.
             </small>
           </label>
           <button
@@ -1518,56 +1587,81 @@ export function ChatbotStudio() {
                   tone="violet"
                   onClick={() => selectTarget("header")}
                 />
-                {project.noticeEnabled && (
-                  <ComponentTreeItem
-                    active={selectedTarget === "notice"}
-                    icon={Info}
-                    name="NoticeCard1"
-                    detail={project.noticeTitle}
-                    tone="yellow"
-                    onClick={() => selectTarget("notice")}
-                  />
-                )}
-                {project.checklistEnabled && (
-                  <ComponentTreeItem
-                    active={selectedTarget === "checklist"}
-                    icon={ClipboardCheck}
-                    name="Checklist1"
-                    detail={`${project.checklistItems.length}개 활동`}
-                    tone="mint"
-                    onClick={() => selectTarget("checklist")}
-                  />
-                )}
-                {project.journalEnabled && (
-                  <ComponentTreeItem
-                    active={selectedTarget === "journal"}
-                    icon={NotebookPen}
-                    name="MyJournal1"
-                    detail={project.journalTitle}
-                    tone="blue"
-                    onClick={() => selectTarget("journal")}
-                  />
-                )}
-                {project.campReportEnabled && (
-                  <ComponentTreeItem
-                    active={selectedTarget === "camp-report"}
-                    icon={FileText}
-                    name="CampReport1"
-                    detail="3일 · 12차시 · 인쇄"
-                    tone="blue"
-                    onClick={() => selectTarget("camp-report")}
-                  />
-                )}
-                {project.buttonEnabled && (
-                  <ComponentTreeItem
-                    active={selectedTarget === "button"}
-                    icon={MousePointerClick}
-                    name="ActionButton1"
-                    detail={project.buttonLabel}
-                    tone="yellow"
-                    onClick={() => selectTarget("button")}
-                  />
-                )}
+                {project.featureOrder
+                  .filter((kind) => kind !== "chatbot")
+                  .map((kind) => {
+                    if (kind === "notice" && project.noticeEnabled) {
+                      return (
+                        <ComponentTreeItem
+                          key={kind}
+                          active={selectedTarget === "notice"}
+                          icon={Info}
+                          name="NoticeCard1"
+                          detail={project.noticeTitle}
+                          tone="yellow"
+                          onClick={() => selectTarget("notice")}
+                          reorder={featureReorderProps(kind)}
+                        />
+                      );
+                    }
+                    if (kind === "checklist" && project.checklistEnabled) {
+                      return (
+                        <ComponentTreeItem
+                          key={kind}
+                          active={selectedTarget === "checklist"}
+                          icon={ClipboardCheck}
+                          name="Checklist1"
+                          detail={`${project.checklistItems.length}개 활동`}
+                          tone="mint"
+                          onClick={() => selectTarget("checklist")}
+                          reorder={featureReorderProps(kind)}
+                        />
+                      );
+                    }
+                    if (kind === "journal" && project.journalEnabled) {
+                      return (
+                        <ComponentTreeItem
+                          key={kind}
+                          active={selectedTarget === "journal"}
+                          icon={NotebookPen}
+                          name="MyJournal1"
+                          detail={project.journalTitle}
+                          tone="blue"
+                          onClick={() => selectTarget("journal")}
+                          reorder={featureReorderProps(kind)}
+                        />
+                      );
+                    }
+                    if (kind === "camp-report" && project.campReportEnabled) {
+                      return (
+                        <ComponentTreeItem
+                          key={kind}
+                          active={selectedTarget === "camp-report"}
+                          icon={FileText}
+                          name="CampReport1"
+                          detail="3일 · 12차시 · 인쇄"
+                          tone="blue"
+                          onClick={() => selectTarget("camp-report")}
+                          reorder={featureReorderProps(kind)}
+                        />
+                      );
+                    }
+                    if (kind === "button" && project.buttonEnabled) {
+                      return (
+                        <ComponentTreeItem
+                          key={kind}
+                          active={selectedTarget === "button"}
+                          icon={MousePointerClick}
+                          name="ActionButton1"
+                          detail={project.buttonLabel}
+                          tone="yellow"
+                          onClick={() => selectTarget("button")}
+                          reorder={featureReorderProps(kind)}
+                        />
+                      );
+                    }
+                    return null;
+                  })}
                 {project.chatbotEnabled && (
                   <>
                     <ComponentTreeItem
@@ -1577,6 +1671,7 @@ export function ChatbotStudio() {
                       detail={project.botName}
                       tone="violet"
                       onClick={() => selectTarget("chatbot")}
+                      reorder={featureReorderProps("chatbot")}
                     />
                     {project.actions.map((action, index) => (
                       <ComponentTreeItem
@@ -1691,6 +1786,15 @@ type ComponentTreeItemProps = {
   tone: "violet" | "yellow" | "mint" | "blue";
   nested?: boolean;
   onClick: () => void;
+  /** 있으면 이 항목을 끌어서 화면의 카드 순서를 바꿀 수 있습니다. */
+  reorder?: {
+    kind: FeatureKind;
+    dragOver: boolean;
+    onDragStart: (event: DragEvent<HTMLButtonElement>) => void;
+    onDragOver: (event: DragEvent<HTMLButtonElement>) => void;
+    onDragLeave: () => void;
+    onDrop: (event: DragEvent<HTMLButtonElement>) => void;
+  };
 };
 
 function ComponentTreeItem({
@@ -1701,14 +1805,20 @@ function ComponentTreeItem({
   tone,
   nested = false,
   onClick,
+  reorder,
 }: ComponentTreeItemProps) {
   return (
     <button
       className={`${active ? "selected" : ""} ${
         nested ? "nested-tree-item" : ""
-      }`}
+      } ${reorder?.dragOver ? "tree-drop-target" : ""}`}
       type="button"
       onClick={onClick}
+      draggable={Boolean(reorder)}
+      onDragStart={reorder?.onDragStart}
+      onDragOver={reorder?.onDragOver}
+      onDragLeave={reorder?.onDragLeave}
+      onDrop={reorder?.onDrop}
     >
       <span className="tree-line" aria-hidden="true" />
       <span className={`tree-icon ${tone}`}>
@@ -1718,6 +1828,11 @@ function ComponentTreeItem({
         <strong>{name}</strong>
         <small>{detail}</small>
       </span>
+      {reorder && (
+        <span className="tree-grip" aria-hidden="true">
+          <GripVertical size={12} />
+        </span>
+      )}
     </button>
   );
 }
