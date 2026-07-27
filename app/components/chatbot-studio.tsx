@@ -42,6 +42,7 @@ import {
   ACTION_ICON_LABELS,
   DEFAULT_PROJECT,
   PROJECT_TEMPLATES,
+  canonicalShareOrigin,
   cloneProject,
   decodeProject,
   encodeProject,
@@ -560,7 +561,7 @@ export function ChatbotStudio() {
 
   const shareProject = async () => {
     const savedApp = saveCurrentAsWebApp();
-    const url = new URL("/", window.location.origin);
+    const url = new URL("/", canonicalShareOrigin());
     url.searchParams.set("run", "install");
     url.searchParams.set("app", savedApp.id);
     url.searchParams.set("project", encodeProject(project));
@@ -576,7 +577,7 @@ export function ChatbotStudio() {
   /** 휴대폰 카메라로 찍으면 설치 화면이 열리는 QR을 띄웁니다. */
   const showShareQr = () => {
     const savedApp = saveCurrentAsWebApp();
-    const url = new URL("/", window.location.origin);
+    const url = new URL("/", canonicalShareOrigin());
     url.searchParams.set("run", "install");
     url.searchParams.set("app", savedApp.id);
     url.searchParams.set("project", encodeProject(project));

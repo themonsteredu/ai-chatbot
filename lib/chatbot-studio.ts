@@ -457,3 +457,14 @@ export function decodeProject(value: string) {
     return null;
   }
 }
+
+/**
+ * QR·공유 링크에 넣을 주소입니다. Vercel의 배포별 주소(해시·브랜치 주소)는
+ * 로그인 보호가 걸려 있어 학생이 열면 로그인 화면이 뜹니다. 어떤 주소로
+ * 접속해 만들었든 링크는 항상 공개 주소로 만들어지게 합니다.
+ */
+export function canonicalShareOrigin() {
+  const production = process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL;
+  if (production) return `https://${production}`;
+  return window.location.origin;
+}

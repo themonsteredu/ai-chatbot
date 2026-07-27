@@ -500,3 +500,20 @@ test("keeps install guidance visible above the blurred toolbar", async () => {
   assert.match(css, /\.pwa-install-help \{\n  position: fixed;/);
   assert.doesNotMatch(css, /\.pwa-install-help \{\n  position: absolute;/);
 });
+
+test("builds share and QR links on the public production domain", async () => {
+  const [model, studio] = await Promise.all([
+    readFile(new URL("lib/chatbot-studio.ts", root), "utf8"),
+    readFile(new URL("app/components/chatbot-studio.tsx", root), "utf8"),
+  ]);
+
+  // Vercel의 배포별 주소는 로그인 보호가 걸려 학생이 열 수 없습니다.
+  // 어떤 주소로 접속했든 링크는 공개 주소로 만들어져야 합니다.
+  assert.match(model, /canonicalShareOrigin/);
+  assert.match(model, /NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL/);
+  assert.equal(
+    (studio.match(/new URL\("\/", canonicalShareOrigin\(\)\)/g) ?? []).length,
+    2,
+    "공유와 QR 두 곳 모두 공개 주소를 써야 합니다.",
+  );
+});
