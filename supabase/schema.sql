@@ -45,3 +45,13 @@ create index if not exists class_records_class_idx
   on public.class_records (class_code, updated_at desc);
 
 alter table public.class_records enable row level security;
+
+-- QR·공유 링크용 표입니다. 내용을 서버에 두고 링크에는 짧은 코드만 담아,
+-- QR이 단순해져 휴대폰 카메라가 쉽게 읽습니다.
+create table if not exists public.shared_webapps (
+  id text primary key,
+  project jsonb not null,
+  created_at timestamptz not null default now()
+);
+
+alter table public.shared_webapps enable row level security;

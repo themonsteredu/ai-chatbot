@@ -150,3 +150,23 @@ export async function listRecordRows(classCode: string) {
   return ((await request(`${RECORD_TABLE}?${params}`, { method: "GET" })) ??
     []) as ClassRecordRow[];
 }
+
+const SHARE_TABLE = "shared_webapps";
+
+/** QR·공유 링크에 담을 짧은 코드로 웹앱 내용을 저장합니다. */
+export async function saveSharedProject(id: string, project: unknown) {
+  await request(SHARE_TABLE, {
+    method: "POST",
+    body: JSON.stringify({ id, project }),
+    headers: { Prefer: "return=minimal" },
+  });
+  return id;
+}
+
+export async function getSharedProject(id: string) {
+  const params = new URLSearchParams({ id: `eq.${id}`, select: "project" });
+  const rows = ((await request(`${SHARE_TABLE}?${params}`, {
+    method: "GET",
+  })) ?? []) as Array<{ project: unknown }>;
+  return rows[0]?.project ?? null;
+}

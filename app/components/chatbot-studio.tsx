@@ -230,7 +230,8 @@ export function ChatbotStudio() {
       const requestedAppId = params.get("app");
       const editingAppId = params.get("edit");
       const shared = params.get("project");
-      const sharedProject = shared ? decodeProject(shared) : null;
+      const sid = params.get("sid");
+      const hydrate = (sharedProject: WebAppProject | null) => {
       const isStandalone =
         runMode === "1" || runMode === "install" || runMode === "saved";
       let nextAppId = isValidWebAppId(requestedAppId)
@@ -318,6 +319,27 @@ export function ChatbotStudio() {
       setSavedApps(listSavedWebApps(window.localStorage));
       setStandalone(isStandalone);
       setHydrated(true);
+      };
+
+      const inlineProject = shared ? decodeProject(shared) : null;
+      if (inlineProject || !sid) {
+        hydrate(inlineProject);
+        return;
+      }
+
+      // QR·공유 링크의 짧은 코드는 서버에서 내용을 받아 옵니다.
+      fetch("/api/share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "get", id: sid }),
+      })
+        .then(async (response) => {
+          const json = await response.json().catch(() => null);
+          if (!response.ok || !json?.project) return null;
+          return normalizeProject(json.project);
+        })
+        .catch(() => null)
+        .then((fetched) => hydrate(fetched));
     }, 0);
 
     return () => window.clearTimeout(timer);
@@ -559,29 +581,47 @@ export function ChatbotStudio() {
     notify("빈 웹앱으로 돌아왔어요.");
   };
 
-  const shareProject = async () => {
+  /**
+   * 공유 주소를 만듭니다. 내용을 서버에 저장하고 짧은 코드만 담는 쪽을
+   * 먼저 시도합니다. 링크가 짧아야 QR이 성겨져 휴대폰 카메라가 잘 읽습니다.
+   * 저장소가 아직 연결되지 않았으면 내용을 통째로 담은 긴 링크를 씁니다.
+   */
+  const buildShareUrl = async () => {
     const savedApp = saveCurrentAsWebApp();
     const url = new URL("/", canonicalShareOrigin());
     url.searchParams.set("run", "install");
     url.searchParams.set("app", savedApp.id);
-    url.searchParams.set("project", encodeProject(project));
 
     try {
-      await navigator.clipboard.writeText(url.toString());
+      const response = await fetch("/api/share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "create", project }),
+      });
+      const json = await response.json().catch(() => null);
+      if (!response.ok || !json?.id) throw new Error("share unavailable");
+      url.searchParams.set("sid", json.id);
+    } catch {
+      url.searchParams.set("project", encodeProject(project));
+    }
+    return url.toString();
+  };
+
+  const shareProject = async () => {
+    const url = await buildShareUrl();
+    try {
+      await navigator.clipboard.writeText(url);
       notify("내 웹앱 공유 링크를 복사했어요.");
     } catch {
-      window.prompt("아래 링크를 복사해 주세요.", url.toString());
+      window.prompt("아래 링크를 복사해 주세요.", url);
     }
   };
 
   /** 휴대폰 카메라로 찍으면 설치 화면이 열리는 QR을 띄웁니다. */
-  const showShareQr = () => {
-    const savedApp = saveCurrentAsWebApp();
-    const url = new URL("/", canonicalShareOrigin());
-    url.searchParams.set("run", "install");
-    url.searchParams.set("app", savedApp.id);
-    url.searchParams.set("project", encodeProject(project));
-    setQrShare({ appName: project.appName, url: url.toString() });
+  const showShareQr = async () => {
+    setQrShare({ appName: project.appName, url: "" });
+    const url = await buildShareUrl();
+    setQrShare({ appName: project.appName, url });
   };
 
   const editStandalone = () => {

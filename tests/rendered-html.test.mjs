@@ -517,3 +517,27 @@ test("builds share and QR links on the public production domain", async () => {
     "공유와 QR 두 곳 모두 공개 주소를 써야 합니다.",
   );
 });
+
+test("keeps QR codes sparse with server-stored share codes", async () => {
+  const [studio, shareRoute, client, schema, qr] = await Promise.all([
+    readFile(new URL("app/components/chatbot-studio.tsx", root), "utf8"),
+    readFile(new URL("app/api/share/route.ts", root), "utf8"),
+    readFile(new URL("app/api/class-webapps/supabase.ts", root), "utf8"),
+    readFile(new URL("supabase/schema.sql", root), "utf8"),
+    readFile(new URL("app/components/share-qr.tsx", root), "utf8"),
+  ]);
+
+  // 내용을 서버에 저장하고 짧은 코드만 담아야 QR이 성겨져 잘 읽힙니다.
+  assert.match(studio, /buildShareUrl/);
+  assert.match(studio, /searchParams\.set\("sid", json\.id\)/);
+  // 저장소가 없으면 내용을 통째로 담은 긴 링크로 대체합니다.
+  assert.match(studio, /url\.searchParams\.set\("project", encodeProject\(project\)\)/);
+  // 링크를 여는 쪽은 짧은 코드로 서버에서 내용을 받아 옵니다.
+  assert.match(studio, /action: "get", id: sid/);
+  assert.match(shareRoute, /normalizeProject/);
+  assert.match(shareRoute, /randomUUID/);
+  assert.match(client, /shared_webapps/);
+  assert.match(schema, /shared_webapps/);
+  // QR 여백은 규격(4모듈)을 지켜야 화면 반사 속에서도 경계를 찾습니다.
+  assert.match(qr, /margin: 4,/);
+});

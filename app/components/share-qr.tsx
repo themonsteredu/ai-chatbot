@@ -12,20 +12,26 @@ type ShareQrDialogProps = {
 };
 
 export function ShareQrDialog({ appName, url, onClose }: ShareQrDialogProps) {
-  const [image, setImage] = useState("");
+  const [result, setResult] = useState<{ url: string; image: string }>({
+    url: "",
+    image: "",
+  });
   const [error, setError] = useState("");
+  // 주소가 아직 만들어지는 중이거나 바뀌었으면 이전 그림을 쓰지 않습니다.
+  const image = result.url === url ? result.image : "";
 
   useEffect(() => {
     let cancelled = false;
+    if (!url) return undefined;
     // 오류 보정을 가장 낮게 잡아 담을 수 있는 길이를 최대로 씁니다. 웹앱 하나가
     // 이천 자 안팎이라 보통 넉넉하고, 넘치면 아래에서 안내합니다.
     QRCode.toDataURL(url, {
       errorCorrectionLevel: "L",
-      margin: 2,
+      margin: 4,
       width: 560,
     })
       .then((dataUrl) => {
-        if (!cancelled) setImage(dataUrl);
+        if (!cancelled) setResult({ url, image: dataUrl });
       })
       .catch(() => {
         if (!cancelled) {
