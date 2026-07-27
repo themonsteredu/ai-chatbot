@@ -4688,6 +4688,30 @@ select:focus-visible {
   resize: vertical;
 }
 
+.camp-photo-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.camp-photo-choices > small {
+  grid-column: 1 / -1;
+  color: #8a90a5;
+  font-size: 7.5px;
+  text-align: center;
+}
+
+.camp-photo-error {
+  margin: 6px 0 0;
+  padding: 7px 9px;
+  border-radius: 7px;
+  background: #fdeaef;
+  color: #c2185b;
+  font-size: 8px;
+  font-weight: 750;
+  line-height: 1.5;
+}
+
 .camp-photo-upload {
   display: grid;
   min-height: 74px;

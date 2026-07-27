@@ -161,6 +161,8 @@ export function CampReport({
   const [storageReady, setStorageReady] = useState(false);
   const [storageStatus, setStorageStatus] = useState("휴대폰에 자동 저장");
   const [uploadingSession, setUploadingSession] = useState("");
+  // 사진 오류는 화면 아래 작은 상태줄로는 눈에 띄지 않아, 해당 칸 바로 밑에 보여 줍니다.
+  const [photoError, setPhotoError] = useState<{ id: string; message: string } | null>(null);
   const storageKey = `my-webapp-camp-report-v1:${project.title}`;
   // 반 코드는 편집 화면의 ‘반에 제출’과 같은 키를 써서 한 번만 적으면 됩니다.
   const [sendClassCode, setSendClassCode] = useState(() =>
@@ -246,14 +248,19 @@ export function CampReport({
     if (!file) return;
 
     setUploadingSession(id);
+    setPhotoError(null);
     setStorageStatus("사진을 저장하는 중");
     try {
       const photo = await compressPhoto(file);
       updateSession(id, { photo });
     } catch (error) {
-      setStorageStatus(
-        error instanceof Error ? error.message : "사진을 올리지 못했어요",
-      );
+      const message =
+        error instanceof Error ? error.message : "사진을 올리지 못했어요.";
+      setPhotoError({
+        id,
+        message: `${message} 다른 사진으로 다시 해 보세요.`,
+      });
+      setStorageStatus("사진을 올리지 못했어요");
     } finally {
       setUploadingSession("");
     }
@@ -465,7 +472,6 @@ export function CampReport({
                                 <input
                                   type="file"
                                   accept="image/*"
-                                  capture="environment"
                                   onChange={(event) => uploadPhoto(event, id)}
                                 />
                               </label>
@@ -479,22 +485,43 @@ export function CampReport({
                             </div>
                           </div>
                         ) : (
-                          <label className="camp-photo-upload">
-                            <ImagePlus size={18} aria-hidden="true" />
-                            <strong>
-                              {uploadingSession === id
-                                ? "사진 저장 중"
-                                : "사진 찍기 또는 올리기"}
-                            </strong>
+                          <div className="camp-photo-choices">
+                            <label className="camp-photo-upload">
+                              <Camera size={17} aria-hidden="true" />
+                              <strong>
+                                {uploadingSession === id
+                                  ? "저장 중"
+                                  : "카메라로 찍기"}
+                              </strong>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                disabled={uploadingSession === id}
+                                onChange={(event) => uploadPhoto(event, id)}
+                              />
+                            </label>
+                            <label className="camp-photo-upload">
+                              <ImagePlus size={17} aria-hidden="true" />
+                              <strong>
+                                {uploadingSession === id
+                                  ? "저장 중"
+                                  : "앨범에서 고르기"}
+                              </strong>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                disabled={uploadingSession === id}
+                                onChange={(event) => uploadPhoto(event, id)}
+                              />
+                            </label>
                             <small>사진은 이 휴대폰에만 저장돼요</small>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              capture="environment"
-                              disabled={uploadingSession === id}
-                              onChange={(event) => uploadPhoto(event, id)}
-                            />
-                          </label>
+                          </div>
+                        )}
+                        {photoError?.id === id && (
+                          <p className="camp-photo-error" role="alert">
+                            {photoError.message}
+                          </p>
                         )}
                       </div>
 

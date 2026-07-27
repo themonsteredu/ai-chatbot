@@ -562,3 +562,22 @@ test("offers a six-digit code path when QR scanning fails", async () => {
   // 점검 주소는 표가 만들어졌는지도 알려 줍니다.
   assert.match(health, /probeTables/);
 });
+
+test("lets students take or pick photos and see upload errors", async () => {
+  const camp = await readFile(
+    new URL("app/components/camp-report.tsx", root),
+    "utf8",
+  );
+
+  // capture가 박힌 입력 하나만 있으면 휴대폰에서 카메라만 열리고 앨범을 못 씁니다.
+  assert.match(camp, /카메라로 찍기/);
+  assert.match(camp, /앨범에서 고르기/);
+  assert.equal(
+    (camp.match(/capture="environment"/g) ?? []).length,
+    1,
+    "capture는 ‘카메라로 찍기’ 입력에만 있어야 합니다.",
+  );
+  // 사진 오류는 해당 칸 바로 밑에 보여야 학생이 알아챕니다.
+  assert.match(camp, /camp-photo-error/);
+  assert.match(camp, /setPhotoError\(\{/);
+});

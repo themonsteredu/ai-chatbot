@@ -171,13 +171,18 @@ export async function getSharedProject(id: string) {
   return rows[0]?.project ?? null;
 }
 
-/** 표가 실제로 만들어졌는지 확인합니다. 값은 읽지 않고 성공 여부만 봅니다. */
+/** 표가 실제로 만들어졌는지 확인합니다. 값은 읽지 않고 상태만 봅니다. */
 async function probeTable(table: string) {
   try {
     await request(`${table}?select=id&limit=1`, { method: "GET" });
-    return true;
-  } catch {
-    return false;
+    return "ok";
+  } catch (caught) {
+    const message = caught instanceof Error ? caught.message : "";
+    if (message.includes("SUPABASE_404")) return "missing";
+    if (message.includes("SUPABASE_401") || message.includes("SUPABASE_403")) {
+      return "key-rejected";
+    }
+    return "error";
   }
 }
 
