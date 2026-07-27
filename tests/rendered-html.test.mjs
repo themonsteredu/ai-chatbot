@@ -511,11 +511,10 @@ test("builds share and QR links on the public production domain", async () => {
   // 어떤 주소로 접속했든 링크는 공개 주소로 만들어져야 합니다.
   assert.match(model, /canonicalShareOrigin/);
   assert.match(model, /NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL/);
-  assert.equal(
-    (studio.match(/new URL\("\/", canonicalShareOrigin\(\)\)/g) ?? []).length,
-    2,
-    "공유와 QR 두 곳 모두 공개 주소를 써야 합니다.",
-  );
+  // 공유와 QR은 같은 buildShareUrl을 쓰므로 공개 주소 사용은 한 곳에 모입니다.
+  assert.match(studio, /new URL\("\/", canonicalShareOrigin\(\)\)/);
+  assert.match(studio, /const shareProject = async \(\) => \{\n    const url = await buildShareUrl\(\)/);
+  assert.match(studio, /const url = await buildShareUrl\(\);\n    setQrShare/);
 });
 
 test("keeps QR codes sparse with server-stored share codes", async () => {
