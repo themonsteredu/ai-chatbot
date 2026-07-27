@@ -5,8 +5,10 @@ import {
   Camera,
   Check,
   ChevronLeft,
+  CloudUpload,
   FileText,
   ImagePlus,
+  Loader2,
   Printer,
   Save,
   Trash2,
@@ -160,6 +162,17 @@ export function CampReport({
   const [storageStatus, setStorageStatus] = useState("휴대폰에 자동 저장");
   const [uploadingSession, setUploadingSession] = useState("");
   const storageKey = `my-webapp-camp-report-v1:${project.title}`;
+  // 반 코드는 편집 화면의 ‘반에 제출’과 같은 키를 써서 한 번만 적으면 됩니다.
+  const [sendClassCode, setSendClassCode] = useState(() =>
+    typeof window === "undefined"
+      ? ""
+      : (window.localStorage.getItem("my-webapp-class-code-v1") ?? ""),
+  );
+  const [sending, setSending] = useState(false);
+  const [sendResult, setSendResult] = useState<{
+    ok: boolean;
+    message: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!interactive) return;
@@ -243,6 +256,48 @@ export function CampReport({
       );
     } finally {
       setUploadingSession("");
+    }
+  };
+
+  const sendToTeacher = async () => {
+    const classCode = sendClassCode.trim();
+    const studentName = report.studentName.trim();
+    if (!classCode || sending) return;
+    if (!studentName) {
+      setSendResult({ ok: false, message: "보고서 맨 위의 이름 칸을 먼저 채워 주세요." });
+      return;
+    }
+
+    setSending(true);
+    setSendResult(null);
+    try {
+      const response = await fetch("/api/class-webapps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save-record",
+          classCode,
+          studentName,
+          record: report,
+        }),
+      });
+      const json = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(json?.error ?? "보내지 못했어요.");
+      }
+      window.localStorage.setItem("my-webapp-class-code-v1", classCode);
+      setSendResult({
+        ok: true,
+        message: "선생님께 보냈어요. 다시 보내면 최신 내용으로 바뀌어요.",
+      });
+    } catch (caught) {
+      setSendResult({
+        ok: false,
+        message:
+          caught instanceof Error ? caught.message : "보내지 못했어요.",
+      });
+    } finally {
+      setSending(false);
     }
   };
 
@@ -478,6 +533,41 @@ export function CampReport({
                   }
                 />
               </label>
+            )}
+          </div>
+
+          <div className="report-send">
+            <b>선생님께 보내기</b>
+            <div className="report-send-row">
+              <input
+                aria-label="반 코드"
+                placeholder="반 코드 (예: 5학년3반)"
+                value={sendClassCode}
+                onChange={(event) => {
+                  setSendClassCode(event.target.value);
+                  setSendResult(null);
+                }}
+              />
+              <button
+                type="button"
+                disabled={sending || !sendClassCode.trim()}
+                onClick={sendToTeacher}
+              >
+                {sending ? (
+                  <Loader2 size={13} aria-hidden="true" className="spin" />
+                ) : (
+                  <CloudUpload size={13} aria-hidden="true" />
+                )}
+                보내기
+              </button>
+            </div>
+            {sendResult && (
+              <p
+                className={sendResult.ok ? "report-send-ok" : "report-send-error"}
+                role="status"
+              >
+                {sendResult.message}
+              </p>
             )}
           </div>
 

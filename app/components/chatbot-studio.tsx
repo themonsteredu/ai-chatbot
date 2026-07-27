@@ -23,6 +23,7 @@ import {
   Play,
   Plus,
   Printer,
+  QrCode,
   Rocket,
   RotateCcw,
   Settings2,
@@ -64,6 +65,7 @@ import {
 import { BlockWorkspace } from "./block-workspace";
 import { PhonePreview } from "./phone-preview";
 import { ClassSubmit } from "./class-submit";
+import { ShareQrDialog } from "./share-qr";
 import { usePhoneScale } from "./use-phone-scale";
 import { SavedWebAppLibrary } from "./saved-webapp-library";
 import { WebAppPlayer } from "./webapp-player";
@@ -196,6 +198,10 @@ export function ChatbotStudio() {
     null,
   );
   const [dragOverFeature, setDragOverFeature] = useState<FeatureKind | null>(
+    null,
+  );
+  // QR 대화 상자에 담을 공유 주소입니다. 비어 있으면 닫힌 상태입니다.
+  const [qrShare, setQrShare] = useState<{ appName: string; url: string } | null>(
     null,
   );
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -565,6 +571,16 @@ export function ChatbotStudio() {
     } catch {
       window.prompt("아래 링크를 복사해 주세요.", url.toString());
     }
+  };
+
+  /** 휴대폰 카메라로 찍으면 설치 화면이 열리는 QR을 띄웁니다. */
+  const showShareQr = () => {
+    const savedApp = saveCurrentAsWebApp();
+    const url = new URL("/", window.location.origin);
+    url.searchParams.set("run", "install");
+    url.searchParams.set("app", savedApp.id);
+    url.searchParams.set("project", encodeProject(project));
+    setQrShare({ appName: project.appName, url: url.toString() });
   };
 
   const editStandalone = () => {
@@ -1291,6 +1307,16 @@ export function ChatbotStudio() {
             공유
           </button>
           <button
+            className="header-button"
+            type="button"
+            aria-label="휴대폰으로 설치하는 QR 보기"
+            title="휴대폰 설치 QR"
+            onClick={showShareQr}
+          >
+            <QrCode size={16} aria-hidden="true" />
+            QR
+          </button>
+          <button
             className="save-app-button"
             type="button"
             aria-label="완성한 내용을 내 웹앱으로 저장"
@@ -1530,6 +1556,7 @@ export function ChatbotStudio() {
                   project={project}
                   selectedTarget={selectedTarget}
                   onSelect={selectTarget}
+                  onReorder={reorderFeature}
                 />
                 <p className="drop-hint">
                   <Plus size={14} aria-hidden="true" />
@@ -1765,6 +1792,14 @@ export function ChatbotStudio() {
           onDelete={removeSavedApp}
           onEdit={editSavedApp}
           onOpen={openSavedApp}
+        />
+      )}
+
+      {qrShare && (
+        <ShareQrDialog
+          appName={qrShare.appName}
+          url={qrShare.url}
+          onClose={() => setQrShare(null)}
         />
       )}
 

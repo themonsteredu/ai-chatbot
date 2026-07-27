@@ -2,8 +2,10 @@ import type { NextRequest } from "next/server";
 import { normalizeProject } from "../../../lib/chatbot-studio";
 import {
   listClassWebApps,
+  listRecordRows,
   listStudentWebApps,
   readConfig,
+  saveRecordRow,
   saveWebApp,
 } from "./supabase";
 
@@ -88,6 +90,43 @@ export async function POST(request: NextRequest) {
           appId: row.app_id,
           appName: row.app_name,
           project: row.project,
+          updatedAt: row.updated_at,
+        })),
+      });
+    }
+
+    if (action === "save-record") {
+      const studentName = cleanText(body.studentName, MAX_NAME);
+      if (!studentName) return fail("이름을 적어 주세요.", 400);
+      if (!body.record || typeof body.record !== "object") {
+        return fail("보낼 기록이 없습니다.", 400);
+      }
+      // 사진이 12장 다 들어가도 넉넉하고, 서버 요청 한도(4.5MB)는 넘지 않는 선입니다.
+      const serialized = JSON.stringify(body.record);
+      if (serialized.length > 4_000_000) {
+        return fail(
+          "기록이 너무 큽니다. 사진 몇 장을 지우고 다시 보내 주세요.",
+          413,
+        );
+      }
+      const saved = await saveRecordRow({
+        classCode,
+        studentName,
+        record: body.record,
+      });
+      return ok({ saved: Boolean(saved), updatedAt: saved?.updated_at ?? null });
+    }
+
+    if (action === "records") {
+      const code = cleanText(body.teacherCode, 100);
+      if (!code || !teacherCodes().includes(code)) {
+        return fail("교사 코드가 올바르지 않습니다.", 401);
+      }
+      const rows = await listRecordRows(classCode);
+      return ok({
+        records: rows.map((row) => ({
+          studentName: row.student_name,
+          record: row.record,
           updatedAt: row.updated_at,
         })),
       });

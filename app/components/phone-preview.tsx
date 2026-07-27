@@ -52,6 +52,8 @@ type PhonePreviewProps = {
   standalone?: boolean;
   selectedTarget?: SelectedTarget;
   onSelect?: (target: SelectedTarget) => void;
+  /** 있으면 편집 화면에서 기능 카드를 끌어 순서를 바꿀 수 있습니다. */
+  onReorder?: (moving: FeatureKind, target: FeatureKind) => void;
 };
 
 const iconMap: Record<ActionIcon, LucideIcon> = {
@@ -77,8 +79,11 @@ export function PhonePreview({
   standalone = false,
   selectedTarget,
   onSelect,
+  onReorder,
 }: PhonePreviewProps) {
   const [checkedItems, setCheckedItems] = useState<string[]>([]);
+  // 편집 화면에서 카드를 끌어 옮길 때의 표시 상태입니다.
+  const [dragOverKind, setDragOverKind] = useState<FeatureKind | null>(null);
   // 이 웹앱을 쓰는 사람이 직접 적어 넣은 할 일입니다. 설계에 있는 항목과 달리
   // 그 기기에만 저장됩니다.
   const [customItems, setCustomItems] = useState<ChecklistItem[]>([]);
@@ -563,9 +568,60 @@ export function PhonePreview({
         </header>
 
         <div className="webapp-scroll">
-          {project.featureOrder.map((kind) => (
-            <Fragment key={kind}>{featureSections[kind]}</Fragment>
-          ))}
+          {project.featureOrder.map((kind) => {
+            const section = featureSections[kind];
+            if (!section) return <Fragment key={kind} />;
+            if (!onReorder || interactive) {
+              return <Fragment key={kind}>{section}</Fragment>;
+            }
+            return (
+              <div
+                key={kind}
+                className={`feature-slot ${
+                  dragOverKind === kind ? "feature-slot-over" : ""
+                }`}
+                draggable
+                onDragStart={(event) => {
+                  event.dataTransfer.setData(
+                    "application/x-webapp-reorder",
+                    kind,
+                  );
+                  event.dataTransfer.effectAllowed = "move";
+                }}
+                onDragOver={(event) => {
+                  if (
+                    !event.dataTransfer.types.includes(
+                      "application/x-webapp-reorder",
+                    )
+                  ) {
+                    return;
+                  }
+                  event.preventDefault();
+                  event.stopPropagation();
+                  event.dataTransfer.dropEffect = "move";
+                  setDragOverKind(kind);
+                }}
+                onDragLeave={() => {
+                  setDragOverKind((current) =>
+                    current === kind ? null : current,
+                  );
+                }}
+                onDrop={(event) => {
+                  const moving = event.dataTransfer.getData(
+                    "application/x-webapp-reorder",
+                  ) as FeatureKind;
+                  if (!moving) return;
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onReorder(moving, kind);
+                  setDragOverKind(null);
+                }}
+                onDragEnd={() => setDragOverKind(null)}
+              >
+                {section}
+              </div>
+            );
+          })}
 
           {!project.noticeEnabled &&
             !project.checklistEnabled &&

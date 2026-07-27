@@ -105,3 +105,48 @@ export async function listClassWebApps(classCode: string) {
   return ((await request(`${TABLE}?${params}`, { method: "GET" })) ??
     []) as ClassWebAppRow[];
 }
+
+const RECORD_TABLE = "class_records";
+
+export type ClassRecordRow = {
+  class_code: string;
+  student_name: string;
+  record: unknown;
+  updated_at: string;
+};
+
+/** 학생이 보낸 캠프 기록을 저장합니다. 같은 학생이 다시 보내면 덮어씁니다. */
+export async function saveRecordRow(row: {
+  classCode: string;
+  studentName: string;
+  record: unknown;
+}) {
+  const payload = {
+    class_code: row.classCode,
+    student_name: row.studentName,
+    record: row.record,
+    updated_at: new Date().toISOString(),
+  };
+  const result = (await request(
+    `${RECORD_TABLE}?on_conflict=class_code,student_name`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+      headers: {
+        Prefer: "resolution=merge-duplicates,return=representation",
+      },
+    },
+  )) as ClassRecordRow[] | null;
+  return result?.[0] ?? null;
+}
+
+/** 교사가 반 전체의 캠프 기록을 봅니다. */
+export async function listRecordRows(classCode: string) {
+  const params = new URLSearchParams({
+    class_code: `eq.${classCode}`,
+    select: "student_name,record,updated_at",
+    order: "student_name.asc",
+  });
+  return ((await request(`${RECORD_TABLE}?${params}`, { method: "GET" })) ??
+    []) as ClassRecordRow[];
+}

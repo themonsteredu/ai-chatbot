@@ -439,3 +439,48 @@ test("lets students write to-dos, reorder cards, and keep typing with Enter", as
   assert.match(studio, /featureReorderProps/);
   assert.match(studio, /application\/x-webapp-reorder/);
 });
+
+test("collects camp records for the teacher and shares apps by QR", async () => {
+  const [camp, roster, viewer, route, schema, studio, qr, preview] =
+    await Promise.all([
+      readFile(new URL("app/components/camp-report.tsx", root), "utf8"),
+      readFile(new URL("app/components/class-roster.tsx", root), "utf8"),
+      readFile(new URL("app/components/record-viewer.ts", root), "utf8"),
+      readFile(new URL("app/api/class-webapps/route.ts", root), "utf8"),
+      readFile(new URL("supabase/schema.sql", root), "utf8"),
+      readFile(new URL("app/components/chatbot-studio.tsx", root), "utf8"),
+      readFile(new URL("app/components/share-qr.tsx", root), "utf8"),
+      readFile(new URL("app/components/phone-preview.tsx", root), "utf8"),
+    ]);
+
+  // 학생이 휴대폰에서 쓴 캠프 기록을 반 코드로 선생님께 보냅니다.
+  assert.match(camp, /선생님께 보내기/);
+  assert.match(camp, /action: "save-record"/);
+  assert.match(camp, /record: report/);
+  // 교사는 반별로 모인 기록을 인쇄용 문서로 봅니다.
+  assert.match(roster, /action: "records"/);
+  assert.match(roster, /buildRecordsHtml/);
+  assert.match(viewer, /캠프 전체 소감/);
+  assert.match(viewer, /window\.print\(\)/);
+  // 사진은 데이터 주소 형식일 때만 문서에 넣습니다.
+  assert.match(viewer, /startsWith\("data:image\/"\)/);
+  assert.match(viewer, /escapeHtml/);
+  // 서버는 교사 코드 없이 반 전체 기록을 주지 않고, 지나친 크기를 거릅니다.
+  assert.match(route, /action === "save-record"/);
+  assert.match(route, /action === "records"/);
+  assert.match(route, /4_000_000/);
+  assert.match(schema, /class_records/);
+  assert.match(schema, /unique \(class_code, student_name\)/);
+
+  // QR: 찍으면 설치 화면이 열리는 공유 주소를 담습니다.
+  assert.match(studio, /showShareQr/);
+  assert.match(studio, /<ShareQrDialog/);
+  assert.match(qr, /QRCode\.toDataURL/);
+  assert.match(qr, /errorCorrectionLevel: "L"/);
+  assert.match(qr, /홈 화면에 추가/);
+
+  // 편집 화면에서는 기능 카드를 직접 끌어 순서를 바꿉니다.
+  assert.match(preview, /feature-slot/);
+  assert.match(preview, /onReorder\(moving, kind\)/);
+  assert.match(studio, /onReorder=\{reorderFeature\}/);
+});

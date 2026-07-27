@@ -3,12 +3,14 @@
 import {
   AlertCircle,
   ExternalLink,
+  FileText,
   Loader2,
   RefreshCw,
   Users,
 } from "lucide-react";
 import { useState } from "react";
 import { encodeProject, normalizeProject } from "../../lib/chatbot-studio";
+import { buildRecordsHtml, type StudentRecord } from "./record-viewer";
 
 type ClassApp = {
   studentName: string;
@@ -40,6 +42,7 @@ function openHref(app: ClassApp) {
 export function ClassRoster({ teacherCode }: { teacherCode: string }) {
   const [classCode, setClassCode] = useState("");
   const [apps, setApps] = useState<ClassApp[] | null>(null);
+  const [records, setRecords] = useState<StudentRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -63,14 +66,38 @@ export function ClassRoster({ teacherCode }: { teacherCode: string }) {
       if (!response.ok) {
         setError(body?.error ?? "목록을 가져오지 못했습니다.");
         setApps(null);
+        setRecords([]);
         return;
       }
       setApps(body.apps ?? []);
+
+      // 웹앱 목록과 별개로, 학생이 보낸 캠프 기록도 함께 가져옵니다.
+      const recordsResponse = await fetch("/api/class-webapps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "records",
+          classCode: classCode.trim(),
+          teacherCode,
+        }),
+      });
+      const recordsBody = await recordsResponse.json().catch(() => null);
+      setRecords(recordsResponse.ok ? (recordsBody?.records ?? []) : []);
     } catch {
       setError("연결에 실패했습니다. 잠시 뒤 다시 시도해 주세요.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const openRecords = (entries: StudentRecord[]) => {
+    const view = window.open("", "_blank");
+    if (!view) {
+      setError("팝업이 막혀 있습니다. 이 사이트의 팝업을 허용해 주세요.");
+      return;
+    }
+    view.document.write(buildRecordsHtml(classCode.trim(), entries));
+    view.document.close();
   };
 
   const byStudent = new Map<string, ClassApp[]>();
@@ -133,6 +160,29 @@ export function ClassRoster({ teacherCode }: { teacherCode: string }) {
           <b> {classCode.trim()} </b>를 알려 주고 ‘반에 제출하기’를 누르게
           해 주세요.
         </p>
+      )}
+
+      {apps && records.length > 0 && (
+        <div className="class-roster-records">
+          <div>
+            <b>
+              <FileText size={14} aria-hidden="true" />
+              캠프 기록 {records.length}명 도착
+            </b>
+            <small>
+              {records
+                .map((entry) => entry.studentName)
+                .slice(0, 8)
+                .join(", ")}
+              {records.length > 8 ? " 외" : ""}
+            </small>
+          </div>
+          <span>
+            <button type="button" onClick={() => openRecords(records)}>
+              전체 보기·인쇄
+            </button>
+          </span>
+        </div>
       )}
 
       {apps && apps.length > 0 && (

@@ -1240,6 +1240,204 @@ select:focus-visible {
   border-color: var(--violet);
 }
 
+.class-roster-records {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 13px;
+  padding: 12px 15px;
+  border: 1px solid #bfe3d2;
+  border-radius: 11px;
+  background: #eefaf4;
+}
+
+.class-roster-records b {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #157a52;
+  font-size: 13px;
+}
+
+.class-roster-records small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.class-roster-records button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 13px;
+  border: 1px solid #157a52;
+  border-radius: 9px;
+  background: #157a52;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.report-send {
+  margin: 12px 12px 0;
+  padding: 11px 12px;
+  border: 1px dashed #c9cede;
+  border-radius: 10px;
+  background: #fbfbfe;
+}
+
+.report-send > b {
+  display: block;
+  margin-bottom: 7px;
+  color: #383f52;
+  font-size: 10px;
+}
+
+.report-send-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+}
+
+.report-send-row input {
+  height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.report-send-row input:focus {
+  border-color: var(--phone-accent, var(--violet));
+  outline: none;
+}
+
+.report-send-row button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--phone-accent, var(--violet));
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.report-send-row button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.report-send-ok,
+.report-send-error {
+  margin: 8px 0 0;
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.report-send-ok {
+  color: #1f8a5f;
+}
+
+.report-send-error {
+  color: #c2185b;
+}
+
+.report-send .spin {
+  animation: teacher-spin 0.9s linear infinite;
+}
+
+.qr-dialog {
+  display: flex;
+  width: min(400px, calc(100vw - 32px));
+  flex-direction: column;
+  gap: 13px;
+  padding: 18px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 30px 80px rgba(21, 24, 33, 0.35);
+}
+
+.qr-dialog > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.qr-dialog > header > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--violet);
+}
+
+.qr-dialog > header b {
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.qr-dialog > header button {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.qr-image {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  image-rendering: pixelated;
+}
+
+.qr-loading,
+.qr-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 26px 10px;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.qr-error {
+  color: #c2185b;
+  line-height: 1.6;
+  text-align: left;
+}
+
+.qr-loading .spin {
+  animation: teacher-spin 0.9s linear infinite;
+}
+
+.qr-steps {
+  margin: 0;
+  padding: 12px 14px 12px 30px;
+  border-radius: 11px;
+  background: var(--violet-soft);
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+
 .teacher-panel-note {
   display: flex;
   align-items: flex-start;
@@ -3116,6 +3314,23 @@ select:focus-visible {
   height: 12px;
   margin: 0;
   accent-color: var(--phone-accent);
+}
+
+/* 편집 화면에서 기능 카드를 통째로 끌어 순서를 바꿉니다. */
+.feature-slot {
+  display: flex;
+  flex-direction: column;
+  border-radius: 18px;
+  cursor: grab;
+}
+
+.feature-slot:active {
+  cursor: grabbing;
+}
+
+.feature-slot-over {
+  outline: 2px dashed var(--violet);
+  outline-offset: 2px;
 }
 
 .phone-checklist label span {
