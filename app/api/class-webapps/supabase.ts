@@ -16,7 +16,9 @@ export type ClassWebAppRow = {
 };
 
 export function readConfig() {
-  const url = process.env.SUPABASE_URL?.trim().replace(/\/+$/, "") ?? "";
+  let url = process.env.SUPABASE_URL?.trim().replace(/\/+$/, "") ?? "";
+  // 대시보드에서 복사하다 보면 https://가 빠지기 쉬워, 여기서 채워 줍니다.
+  if (url && !/^https?:\/\//.test(url)) url = `https://${url}`;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ?? "";
   return { url, key, ready: Boolean(url && key) };
 }
@@ -182,7 +184,10 @@ async function probeTable(table: string) {
     if (message.includes("SUPABASE_401") || message.includes("SUPABASE_403")) {
       return "key-rejected";
     }
-    return "error";
+    if (/fetch failed|ENOTFOUND|ECONN|Invalid URL/i.test(message)) {
+      return "unreachable";
+    }
+    return `error:${message.slice(0, 40)}`;
   }
 }
 

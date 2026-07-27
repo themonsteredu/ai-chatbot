@@ -13,13 +13,22 @@ export async function GET() {
     ""
   ).trim();
 
-  const ready = readConfig().ready;
+  const config = readConfig();
+  // 주소는 비밀이 아니므로, 어느 곳에 연결하는지 호스트만 보여 줍니다.
+  let supabaseHost = "";
+  try {
+    supabaseHost = config.url ? new URL(config.url).host : "";
+  } catch {
+    supabaseHost = "(주소 형식 오류)";
+  }
+
   return Response.json(
     {
-      classStore: ready,
+      classStore: config.ready,
       teacherCode: Boolean(adminCode),
+      supabaseHost,
       // 표가 만들어졌는지도 함께 알려 줘, 어떤 SQL이 빠졌는지 바로 보입니다.
-      tables: ready ? await probeTables() : null,
+      tables: config.ready ? await probeTables() : null,
     },
     { headers: { "Cache-Control": "no-store" } },
   );
