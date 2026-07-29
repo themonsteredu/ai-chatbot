@@ -1000,17 +1000,6 @@ export function ChatbotStudio() {
             />
           </label>
           <label>
-            <span>차시별 느낀 점 안내</span>
-            <textarea
-              rows={4}
-              value={project.campReflectionPrompt}
-              maxLength={140}
-              onChange={(event) =>
-                updateProject("campReflectionPrompt", event.target.value)
-              }
-            />
-          </label>
-          <label>
             <span>마지막 전체 소감 안내</span>
             <textarea
               rows={4}

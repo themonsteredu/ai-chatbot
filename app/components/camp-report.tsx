@@ -217,16 +217,15 @@ export function CampReport({
     }
   };
 
+  // 차시에는 활동과 사진만 적으므로 그 둘로 완료를 판단합니다.
   const completedCount = Object.values(report.sessions).filter(
-    (entry) => entry.activity.trim() || entry.reflection.trim() || entry.photo,
+    (entry) => entry.activity.trim() || entry.photo,
   ).length;
 
   const dayCompletedCount = (day: number) =>
     PERIODS.filter((period) => {
       const entry = report.sessions[sessionId(day, period)];
-      return (
-        entry.activity.trim() || entry.reflection.trim() || Boolean(entry.photo)
-      );
+      return entry.activity.trim() || Boolean(entry.photo);
     }).length;
 
   const updateSession = (id: string, patch: Partial<SessionRecord>) => {
@@ -407,11 +406,7 @@ export function CampReport({
               {PERIODS.map((period) => {
                 const id = sessionId(activeDay, period);
                 const entry = report.sessions[id];
-                const hasRecord = Boolean(
-                  entry.activity.trim() ||
-                    entry.reflection.trim() ||
-                    entry.photo,
-                );
+                const hasRecord = Boolean(entry.activity.trim() || entry.photo);
 
                 return (
                   <details
@@ -525,18 +520,6 @@ export function CampReport({
                         )}
                       </div>
 
-                      <label>
-                        <span>느낀 점</span>
-                        <textarea
-                          value={entry.reflection}
-                          placeholder={project.campReflectionPrompt}
-                          onChange={(event) =>
-                            updateSession(id, {
-                              reflection: event.target.value,
-                            })
-                          }
-                        />
-                      </label>
                     </div>
                   </details>
                 );
@@ -634,8 +617,6 @@ export function CampReport({
                         <div>
                           <h4>배운 내용과 활동</h4>
                           <p>{entry.activity || "기록하지 않았습니다."}</p>
-                          <h4>느낀 점</h4>
-                          <p>{entry.reflection || "기록하지 않았습니다."}</p>
                         </div>
                         <div className="print-photo">
                           {entry.photo ? (

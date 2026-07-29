@@ -66,7 +66,6 @@ test("provides a persistent 3-day, 12-session printable camp report", async () =
   assert.match(camp, /const DAYS = \[1, 2, 3\]/);
   assert.match(camp, /const PERIODS = \[1, 2, 3, 4\]/);
   assert.match(camp, /배운 내용과 활동/);
-  assert.match(camp, /느낀 점/);
   assert.match(camp, /3일 캠프 전체 소감/);
   assert.match(camp, /accept="image\/\*"/);
   assert.match(camp, /capture="environment"/);
@@ -593,4 +592,24 @@ test("reads Supabase responses that have no body", async () => {
   assert.match(client, /const text = await response\.text\(\)/);
   assert.match(client, /if \(!text\) return null/);
   assert.doesNotMatch(client, /return response\.json\(\);/);
+});
+
+test("records activities per session and reflection only at the end", async () => {
+  const [camp, studio, viewer] = await Promise.all([
+    readFile(new URL("app/components/camp-report.tsx", root), "utf8"),
+    readFile(new URL("app/components/chatbot-studio.tsx", root), "utf8"),
+    readFile(new URL("app/components/record-viewer.ts", root), "utf8"),
+  ]);
+
+  // 차시에는 활동과 사진만 적고, 느낀 점은 마지막에 한 번만 씁니다.
+  assert.doesNotMatch(camp, /placeholder=\{project\.campReflectionPrompt\}/);
+  assert.doesNotMatch(camp, /reflection: event\.target\.value/);
+  assert.match(camp, /camp-final-reflection/);
+  assert.match(camp, /placeholder=\{project\.campFinalPrompt\}/);
+  // 완료 판정도 활동과 사진만 봅니다.
+  assert.doesNotMatch(camp, /entry\.reflection\.trim\(\)/);
+  // 이제 쓰이지 않는 차시별 안내 문구 입력은 속성 판에서 뺐습니다.
+  assert.doesNotMatch(studio, /campReflectionPrompt/);
+  // 교사 문서는 예전에 적어 둔 느낀 점이 있으면 잃지 않고 보여 줍니다.
+  assert.match(viewer, /session\.reflection\?\.trim\(\)/);
 });

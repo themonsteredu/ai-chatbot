@@ -42,11 +42,16 @@ function renderStudent(entry: StudentRecord) {
       const photo = isSafePhoto(session.photo)
         ? `<img src="${session.photo}" alt="${day}일차 ${period}차시 사진"/>`
         : "";
+      // 차시에는 활동만 적습니다. 예전에 적어 둔 느낀 점이 있으면 잃지 않도록
+      // 내용이 있을 때만 함께 보여 줍니다.
+      const reflection = session.reflection?.trim()
+        ? `<p><b>느낀 점</b>${escapeHtml(session.reflection.trim())}</p>`
+        : "";
       return `
         <div class="session">
           <h4>${day}일차 ${period}차시</h4>
           <p><b>배운 내용과 활동</b>${escapeHtml(session.activity?.trim() || "—")}</p>
-          <p><b>느낀 점</b>${escapeHtml(session.reflection?.trim() || "—")}</p>
+          ${reflection}
           ${photo}
         </div>`;
     }).join("");
