@@ -47,8 +47,11 @@ async function request(path: string, init: RequestInit) {
     throw new Error(`SUPABASE_${response.status}: ${detail.slice(0, 300)}`);
   }
 
-  if (response.status === 204) return null;
-  return response.json();
+  // Prefer: return=minimal이면 201에 본문이 없습니다. 빈 응답을 JSON으로
+  // 읽으려 하면 터지므로, 내용이 있을 때만 파싱합니다.
+  const text = await response.text();
+  if (!text) return null;
+  return JSON.parse(text);
 }
 
 /** 같은 반·학생·웹앱이면 덮어쓰고, 없으면 새로 넣습니다. */

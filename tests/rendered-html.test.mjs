@@ -581,3 +581,16 @@ test("lets students take or pick photos and see upload errors", async () => {
   assert.match(camp, /camp-photo-error/);
   assert.match(camp, /setPhotoError\(\{/);
 });
+
+test("reads Supabase responses that have no body", async () => {
+  const client = await readFile(
+    new URL("app/api/class-webapps/supabase.ts", root),
+    "utf8",
+  );
+
+  // Prefer: return=minimal이면 201에 본문이 없습니다. 바로 json()을 부르면
+  // 저장에 성공하고도 예외가 나서, QR이 조용히 긴 링크로 대체됐습니다.
+  assert.match(client, /const text = await response\.text\(\)/);
+  assert.match(client, /if \(!text\) return null/);
+  assert.doesNotMatch(client, /return response\.json\(\);/);
+});
