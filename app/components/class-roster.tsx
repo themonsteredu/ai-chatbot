@@ -6,11 +6,20 @@ import {
   FileText,
   Loader2,
   RefreshCw,
+  School,
   Users,
 } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { encodeProject, normalizeProject } from "../../lib/chatbot-studio";
 import { buildRecordsHtml, type StudentRecord } from "./record-viewer";
+
+type ClassSummary = {
+  classCode: string;
+  studentCount: number;
+  appCount: number;
+  recordCount: number;
+  updatedAt: string;
+};
 
 type ClassApp = {
   studentName: string;
@@ -43,12 +52,36 @@ export function ClassRoster({ teacherCode }: { teacherCode: string }) {
   const [classCode, setClassCode] = useState("");
   const [apps, setApps] = useState<ClassApp[] | null>(null);
   const [records, setRecords] = useState<StudentRecord[]>([]);
+  // 반 코드를 외우지 않아도 되도록, 들어오자마자 반 목록을 먼저 보여 줍니다.
+  const [classes, setClasses] = useState<ClassSummary[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const load = async (event?: React.FormEvent) => {
+  const loadClasses = useCallback(async () => {
+    try {
+      const response = await fetch("/api/class-webapps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "classes", teacherCode }),
+      });
+      const body = await response.json().catch(() => null);
+      setClasses(response.ok ? (body?.classes ?? []) : []);
+    } catch {
+      setClasses([]);
+    }
+  }, [teacherCode]);
+
+  useEffect(() => {
+    // 화면이 붙은 뒤에 불러와, 그리는 도중에 상태를 바꾸지 않게 합니다.
+    const timer = window.setTimeout(loadClasses, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadClasses]);
+
+  const load = async (event?: React.FormEvent, code?: string) => {
     event?.preventDefault();
-    if (loading || !classCode.trim()) return;
+    const target = (code ?? classCode).trim();
+    if (loading || !target) return;
+    if (code) setClassCode(code);
 
     setLoading(true);
     setError("");
@@ -58,7 +91,7 @@ export function ClassRoster({ teacherCode }: { teacherCode: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "class",
-          classCode: classCode.trim(),
+          classCode: target,
           teacherCode,
         }),
       });
@@ -77,12 +110,13 @@ export function ClassRoster({ teacherCode }: { teacherCode: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "records",
-          classCode: classCode.trim(),
+          classCode: target,
           teacherCode,
         }),
       });
       const recordsBody = await recordsResponse.json().catch(() => null);
       setRecords(recordsResponse.ok ? (recordsBody?.records ?? []) : []);
+      loadClasses();
     } catch {
       setError("연결에 실패했습니다. 잠시 뒤 다시 시도해 주세요.");
     } finally {
@@ -151,6 +185,44 @@ export function ClassRoster({ teacherCode }: { teacherCode: string }) {
         <p className="teacher-gate-error" role="alert">
           <AlertCircle size={15} aria-hidden="true" />
           {error}
+        </p>
+      )}
+
+      {classes && classes.length > 0 && (
+        <div className="class-list">
+          <b>
+            <School size={14} aria-hidden="true" />
+            우리 반 목록 · {classes.length}개
+          </b>
+          <ul>
+            {classes.map((entry) => (
+              <li key={entry.classCode}>
+                <button
+                  type="button"
+                  className={
+                    entry.classCode === classCode.trim() ? "active" : ""
+                  }
+                  onClick={() => load(undefined, entry.classCode)}
+                >
+                  <strong>{entry.classCode}</strong>
+                  <small>
+                    학생 {entry.studentCount}명 · 웹앱 {entry.appCount}개
+                    {entry.recordCount > 0
+                      ? ` · 캠프 기록 ${entry.recordCount}명`
+                      : ""}
+                  </small>
+                  <em>{formatWhen(entry.updatedAt)}</em>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {classes && classes.length === 0 && !apps && (
+        <p className="class-roster-empty">
+          아직 제출된 반이 없습니다. 학생에게 반 코드를 알려 주고 ‘반에
+          제출하기’를 누르게 해 주세요.
         </p>
       )}
 

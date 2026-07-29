@@ -230,3 +230,63 @@ export async function probeWrite() {
   }
   return "ok";
 }
+
+/**
+ * 어떤 반이 있는지 한눈에 보여 주기 위한 요약입니다. 사진이 들어 있는 본문은
+ * 빼고 반 이름과 시각만 읽어 와, 반이 많아도 가볍게 불러옵니다.
+ */
+export async function listClassSummaries() {
+  const pick = new URLSearchParams({
+    select: "class_code,student_name,updated_at",
+    order: "updated_at.desc",
+    limit: "2000",
+  }).toString();
+
+  const [apps, records] = await Promise.all([
+    request(`${TABLE}?${pick}`, { method: "GET" }) as Promise<
+      Array<{ class_code: string; student_name: string; updated_at: string }>
+    >,
+    request(`${RECORD_TABLE}?${pick}`, { method: "GET" }) as Promise<
+      Array<{ class_code: string; student_name: string; updated_at: string }>
+    >,
+  ]);
+
+  const summary = new Map<
+    string,
+    {
+      classCode: string;
+      appCount: number;
+      recordCount: number;
+      students: Set<string>;
+      updatedAt: string;
+    }
+  >();
+
+  const add = (
+    row: { class_code: string; student_name: string; updated_at: string },
+    kind: "app" | "record",
+  ) => {
+    const found = summary.get(row.class_code) ?? {
+      classCode: row.class_code,
+      appCount: 0,
+      recordCount: 0,
+      students: new Set<string>(),
+      updatedAt: row.updated_at,
+    };
+    if (kind === "app") found.appCount += 1;
+    else found.recordCount += 1;
+    found.students.add(row.student_name);
+    if (row.updated_at > found.updatedAt) found.updatedAt = row.updated_at;
+    summary.set(row.class_code, found);
+  };
+
+  (apps ?? []).forEach((row) => add(row, "app"));
+  (records ?? []).forEach((row) => add(row, "record"));
+
+  return [...summary.values()]
+    .map(({ students, ...rest }) => ({
+      ...rest,
+      studentCount: students.size,
+    }))
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}

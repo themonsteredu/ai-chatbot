@@ -613,3 +613,26 @@ test("records activities per session and reflection only at the end", async () =
   // 교사 문서는 예전에 적어 둔 느낀 점이 있으면 잃지 않고 보여 줍니다.
   assert.match(viewer, /session\.reflection\?\.trim\(\)/);
 });
+
+test("shows every class at once without typing a class code", async () => {
+  const [route, client, roster] = await Promise.all([
+    readFile(new URL("app/api/class-webapps/route.ts", root), "utf8"),
+    readFile(new URL("app/api/class-webapps/supabase.ts", root), "utf8"),
+    readFile(new URL("app/components/class-roster.tsx", root), "utf8"),
+  ]);
+
+  // 반 목록은 반 코드 없이 교사 코드만으로 부르고, 코드가 틀리면 거절합니다.
+  assert.match(route, /action === "classes"/);
+  assert.match(
+    route,
+    /if \(action === "classes"\)[\s\S]{0,220}teacherCodes\(\)\.includes\(code\)/,
+  );
+  // 사진이 든 본문은 빼고 요약만 읽어 와야 반이 많아도 가볍습니다.
+  assert.match(client, /select: "class_code,student_name,updated_at"/);
+  assert.doesNotMatch(client, /listClassSummaries[\s\S]{0,400}select: "[^"]*project/);
+  // 화면에서는 목록이 먼저 뜨고, 눌러서 바로 엽니다.
+  assert.match(roster, /class-list/);
+  assert.match(roster, /load\(undefined, entry\.classCode\)/);
+  assert.match(roster, /studentCount/);
+  assert.match(roster, /recordCount/);
+});

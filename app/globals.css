@@ -1355,6 +1355,67 @@ select:focus-visible {
   border-color: var(--violet);
 }
 
+.class-list {
+  margin-top: 14px;
+  padding: 13px 15px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: #fbfbfe;
+}
+
+.class-list > b {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 9px;
+  color: var(--ink);
+  font-size: 12.5px;
+}
+
+.class-list ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.class-list button {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, auto) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.class-list button:hover,
+.class-list button.active {
+  border-color: var(--violet);
+  background: var(--violet-soft);
+}
+
+.class-list strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.class-list small {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.class-list em {
+  color: #9aa0b4;
+  font-size: 11px;
+  font-style: normal;
+}
+
 .class-roster-records {
   display: flex;
   flex-wrap: wrap;

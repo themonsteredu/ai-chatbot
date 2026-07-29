@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { normalizeProject } from "../../../lib/chatbot-studio";
 import {
+  listClassSummaries,
   listClassWebApps,
   listRecordRows,
   listStudentWebApps,
@@ -57,6 +58,24 @@ export async function POST(request: NextRequest) {
   }
 
   const action = cleanText(body.action, 20);
+
+  // 반 목록 보기는 반 코드 없이, 교사 코드만으로 부릅니다.
+  if (action === "classes") {
+    const code = cleanText(body.teacherCode, 100);
+    if (!code || !teacherCodes().includes(code)) {
+      return fail("교사 코드가 올바르지 않습니다.", 401);
+    }
+    try {
+      return ok({ classes: await listClassSummaries() });
+    } catch (error) {
+      console.error(
+        "class summaries failed:",
+        error instanceof Error ? error.message : "",
+      );
+      return fail("반 목록을 가져오지 못했습니다.", 502);
+    }
+  }
+
   const classCode = cleanText(body.classCode, 24);
   if (!CLASS_CODE.test(classCode)) {
     return fail("반 코드는 2~24자의 한글·영문·숫자로 적어 주세요.", 400);
