@@ -1,4 +1,8 @@
-import { probeTables, readConfig } from "../class-webapps/supabase";
+import {
+  probeTables,
+  probeWrite,
+  readConfig,
+} from "../class-webapps/supabase";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,6 +33,8 @@ export async function GET() {
       supabaseHost,
       // 표가 만들어졌는지도 함께 알려 줘, 어떤 SQL이 빠졌는지 바로 보입니다.
       tables: config.ready ? await probeTables() : null,
+      // 읽기만으로는 anon 키 문제를 놓치므로 쓰기까지 시험합니다.
+      canWrite: config.ready ? await probeWrite() : null,
     },
     { headers: { "Cache-Control": "no-store" } },
   );

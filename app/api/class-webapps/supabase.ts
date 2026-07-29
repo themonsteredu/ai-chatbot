@@ -199,3 +199,31 @@ export async function probeTables() {
   ]);
   return { webapps, records, share };
 }
+
+/**
+ * 실제로 쓰기가 되는지 확인합니다. 읽기만 보면 RLS가 켜진 상태에서 anon 키를
+ * 써도 빈 배열이 성공으로 돌아와 문제를 놓칩니다. 시험용 줄을 넣었다가 지웁니다.
+ */
+export async function probeWrite() {
+  const id = `probe-${Date.now().toString(36)}`;
+  try {
+    await request(SHARE_TABLE, {
+      method: "POST",
+      body: JSON.stringify({ id, project: { probe: true } }),
+      headers: { Prefer: "return=minimal" },
+    });
+  } catch (caught) {
+    const message = caught instanceof Error ? caught.message : "";
+    if (message.includes("SUPABASE_401") || message.includes("SUPABASE_403")) {
+      return "key-cannot-write";
+    }
+    return `error:${message.slice(0, 60)}`;
+  }
+
+  try {
+    await request(`${SHARE_TABLE}?id=eq.${id}`, { method: "DELETE" });
+  } catch {
+    // 지우지 못해도 쓰기는 된 것이라 그대로 둡니다.
+  }
+  return "ok";
+}

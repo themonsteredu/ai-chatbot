@@ -102,6 +102,14 @@ export function ShareQrDialog({ appName, url, code, onClose }: ShareQrDialogProp
           <li>갤럭시에서 안 찍히면 카메라 설정의 ‘QR 코드 스캔’을 켜 보세요.</li>
         </ol>
 
+        {url && !code && (
+          <p className="qr-store-warning" role="status">
+            <AlertCircle size={15} aria-hidden="true" />
+            반 저장소에 연결되지 않아 QR이 빽빽해요. 이러면 갤럭시가 잘 못
+            읽어요. 교사용 설정의 연결 상태를 확인해 주세요.
+          </p>
+        )}
+
         {code && (
           <div className="qr-code-alt">
             <b>QR이 안 되면 번호로 받아요</b>
