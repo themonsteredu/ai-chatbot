@@ -39,6 +39,7 @@ export function PalettePanel({ nodes, onAdd }: PalettePanelProps) {
               }
             >
               <span>{category.label}</span>
+              <b>{category.types.length}</b>
               <ChevronDown size={14} aria-hidden="true" />
             </button>
             {open && (
@@ -67,10 +68,7 @@ export function PalettePanel({ nodes, onAdd }: PalettePanelProps) {
                       <span className={`palette-icon ${spec.tone}`}>
                         <PartIcon type={type} size={18} />
                       </span>
-                      <span>
-                        <strong>{spec.name}</strong>
-                        <small>{spec.hint}</small>
-                      </span>
+                      <strong>{spec.name}</strong>
                     </button>
                   );
                 })}

@@ -1069,6 +1069,16 @@ export function ChatbotStudio() {
                   onRestore={restoreClassWebApp}
                 />
                 <CodeReceive />
+                <Link className="worksheet-card" href="/lessons">
+                  <span>
+                    <Sparkles size={18} aria-hidden="true" />
+                  </span>
+                  <span>
+                    <b>수업 예시 3가지 보기</b>
+                    <small>차시별 예시 웹앱과 지도안·활동지</small>
+                  </span>
+                  <ChevronRight size={15} aria-hidden="true" />
+                </Link>
                 <Link className="worksheet-card" href="/worksheets">
                   <span>
                     <Printer size={18} aria-hidden="true" />

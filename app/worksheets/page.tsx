@@ -50,6 +50,17 @@ export default function WorksheetsPage() {
           </p>
         </header>
 
+        <Link className="lesson-banner" href="/lessons">
+          <span>
+            <FileText size={19} aria-hidden="true" />
+          </span>
+          <span>
+            <b>수업 예시와 지도안 보기</b>
+            <small>차시별 예시 웹앱 3종 · 수업 흐름 · 평가 기준 · 활동지</small>
+          </span>
+          <ChevronRight size={16} aria-hidden="true" />
+        </Link>
+
         <section className="worksheet-level-grid" aria-label="학년군별 활동지">
           {worksheets.map((worksheet) => (
             <article
