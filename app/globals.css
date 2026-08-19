@@ -5566,3 +5566,919 @@ select:focus-visible {
   line-height: 1.5;
   color: #c2410c;
 }
+
+/* ==================================================================
+   v4 부품 트리
+   부품을 여러 개 놓고, 배치 안에 넣고, 저마다 꾸밀 수 있게 되면서
+   생긴 모양입니다.
+   ================================================================== */
+
+.part-slot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.part-slot.design {
+  cursor: pointer;
+  border-radius: 12px;
+  outline-offset: 2px;
+}
+
+.part-slot.design:focus-visible {
+  outline: 2px solid var(--violet);
+}
+
+.part-slot.design.component-selected {
+  outline: 2px solid var(--violet);
+  outline-offset: 2px;
+}
+
+/* 감춘 부품은 실행 중에는 보이지 않지만, 편집 중에는 흐리게 남아 있어야
+   학생이 다시 찾아 켤 수 있습니다. */
+.part-slot.part-hidden {
+  opacity: 0.45;
+}
+
+.part-hidden-badge {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: 99px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+/* 끌어온 부품이 어디에 놓일지 보여 줍니다. */
+.part-slot.drop-before::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: -4px;
+  height: 3px;
+  border-radius: 99px;
+  background: var(--violet);
+}
+
+.part-container.drop-inside {
+  outline: 2px dashed var(--violet);
+  outline-offset: 2px;
+}
+
+/* ---------- 기본 부품 ---------- */
+
+.part-label {
+  margin: 0;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: keep-all;
+}
+
+.part-placeholder {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.part-image {
+  display: flex;
+  overflow: hidden;
+}
+
+.part-image img {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
+.part-image.rounded img {
+  border-radius: 12px;
+}
+
+.part-image.empty {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 90px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.part-button {
+  display: flex;
+}
+
+.part-button-face {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 11px 14px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--phone-accent, var(--violet));
+  color: #fff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.part-button-face.outline {
+  border: 2px solid var(--phone-accent, var(--violet));
+  background: transparent;
+  color: var(--phone-accent, var(--violet));
+}
+
+.part-button-face.soft {
+  background: color-mix(in srgb, var(--phone-accent, #6956e8) 16%, #fff);
+  color: var(--phone-accent, var(--violet));
+}
+
+.part-button-face:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.part-divider {
+  width: 100%;
+  height: 0;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--line-strong);
+}
+
+.part-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.part-list h4 {
+  margin: 0;
+  font-size: 1em;
+}
+
+.part-list ul,
+.part-list ol {
+  margin: 0;
+  padding-left: 1.15em;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  line-height: 1.55;
+}
+
+/* ---------- 입력 부품 ---------- */
+
+.part-textbox,
+.part-slider {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.part-textbox > span,
+.part-slider > span {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85em;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+.part-textbox input,
+.part-textbox textarea {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  font: inherit;
+  resize: vertical;
+}
+
+.part-slider input[type="range"] {
+  width: 100%;
+  accent-color: var(--phone-accent, var(--violet));
+}
+
+.part-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.part-checkbox input {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--phone-accent, var(--violet));
+}
+
+.part-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.part-switch input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.part-switch i {
+  flex: none;
+  width: 38px;
+  height: 21px;
+  border-radius: 99px;
+  background: var(--line-strong);
+  position: relative;
+  transition: background 0.15s ease;
+}
+
+.part-switch i::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.15s ease;
+}
+
+.part-switch.on i {
+  background: var(--phone-accent, var(--violet));
+}
+
+.part-switch.on i::after {
+  transform: translateX(17px);
+}
+
+/* ---------- 배치 부품 ---------- */
+
+.part-container {
+  display: flex;
+  border-radius: 12px;
+}
+
+.part-row {
+  flex-direction: row;
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+
+.part-row > * {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.part-column {
+  flex-direction: column;
+}
+
+.part-container.empty {
+  min-height: 56px;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--line-strong);
+}
+
+.part-container-hint {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* 블록이 띄우는 안내입니다. */
+.webapp-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 6;
+  max-width: 88%;
+  margin: 0;
+  padding: 9px 14px;
+  border-radius: 99px;
+  background: rgba(23, 32, 51, 0.94);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.45;
+}
+
+/* ==================================================================
+   속성 판
+   ================================================================== */
+
+.property-group {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.property-group-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.property-group-heading small {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 99px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.property-group-heading::after {
+  content: "▾";
+  margin-left: auto;
+  padding-left: 8px;
+  color: var(--muted);
+  transition: transform 0.15s ease;
+}
+
+.property-group-heading.open::after {
+  transform: rotate(180deg);
+}
+
+.property-group-body {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  padding-top: 9px;
+}
+
+.property-error {
+  color: var(--danger);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.property-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+}
+
+.secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 800;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.secondary-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 색을 정하지 않으면 웹앱 대표 색을 따라갑니다. */
+.color-none {
+  position: relative;
+  background:
+    linear-gradient(45deg, transparent 45%, var(--danger) 45%, var(--danger) 55%, transparent 55%),
+    var(--surface);
+}
+
+.align-field {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.align-field legend {
+  padding: 0 0 5px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+.align-choices {
+  display: flex;
+  gap: 5px;
+}
+
+.align-choices button {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px;
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.align-choices button.selected {
+  border-color: var(--violet);
+  background: var(--violet-soft);
+  color: var(--violet);
+}
+
+.image-field,
+.qa-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.image-field > span,
+.qa-field > span {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+.image-field-drop {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 16px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 11px;
+  background: var(--panel);
+  color: var(--muted);
+  font: inherit;
+  font-weight: 800;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.image-field-preview {
+  position: relative;
+}
+
+.image-field-preview img {
+  width: 100%;
+  border-radius: 11px;
+  display: block;
+}
+
+.image-field-preview button {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: inline-flex;
+  padding: 5px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(23, 32, 51, 0.85);
+  color: #fff;
+  cursor: pointer;
+}
+
+.qa-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--panel);
+}
+
+.qa-row header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.qa-row header button {
+  display: inline-flex;
+  padding: 3px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--danger);
+  cursor: pointer;
+}
+
+.qa-row input,
+.qa-row textarea,
+.qa-row select {
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  font: inherit;
+  font-size: 12px;
+  resize: vertical;
+}
+
+/* ==================================================================
+   팔레트와 컴포넌트 트리
+   ================================================================== */
+
+.palette-category {
+  display: flex;
+  flex-direction: column;
+}
+
+.palette-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 9px 2px 6px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.palette-section-heading svg {
+  transition: transform 0.15s ease;
+}
+
+.palette-section-heading:not(.open) svg {
+  transform: rotate(-90deg);
+}
+
+.palette-item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.tree-branch {
+  display: flex;
+  flex-direction: column;
+}
+
+.tree-drop-target {
+  outline: 2px solid var(--violet);
+  outline-offset: -2px;
+  border-radius: 8px;
+}
+
+/* ==================================================================
+   블록 편집기
+   ================================================================== */
+
+.block-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 34px 18px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 14px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.block-empty strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.block-empty span {
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.block-advanced-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 10px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.action-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.action-list.depth-1,
+.action-list.depth-2 {
+  margin-left: 14px;
+  padding-left: 10px;
+  border-left: 2px dashed var(--line-strong);
+}
+
+.block-connector-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.action-block .action-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.action-block .action-body select,
+.action-block .action-body input {
+  padding: 4px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  max-width: 150px;
+}
+
+.action-block .action-else {
+  width: 100%;
+  font-weight: 800;
+  opacity: 0.85;
+}
+
+.add-action-row {
+  padding: 7px 0 2px 14px;
+}
+
+.add-action-row select {
+  padding: 7px 10px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 9px;
+  background: var(--panel);
+  color: var(--muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  max-width: 100%;
+}
+
+.value-socket {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.value-socket.depth-1,
+.value-socket.depth-2,
+.value-socket.depth-3 {
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.value-operands {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.socket-add {
+  padding: 2px 7px;
+  border: 0;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.85);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.variable-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.variable-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 8px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+  font-size: 11px;
+}
+
+.variable-row button {
+  margin-left: auto;
+  display: inline-flex;
+  padding: 3px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--danger);
+  cursor: pointer;
+}
+
+.variable-row select,
+.variable-row input {
+  padding: 3px 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 11px;
+  max-width: 96px;
+}
+
+.variable-add {
+  display: flex;
+  gap: 5px;
+}
+
+.variable-add input {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  font: inherit;
+  font-size: 11px;
+}
+
+.variable-add button {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--violet);
+  color: #fff;
+  cursor: pointer;
+}
+
+.variable-add button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ==================================================================
+   되돌리기·다시 하기 단추가 늘면서 위쪽 띠가 비좁아졌습니다. 마지막 칸이
+   줄어들 수 있게 두고, 넘치면 겹치는 대신 가로로 밀리게 합니다.
+   ================================================================== */
+
+.studio-topbar {
+  grid-template-columns:
+    minmax(190px, 0.8fr) minmax(110px, 0.45fr) auto minmax(0, 2fr);
+}
+
+.topbar-actions {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.topbar-actions > * {
+  flex: none;
+}
+
+.mode-tabs {
+  flex: none;
+}
+
+.mode-tabs button {
+  min-width: 92px;
+}
+
+.icon-action:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* 컴포넌트 트리는 이제 배치 부품 안쪽까지 들여쓰기 때문에, 칸을 새 모양에
+   맞춥니다. 이름이 길어도 잘리지 않고 말줄임으로 끝나야 합니다. */
+
+.component-tree button {
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+}
+
+.component-tree button > span:nth-child(2) {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.component-tree button strong,
+.component-tree button small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.component-tree button strong {
+  font-size: 12.5px;
+}
+
+.component-tree button small {
+  color: var(--muted);
+  font-size: 10.5px;
+}
+
+.component-tree .tree-grip {
+  color: var(--line-strong);
+}
+
+.tree-children {
+  display: grid;
+  gap: 3px;
+}
+
+/* 트리가 배치 부품 안쪽까지 접히면서 칸 구성이 달라졌습니다. 들여쓰기는 이제
+   깊이에 따라 인라인 padding으로 주므로, 예전의 고정 여백과 3칸 구성을 걷어
+   냅니다. 그대로 두면 이름이 27px 칸에 갇혀 "버…"로 잘립니다. */
+
+.component-tree button,
+.tree-children button,
+.tree-children button[draggable="true"] {
+  grid-template-columns: 26px minmax(0, 1fr) auto auto;
+}
+
+.nested-tree-item {
+  margin-left: 0;
+  width: 100% !important;
+}
+
+.tree-children {
+  margin-left: 10px;
+  padding-left: 6px;
+}
+
+/* 속성이 부품마다 열 개 넘게 생기면서 오른쪽 판이 길어졌습니다. 넓은 화면에서는
+   판 안에서만 스크롤되게 두어, 휴대폰 미리보기가 화면 밖으로 밀려나지 않게
+   합니다. 휴대폰 크기를 재는 뷰어 쪽은 건드리지 않습니다. */
+@media (min-width: 961px) {
+  .inspector-panel,
+  .palette-panel {
+    position: sticky;
+    top: 133px;
+    align-self: start;
+    max-height: calc(100vh - 133px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+}

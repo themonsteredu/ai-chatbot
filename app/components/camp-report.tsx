@@ -15,15 +15,13 @@ import {
 } from "lucide-react";
 import {
   ChangeEvent,
-  KeyboardEvent,
   MouseEvent,
   useEffect,
   useState,
 } from "react";
-import type {
-  SelectedTarget,
-  WebAppProject,
-} from "../../lib/chatbot-studio";
+import type { ComponentNode } from "../../lib/chatbot-studio";
+import type { AppRuntime } from "./runtime/use-app-runtime";
+import { partStyle } from "./runtime/style";
 import { compressPhoto } from "../../lib/image";
 import {
   DRAFT_SCOPE_ID,
@@ -45,10 +43,9 @@ type CampReportData = {
 };
 
 type CampReportProps = {
-  project: WebAppProject;
-  interactive: boolean;
-  selectedTarget?: SelectedTarget;
-  onSelect?: (target: SelectedTarget) => void;
+  /** 화면에 놓인 캠프 기록 부품입니다. 제목과 안내 문구를 여기서 읽습니다. */
+  node: ComponentNode;
+  runtime: AppRuntime;
   /** 이 웹앱의 기록을 저장할 자리입니다. 웹앱 아이디로 정해집니다. */
   dataScope?: RuntimeScope;
 };
@@ -122,12 +119,13 @@ function normalizeReport(value: unknown): CampReportData {
 }
 
 export function CampReport({
-  project,
-  interactive,
-  selectedTarget,
-  onSelect,
+  node,
+  runtime,
   dataScope,
 }: CampReportProps) {
+  const interactive = runtime.interactive;
+  const fire = runtime.fire;
+  const nodeId = node.id;
   const [reportOpen, setReportOpen] = useState(false);
   const [activeDay, setActiveDay] = useState<(typeof DAYS)[number]>(1);
   const [openSessions, setOpenSessions] = useState([sessionId(1, 1)]);
@@ -143,7 +141,7 @@ export function CampReport({
   // 것처럼 보입니다. 웹앱 아이디를 씁니다.
   const scope: RuntimeScope = dataScope ?? {
     appId: DRAFT_SCOPE_ID,
-    legacyTitle: project.title,
+    legacyTitle: "",
   };
   const scopeId = scope.appId;
   const scopeLegacyTitle = scope.legacyTitle;
@@ -193,21 +191,11 @@ export function CampReport({
           ? "휴대폰에 자동 저장됨"
           : "저장 공간이 부족해요. 사진을 줄여 주세요",
       );
+      if (result === "saved") fire(nodeId, "session-saved");
     }, 0);
 
     return () => window.clearTimeout(timer);
-  }, [interactive, report, scopeId, scopeLegacyTitle, storageReady]);
-
-  const select = () => {
-    if (!interactive) onSelect?.("camp-report");
-  };
-
-  const selectOnKeyboard = (event: KeyboardEvent<HTMLElement>) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      select();
-    }
-  };
+  }, [fire, interactive, nodeId, report, scopeId, scopeLegacyTitle, storageReady]);
 
   // 차시에는 활동과 사진만 적으므로 그 둘로 완료를 판단합니다.
   const completedCount = Object.values(report.sessions).filter(
@@ -302,27 +290,18 @@ export function CampReport({
   const openReport = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
     if (interactive) setReportOpen(true);
-    else select();
   };
 
   return (
     <>
-      <section
-        className={`webapp-card camp-report-card ${
-          selectedTarget === "camp-report" ? "component-selected" : ""
-        }`}
-        role={interactive ? undefined : "button"}
-        tabIndex={interactive ? undefined : 0}
-        onClick={select}
-        onKeyDown={selectOnKeyboard}
-      >
+      <section className="webapp-card camp-report-card" style={partStyle(node.props)}>
         <div className="camp-report-heading">
           <span className="feature-card-icon blue">
             <FileText size={16} aria-hidden="true" />
           </span>
           <span>
             <small>3 DAYS · 12 CLASSES</small>
-            <strong>{project.campReportTitle}</strong>
+            <strong>{runtime.text(node, "title")}</strong>
             <em>활동 · 사진 · 느낀 점을 차시별로 기록해요</em>
           </span>
         </div>
@@ -352,7 +331,7 @@ export function CampReport({
             </button>
             <span>
               <small>MY CAMP REPORT</small>
-              <strong>{project.campReportTitle}</strong>
+              <strong>{runtime.text(node, "title")}</strong>
             </span>
             <b>{completedCount}/12</b>
           </header>
@@ -434,7 +413,7 @@ export function CampReport({
                         <span>배운 내용과 활동</span>
                         <textarea
                           value={entry.activity}
-                          placeholder={project.campActivityPrompt}
+                          placeholder={runtime.text(node, "activityPrompt")}
                           onChange={(event) =>
                             updateSession(id, { activity: event.target.value })
                           }
@@ -526,7 +505,7 @@ export function CampReport({
                 </span>
                 <textarea
                   value={report.finalReflection}
-                  placeholder={project.campFinalPrompt}
+                  placeholder={runtime.text(node, "finalPrompt")}
                   onChange={(event) =>
                     setReport((current) => ({
                       ...current,
@@ -578,7 +557,13 @@ export function CampReport({
               <Save size={12} aria-hidden="true" />
               {storageStatus}
             </span>
-            <button type="button" onClick={() => window.print()}>
+            <button
+              type="button"
+              onClick={() => {
+                runtime.fire(node.id, "printed");
+                window.print();
+              }}
+            >
               <Printer size={13} aria-hidden="true" />
               보고서 인쇄
             </button>
@@ -590,7 +575,7 @@ export function CampReport({
         <article className="print-report" aria-label="인쇄용 캠프 활동 보고서">
           <header>
             <span>MY CAMP REPORT</span>
-            <h1>{project.campReportTitle}</h1>
+            <h1>{runtime.text(node, "title")}</h1>
             <p>
               이름 <b>{report.studentName || "________________"}</b>
             </p>

@@ -35,7 +35,12 @@ export function PwaInstallButton({
 
   // 설치한 앱이 브라우저 저장 공간을 못 읽는 아이폰에서도 열리도록, 설계 내용을
   // 매니페스트에 실어 시작 주소에 담습니다.
-  const encodedProject = useMemo(() => encodeProject(project), [project]);
+  // 홈 화면 설치 주소는 12,000자까지라 사진은 빼고 싣습니다. 설계는 기기에
+  // 그대로 남아 있어서 첫 실행 뒤에는 사진도 다시 보입니다.
+  const encodedProject = useMemo(
+    () => encodeProject(project, { forManifest: true }),
+    [project],
+  );
 
   useEffect(() => {
     const manifestParams = new URLSearchParams({

@@ -1,45 +1,30 @@
 "use client";
 
 import {
-  AppWindow,
-  BellRing,
-  Bot,
   Check,
-  ChevronDown,
   ChevronRight,
   CircleHelp,
-  ClipboardCheck,
   Copy,
-  FileText,
-  FilePlus2,
-  GripVertical,
-  Info,
   LayoutPanelTop,
   LibraryBig,
-  ListChecks,
-  MousePointerClick,
-  NotebookPen,
-  Palette,
   Play,
   Plus,
   Printer,
   QrCode,
+  Redo2,
   Rocket,
   RotateCcw,
   Settings2,
   Share2,
   Smartphone,
   Sparkles,
-  TentTree,
-  Trash2,
+  Undo2,
   Workflow,
   X,
-  type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { DragEvent, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import {
-  ACTION_ICON_LABELS,
   DEFAULT_PROJECT,
   PROJECT_TEMPLATES,
   canonicalShareOrigin,
@@ -47,14 +32,26 @@ import {
   decodeProject,
   encodeProject,
   normalizeProject,
-  type ActionIcon,
-  type FeatureKind,
-  type QuickAction,
-  type SelectedTarget,
+  type ComponentNode,
+  type ComponentTypeId,
+  type PropValue,
   type StudioMode,
   type TemplateId,
   type WebAppProject,
 } from "../../lib/chatbot-studio";
+import { REGISTRY } from "../../lib/components/registry";
+import {
+  canAdd,
+  createNode,
+  duplicateNode,
+  findNode,
+  insertNode,
+  locate,
+  moveNode,
+  removeNode,
+  updateNode,
+  walk,
+} from "../../lib/project/tree";
 import {
   deleteSavedWebApp,
   isValidWebAppId,
@@ -64,7 +61,12 @@ import {
   type SavedWebAppSummary,
 } from "../../lib/saved-webapps";
 import { clearRuntime, DRAFT_SCOPE_ID } from "../../lib/runtime-store";
-import { BlockWorkspace } from "./block-workspace";
+import { BlockEditor } from "./blocks/block-editor";
+import { ColorField } from "./designer/color-field";
+import { ComponentTree, REORDER_MIME } from "./designer/component-tree";
+import { PALETTE_MIME, PalettePanel } from "./designer/palette-panel";
+import { PropertyEditor } from "./designer/property-editor";
+import { useProjectHistory } from "./designer/use-project-history";
 import { PhonePreview } from "./phone-preview";
 import { ClassSubmit } from "./class-submit";
 import { CodeReceive } from "./code-receive";
@@ -74,117 +76,18 @@ import { SavedWebAppLibrary } from "./saved-webapp-library";
 import { WebAppPlayer } from "./webapp-player";
 
 const STORAGE_KEY = "my-webapp-inventor-project-v3";
-const MAX_CHECKLIST_ITEMS = 10;
 const LEGACY_INSTALLED_PROJECT_KEY = "my-webapp-installed-project-v1";
 
-type PaletteKind =
-  | "screen"
-  | "header"
-  | "notice"
-  | "checklist"
-  | "journal"
-  | "camp-report"
-  | "button"
-  | "chatbot";
 type MobilePanel = "palette" | "viewer" | "properties";
-
-type PaletteItem = {
-  kind: PaletteKind;
-  name: string;
-  hint: string;
-  icon: LucideIcon;
-  tone: "violet" | "yellow" | "mint" | "blue";
-};
-
-const paletteItems: PaletteItem[] = [
-  {
-    kind: "screen",
-    name: "화면 배경",
-    hint: "웹앱의 바탕을 꾸며요",
-    icon: Smartphone,
-    tone: "blue",
-  },
-  {
-    kind: "header",
-    name: "앱 머리글",
-    hint: "이름과 소개를 보여줘요",
-    icon: AppWindow,
-    tone: "violet",
-  },
-  {
-    kind: "notice",
-    name: "안내 카드",
-    hint: "중요한 내용을 알려줘요",
-    icon: Info,
-    tone: "yellow",
-  },
-  {
-    kind: "checklist",
-    name: "활동 체크",
-    hint: "할 일을 하나씩 완료해요",
-    icon: ListChecks,
-    tone: "mint",
-  },
-  {
-    kind: "journal",
-    name: "나의 기록",
-    hint: "생각을 적고 저장해요",
-    icon: NotebookPen,
-    tone: "blue",
-  },
-  {
-    kind: "camp-report",
-    name: "3일 캠프 기록",
-    hint: "12차시·사진·소감을 모아요",
-    icon: FileText,
-    tone: "blue",
-  },
-  {
-    kind: "button",
-    name: "일반 버튼",
-    hint: "누르면 안내를 보여줘요",
-    icon: MousePointerClick,
-    tone: "yellow",
-  },
-  {
-    kind: "chatbot",
-    name: "나만의 챗봇",
-    hint: "내 질문과 답으로 만들어요",
-    icon: Bot,
-    tone: "violet",
-  },
-];
-
-const templateIconMap: Record<TemplateId, LucideIcon> = {
-  notice: BellRing,
-  camp: TentTree,
-  blank: FilePlus2,
-};
-
-const featureEnabledKey = {
-  notice: "noticeEnabled",
-  checklist: "checklistEnabled",
-  journal: "journalEnabled",
-  "camp-report": "campReportEnabled",
-  button: "buttonEnabled",
-  chatbot: "chatbotEnabled",
-} as const;
-
-const colorChoices = [
-  { name: "보라", value: "#6956e8" },
-  { name: "파랑", value: "#3478f6" },
-  { name: "민트", value: "#16a982" },
-  { name: "주황", value: "#f26b3a" },
-  { name: "분홍", value: "#e65387" },
-];
+type Selected = "screen" | "header" | string;
 
 export function ChatbotStudio() {
-  const [project, setProject] = useState<WebAppProject>(() =>
-    cloneProject(DEFAULT_PROJECT),
-  );
+  const history = useProjectHistory(cloneProject(DEFAULT_PROJECT));
+  const project = history.project;
+  const screen = project.screens[0];
+
   const [mode, setMode] = useState<StudioMode>("designer");
-  const [selectedTarget, setSelectedTarget] =
-    useState<SelectedTarget>("screen");
+  const [selected, setSelected] = useState<Selected>("screen");
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>("viewer");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
@@ -194,38 +97,33 @@ export function ChatbotStudio() {
   const [loadError, setLoadError] = useState("");
   const [hydrated, setHydrated] = useState(false);
   const [toast, setToast] = useState("");
-  // 체크 항목을 적는 중에는 빈 줄까지 그대로 들고 있습니다.
-  const [checklistDraft, setChecklistDraft] = useState<string | null>(null);
-  // 컴포넌트 목록에서 끌고 있는 기능과, 지금 그 위에 올라가 있는 기능입니다.
-  const [draggingFeature, setDraggingFeature] = useState<FeatureKind | null>(
-    null,
-  );
-  const [dragOverFeature, setDragOverFeature] = useState<FeatureKind | null>(
-    null,
-  );
-  // QR 대화 상자에 담을 공유 주소입니다. 비어 있으면 닫힌 상태입니다.
+  // 지금 무엇을 어디로 끌고 있는지입니다. 팔레트에서 온 것과 화면에 있던 것을
+  // 구분해야 새로 놓을지 옮길지 정할 수 있습니다.
+  const [dropTargetId, setDropTargetId] = useState("");
   const [qrShare, setQrShare] = useState<{
     appName: string;
     url: string;
     code: string;
   } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // 넓은 화면에서 휴대폰 미리보기가 남는 공간만큼 커지게 합니다.
   const phoneStageRef = usePhoneScale();
 
-  const selectedAction = useMemo(
-    () => project.actions.find((action) => action.id === selectedTarget),
-    [project.actions, selectedTarget],
+  const selectedNode = useMemo(
+    () =>
+      selected === "screen" || selected === "header"
+        ? null
+        : findNode(screen.children, selected),
+    [screen.children, selected],
   );
 
-  const visibleFeatureCount =
-    1 +
-    Number(project.noticeEnabled) +
-    Number(project.checklistEnabled) +
-    Number(project.journalEnabled) +
-    Number(project.campReportEnabled) +
-    Number(project.buttonEnabled) +
-    Number(project.chatbotEnabled);
+  const componentCount = useMemo(
+    () => [...walk(screen.children)].length,
+    [screen.children],
+  );
+
+  const reset = history.reset;
+
+  /* ---------------- 불러오기 ---------------- */
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -235,94 +133,95 @@ export function ChatbotStudio() {
       const editingAppId = params.get("edit");
       const shared = params.get("project");
       const sid = params.get("sid");
+
       const hydrate = (sharedProject: WebAppProject | null) => {
-      const isStandalone =
-        runMode === "1" || runMode === "install" || runMode === "saved";
-      let nextAppId = isValidWebAppId(requestedAppId)
-        ? requestedAppId!
-        : isValidWebAppId(editingAppId)
-          ? editingAppId!
-          : "";
-      let nextProject: WebAppProject | null = null;
+        const isStandalone =
+          runMode === "1" || runMode === "install" || runMode === "saved";
+        let nextAppId = isValidWebAppId(requestedAppId)
+          ? requestedAppId!
+          : isValidWebAppId(editingAppId)
+            ? editingAppId!
+            : "";
+        let nextProject: WebAppProject | null = null;
 
-      // 설치한 앱의 시작 주소(run=saved)에는 내용이 같이 실려 있습니다. 홈 화면
-      // 앱은 브라우저와 저장 공간이 달라 첫 실행 때 이 값으로 채워 넣어야 열립니다.
-      // 다만 이미 저장된 내용이 있으면 그쪽이 최신이므로 덮어쓰지 않습니다.
-      // 사람이 직접 연 공유 링크(run=install)는 새 내용을 받는 것이 목적이라
-      // 언제나 받아 씁니다.
-      const seedOnly = runMode === "saved";
-      const storedProject =
-        sharedProject && seedOnly && nextAppId
-          ? loadSavedWebApp(window.localStorage, nextAppId)
-          : null;
+        // 설치한 앱의 시작 주소(run=saved)에는 내용이 같이 실려 있습니다. 홈 화면
+        // 앱은 브라우저와 저장 공간이 달라 첫 실행 때 이 값으로 채워 넣어야
+        // 열립니다. 다만 이미 저장된 내용이 있으면 그쪽이 최신이므로 덮어쓰지
+        // 않습니다. 사람이 직접 연 공유 링크(run=install)는 새 내용을 받는 것이
+        // 목적이라 언제나 받아 씁니다.
+        const seedOnly = runMode === "saved";
+        const storedProject =
+          sharedProject && seedOnly && nextAppId
+            ? loadSavedWebApp(window.localStorage, nextAppId)
+            : null;
 
-      if (sharedProject) {
-        if (storedProject) {
-          nextProject = storedProject;
+        if (sharedProject) {
+          if (storedProject) {
+            nextProject = storedProject;
+          } else {
+            const savedApp = saveWebApp(
+              window.localStorage,
+              sharedProject,
+              nextAppId || undefined,
+            );
+            nextAppId = savedApp.id;
+            nextProject = sharedProject;
+          }
+
+          if (isStandalone) {
+            // 주소창에 긴 내용이 남지 않도록 정리합니다.
+            const installedUrl = new URL("/", window.location.origin);
+            installedUrl.searchParams.set(
+              "run",
+              runMode === "saved" ? "saved" : "install",
+            );
+            installedUrl.searchParams.set("app", nextAppId);
+            window.history.replaceState(null, "", installedUrl);
+          }
+        } else if (nextAppId) {
+          nextProject = loadSavedWebApp(window.localStorage, nextAppId);
+        } else if (runMode === "saved") {
+          const legacySaved = window.localStorage.getItem(
+            LEGACY_INSTALLED_PROJECT_KEY,
+          );
+          if (legacySaved) {
+            try {
+              nextProject = normalizeProject(JSON.parse(legacySaved));
+              const migrated = saveWebApp(window.localStorage, nextProject);
+              nextAppId = migrated.id;
+              const migratedUrl = new URL("/", window.location.origin);
+              migratedUrl.searchParams.set("run", "saved");
+              migratedUrl.searchParams.set("app", nextAppId);
+              window.history.replaceState(null, "", migratedUrl);
+            } catch {
+              nextProject = null;
+            }
+          }
         } else {
-          const savedApp = saveWebApp(
-            window.localStorage,
-            sharedProject,
-            nextAppId || undefined,
-          );
-          nextAppId = savedApp.id;
-          nextProject = sharedProject;
-        }
-
-        if (isStandalone) {
-          // 주소창에 긴 내용이 남지 않도록 정리합니다.
-          const installedUrl = new URL("/", window.location.origin);
-          installedUrl.searchParams.set(
-            "run",
-            runMode === "saved" ? "saved" : "install",
-          );
-          installedUrl.searchParams.set("app", nextAppId);
-          window.history.replaceState(null, "", installedUrl);
-        }
-      } else if (nextAppId) {
-        nextProject = loadSavedWebApp(window.localStorage, nextAppId);
-      } else if (runMode === "saved") {
-        const legacySaved = window.localStorage.getItem(
-          LEGACY_INSTALLED_PROJECT_KEY,
-        );
-        if (legacySaved) {
-          try {
-            nextProject = normalizeProject(JSON.parse(legacySaved));
-            const migrated = saveWebApp(window.localStorage, nextProject);
-            nextAppId = migrated.id;
-            const migratedUrl = new URL("/", window.location.origin);
-            migratedUrl.searchParams.set("run", "saved");
-            migratedUrl.searchParams.set("app", nextAppId);
-            window.history.replaceState(null, "", migratedUrl);
-          } catch {
-            nextProject = null;
+          const saved = window.localStorage.getItem(STORAGE_KEY);
+          if (saved) {
+            try {
+              nextProject = normalizeProject(JSON.parse(saved));
+            } catch {
+              nextProject = cloneProject(DEFAULT_PROJECT);
+            }
           }
         }
-      } else {
-        const saved = window.localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          try {
-            nextProject = normalizeProject(JSON.parse(saved));
-          } catch {
-            nextProject = cloneProject(DEFAULT_PROJECT);
-          }
+
+        if (nextProject) {
+          reset(nextProject);
+        } else if (isStandalone) {
+          setLoadError(
+            "이 기기에서 이 웹앱의 저장 내용을 찾지 못했어요. 만든 기기에서 다시 공유 링크를 열어 주세요.",
+          );
+        } else {
+          reset(cloneProject(DEFAULT_PROJECT));
         }
-      }
 
-      if (nextProject) {
-        setProject(nextProject);
-      } else if (isStandalone) {
-        setLoadError(
-          "이 기기에서 이 웹앱의 저장 내용을 찾지 못했어요. 만든 기기에서 다시 공유 링크를 열어 주세요.",
-        );
-      } else {
-        setProject(cloneProject(DEFAULT_PROJECT));
-      }
-
-      setActiveAppId(nextAppId);
-      setSavedApps(listSavedWebApps(window.localStorage));
-      setStandalone(isStandalone);
-      setHydrated(true);
+        setActiveAppId(nextAppId);
+        setSavedApps(listSavedWebApps(window.localStorage));
+        setStandalone(isStandalone);
+        setHydrated(true);
       };
 
       const inlineProject = shared ? decodeProject(shared) : null;
@@ -347,15 +246,17 @@ export function ChatbotStudio() {
     }, 0);
 
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [reset]);
 
+  /* 되돌리기를 여러 번 눌러도 저장이 몰아치지 않도록 잠깐 모았다 씁니다. */
   useEffect(() => {
     if (!hydrated || standalone) return;
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(project));
+    const timer = window.setTimeout(() => {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(project));
+      if (activeAppId) saveWebApp(window.localStorage, project, activeAppId);
+    }, 400);
 
-    if (activeAppId) {
-      saveWebApp(window.localStorage, project, activeAppId);
-    }
+    return () => window.clearTimeout(timer);
   }, [activeAppId, hydrated, project, standalone]);
 
   useEffect(() => {
@@ -382,137 +283,202 @@ export function ChatbotStudio() {
     toastTimer.current = setTimeout(() => setToast(""), 2400);
   };
 
-  const updateProject = <Key extends keyof WebAppProject>(
-    key: Key,
-    value: WebAppProject[Key],
+  /* ---------------- 편집 ---------------- */
+
+  const setChildren = (
+    change: (children: ComponentNode[]) => ComponentNode[],
+    label: string,
+    coalesceKey?: string,
   ) => {
-    setProject((current) => ({ ...current, [key]: value }));
+    history.commit(
+      (current) => ({
+        ...current,
+        screens: current.screens.map((one, index) =>
+          index === 0 ? { ...one, children: change(one.children) } : one,
+        ),
+      }),
+      { label, coalesceKey },
+    );
   };
 
-  const updateAction = (
-    id: string,
-    patch: Partial<Pick<QuickAction, "label" | "response" | "icon">>,
+  const addComponent = (
+    type: ComponentTypeId,
+    at?: { parentId: string | null; index: number },
   ) => {
-    setProject((current) => ({
-      ...current,
-      actions: current.actions.map((action) =>
-        action.id === id ? { ...action, ...patch } : action,
-      ),
-    }));
-  };
-
-  const addAction = () => {
-    if (project.actions.length >= 12) {
-      notify("질문·답은 12개까지 만들 수 있어요.");
+    if (!canAdd(screen.children, type)) {
+      notify(`${REGISTRY[type].name}은(는) 화면에 하나만 놓을 수 있어요.`);
       return;
     }
+    const node = createNode(screen.children, type);
+    setChildren(
+      (children) =>
+        insertNode(
+          children,
+          node,
+          at ?? { parentId: null, index: children.length },
+        ),
+      `${REGISTRY[type].name} 추가`,
+    );
+    setSelected(node.id);
+    setMobilePanel("properties");
+    notify(`${node.name}을(를) 놓았어요.`);
+  };
 
-    const order = project.actions.length + 1;
-    let serial = order;
-    while (project.actions.some((action) => action.id === `question-${serial}`)) {
-      serial += 1;
+  const changeProp = (nodeId: string, key: string, value: PropValue) => {
+    setChildren(
+      (children) =>
+        updateNode(children, nodeId, (node) => ({
+          ...node,
+          props: { ...node.props, [key]: value },
+        })),
+      "속성 바꾸기",
+      `${nodeId}:${key}`,
+    );
+  };
+
+  const renameNode = (nodeId: string, name: string) => {
+    setChildren(
+      (children) =>
+        updateNode(children, nodeId, (node) => ({ ...node, name })),
+      "이름 바꾸기",
+      `${nodeId}:name`,
+    );
+  };
+
+  const duplicate = (nodeId: string) => {
+    const node = findNode(screen.children, nodeId);
+    if (!node) return;
+    if (!canAdd(screen.children, node.type)) {
+      notify(`${REGISTRY[node.type].name}은(는) 화면에 하나만 놓을 수 있어요.`);
+      return;
     }
-    const id = `question-${serial}`;
-    setProject((current) => ({
-      ...current,
-      chatbotEnabled: true,
-      actions: [
-        ...current.actions,
-        {
-          id,
-          label: `새 질문 ${order}`,
-          response: "이 질문을 눌렀을 때 보여 줄 답을 적어 주세요.",
-          icon: "message",
+    let createdId = "";
+    setChildren(
+      (children) => {
+        const result = duplicateNode(children, nodeId);
+        createdId = result.created?.id ?? "";
+        return result.nodes;
+      },
+      `${node.name} 복제`,
+    );
+    if (createdId) setSelected(createdId);
+    notify("똑같은 부품을 하나 더 놓았어요.");
+  };
+
+  const deleteNode = (nodeId: string) => {
+    const node = findNode(screen.children, nodeId);
+    if (!node) return;
+    // 되돌리기가 있으니 겁주는 확인 창 대신 안내만 띄웁니다.
+    history.commit(
+      (current) => ({
+        ...current,
+        screens: current.screens.map((one, index) =>
+          index === 0
+            ? { ...one, children: removeNode(one.children, nodeId) }
+            : one,
+        ),
+        // 사라진 부품을 가리키던 블록도 함께 걷어 냅니다.
+        blocks: {
+          ...current.blocks,
+          events: current.blocks.events.filter(
+            (event) => event.componentId !== nodeId,
+          ),
         },
-      ],
-    }));
-    setSelectedTarget(id);
-    setMobilePanel("properties");
-    notify("나만의 챗봇에 새 질문과 답을 추가했어요.");
-  };
-
-  const removeAction = (id: string) => {
-    const action = project.actions.find((item) => item.id === id);
-    if (!action) return;
-    if (!window.confirm(`‘${action.label}’ 질문 버튼을 삭제할까요?`)) return;
-
-    setProject((current) => ({
-      ...current,
-      actions: current.actions.filter((item) => item.id !== id),
-    }));
-    setSelectedTarget("chatbot");
-    notify("질문 버튼을 삭제했어요.");
-  };
-
-  const moveAction = (id: string, direction: -1 | 1) => {
-    setProject((current) => {
-      const index = current.actions.findIndex((action) => action.id === id);
-      const target = index + direction;
-      if (index < 0 || target < 0 || target >= current.actions.length) {
-        return current;
-      }
-      const actions = [...current.actions];
-      [actions[index], actions[target]] = [actions[target], actions[index]];
-      return { ...current, actions };
-    });
-  };
-
-  const choosePaletteItem = (kind: PaletteKind) => {
-    if (kind !== "screen" && kind !== "header") {
-      const enabledKey =
-        featureEnabledKey[kind as keyof typeof featureEnabledKey];
-      setProject((current) => ({ ...current, [enabledKey]: true }));
-    }
-    setSelectedTarget(kind);
-    setMobilePanel("properties");
-    if (kind !== "screen" && kind !== "header") {
-      notify(`${paletteItems.find((item) => item.kind === kind)?.name} 기능을 준비했어요.`);
-    }
-  };
-
-  const hideFeature = (
-    kind: Exclude<PaletteKind, "screen" | "header">,
-  ) => {
-    const item = paletteItems.find((paletteItem) => paletteItem.kind === kind);
-    if (!window.confirm(`‘${item?.name}’ 기능을 화면에서 뺄까요?`)) return;
-    const enabledKey = featureEnabledKey[kind];
-    setProject((current) => ({ ...current, [enabledKey]: false }));
-    setSelectedTarget("screen");
-    notify(`${item?.name} 기능을 화면에서 뺐어요.`);
+      }),
+      { label: `${node.name} 삭제` },
+    );
+    setSelected("screen");
+    notify(`${node.name}을(를) 지웠어요. 되돌리기로 되살릴 수 있어요.`);
   };
 
   const applyTemplate = (templateId: TemplateId) => {
     const template = PROJECT_TEMPLATES.find((item) => item.id === templateId);
     if (!template || template.id === project.template) return;
-    if (
-      !window.confirm(
-        `지금 내용을 ‘${template.name}’ 예제로 바꿀까요? 현재 내용은 새 예제로 바뀝니다.`,
-      )
-    ) {
-      return;
-    }
-    setProject(cloneProject(template.project));
-    setSelectedTarget("screen");
+    history.commit(() => cloneProject(template.project), {
+      label: `${template.name} 불러오기`,
+    });
+    setSelected("screen");
     setMode("designer");
     setMobilePanel("viewer");
-    notify(`${template.name} 예제를 불러왔어요.`);
+    notify(`${template.name} 예제를 불러왔어요. 되돌리기로 돌아갈 수 있어요.`);
   };
 
-  const dropPaletteItem = (event: DragEvent<HTMLDivElement>) => {
+  const resetProject = () => {
+    history.commit(() => cloneProject(DEFAULT_PROJECT), {
+      label: "빈 웹앱으로 되돌리기",
+    });
+    setSelected("screen");
+    setMode("designer");
+    notify("빈 웹앱으로 돌아왔어요. 되돌리기로 되살릴 수 있어요.");
+  };
+
+  /* ---------------- 끌어 놓기 ---------------- */
+
+  const dragged = useRef("");
+
+  const readDrop = (event: DragEvent<HTMLElement>) => {
+    const type = event.dataTransfer.getData(PALETTE_MIME) as ComponentTypeId;
+    const moving = event.dataTransfer.getData(REORDER_MIME);
+    return { type, moving };
+  };
+
+  const dropAt = (
+    event: DragEvent<HTMLElement>,
+    at: { parentId: string | null; index: number },
+  ) => {
     event.preventDefault();
-    const kind = event.dataTransfer.getData(
-      "application/x-webapp-component",
-    ) as PaletteKind;
-    if (paletteItems.some((item) => item.kind === kind)) {
-      choosePaletteItem(kind);
+    setDropTargetId("");
+    const { type, moving } = readDrop(event);
+    if (moving) {
+      const node = findNode(screen.children, moving);
+      if (!node) return;
+      setChildren(
+        (children) => moveNode(children, moving, at),
+        `${node.name} 옮기기`,
+      );
+      return;
     }
+    if (type && type in REGISTRY) addComponent(type, at);
   };
 
-  /**
-   * 실행 기록을 어디에 저장할지 정합니다. 아직 저장하지 않은 웹앱은 임시 자리를
-   * 쓰고, 저장한 뒤에는 그 웹앱의 아이디를 씁니다. `legacyTitle`은 이름으로
-   * 저장해 둔 예전 기록을 한 번 옮겨 오기 위해서만 넘깁니다.
-   */
+  const designHooks = {
+    selectedId: typeof selected === "string" ? selected : "",
+    onSelect: (id: string) => selectTarget(id),
+    onDropBefore: (nodeId: string, event: DragEvent<HTMLElement>) => {
+      const at = locate(screen.children, nodeId);
+      if (at) dropAt(event, at);
+    },
+    onDropInside: (parentId: string, event: DragEvent<HTMLElement>) => {
+      const parent = findNode(screen.children, parentId);
+      dropAt(event, {
+        parentId,
+        index: parent?.children?.length ?? 0,
+      });
+    },
+    onDragStartNode: (nodeId: string, event: DragEvent<HTMLElement>) => {
+      dragged.current = nodeId;
+      event.dataTransfer.setData(REORDER_MIME, nodeId);
+      event.dataTransfer.effectAllowed = "move";
+    },
+    onDragEnd: () => {
+      dragged.current = "";
+      setDropTargetId("");
+    },
+    dropTargetId,
+    onDragOverNode: (target: string, event: DragEvent<HTMLElement>) => {
+      event.dataTransfer.dropEffect = event.dataTransfer.types.includes(
+        REORDER_MIME,
+      )
+        ? "move"
+        : "copy";
+      setDropTargetId(target);
+    },
+    onDragLeaveNode: (target: string) =>
+      setDropTargetId((current) => (current === target ? "" : current)),
+  };
+
+  /* ---------------- 저장·공유 ---------------- */
+
   const dataScope = {
     appId: activeAppId || DRAFT_SCOPE_ID,
     legacyTitle: project.title,
@@ -530,47 +496,8 @@ export function ChatbotStudio() {
     return savedApp;
   };
 
-  /** 끌어다 놓은 기능을 목표 기능 자리 앞으로 옮깁니다. */
-  const reorderFeature = (moving: FeatureKind, target: FeatureKind) => {
-    if (moving === target) return;
-    const order = project.featureOrder.filter((kind) => kind !== moving);
-    const at = order.indexOf(target);
-    order.splice(at < 0 ? order.length : at, 0, moving);
-    // 바뀐 순서가 화면에 바로 보이므로 따로 알림을 띄우지 않습니다.
-    updateProject("featureOrder", order);
-  };
-
-  const featureReorderProps = (kind: FeatureKind) => ({
-    kind,
-    dragOver: dragOverFeature === kind && draggingFeature !== kind,
-    onDragStart: (event: DragEvent<HTMLButtonElement>) => {
-      event.dataTransfer.setData("application/x-webapp-reorder", kind);
-      event.dataTransfer.effectAllowed = "move";
-      setDraggingFeature(kind);
-    },
-    onDragOver: (event: DragEvent<HTMLButtonElement>) => {
-      if (!draggingFeature) return;
-      event.preventDefault();
-      event.dataTransfer.dropEffect = "move";
-      setDragOverFeature(kind);
-    },
-    onDragLeave: () => {
-      setDragOverFeature((current) => (current === kind ? null : current));
-    },
-    onDrop: (event: DragEvent<HTMLButtonElement>) => {
-      event.preventDefault();
-      const moving = event.dataTransfer.getData(
-        "application/x-webapp-reorder",
-      ) as FeatureKind;
-      if (moving) reorderFeature(moving, kind);
-      setDraggingFeature(null);
-      setDragOverFeature(null);
-    },
-  });
-
-  /** 반 저장소에서 가져온 웹앱으로 편집을 이어 갑니다. */
   const restoreClassWebApp = (restored: WebAppProject, restoredId: string) => {
-    setProject(restored);
+    reset(restored);
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(restored));
     const savedApp = saveWebApp(window.localStorage, restored, restoredId);
     setActiveAppId(savedApp.id);
@@ -584,15 +511,6 @@ export function ChatbotStudio() {
     url.searchParams.set("run", "install");
     url.searchParams.set("app", savedApp.id);
     window.location.href = url.toString();
-  };
-
-  const resetProject = () => {
-    if (!window.confirm("지금 만든 내용을 지우고 빈 웹앱으로 돌아갈까요?"))
-      return;
-    setProject(cloneProject(DEFAULT_PROJECT));
-    setSelectedTarget("screen");
-    setMode("designer");
-    notify("빈 웹앱으로 돌아왔어요.");
   };
 
   /**
@@ -617,26 +535,36 @@ export function ChatbotStudio() {
       url.searchParams.set("sid", json.id);
       return { url: url.toString(), code: String(json.id) };
     } catch {
-      url.searchParams.set("project", encodeProject(project));
+      // 긴 링크에는 사진을 그대로 실을 수 없습니다. 주소가 한도를 넘습니다.
+      url.searchParams.set("project", encodeProject(project, { forManifest: true }));
       return { url: url.toString(), code: "" };
     }
   };
 
   const shareProject = async () => {
-    const { url } = await buildShareUrl();
     try {
-      await navigator.clipboard.writeText(url);
-      notify("내 웹앱 공유 링크를 복사했어요.");
+      const { url } = await buildShareUrl();
+      try {
+        await navigator.clipboard.writeText(url);
+        notify("내 웹앱 공유 링크를 복사했어요.");
+      } catch {
+        window.prompt("아래 링크를 복사해 주세요.", url);
+      }
     } catch {
-      window.prompt("아래 링크를 복사해 주세요.", url);
+      notify("공유 링크를 만들지 못했어요. 저장 공간을 확인해 주세요.");
     }
   };
 
   /** 휴대폰 카메라로 찍으면 설치 화면이 열리는 QR을 띄웁니다. */
   const showShareQr = async () => {
     setQrShare({ appName: project.appName, url: "", code: "" });
-    const { url, code } = await buildShareUrl();
-    setQrShare({ appName: project.appName, url, code });
+    try {
+      const { url, code } = await buildShareUrl();
+      setQrShare({ appName: project.appName, url, code });
+    } catch {
+      setQrShare(null);
+      notify("QR을 만들지 못했어요. 저장 공간을 확인해 주세요.");
+    }
   };
 
   const editStandalone = () => {
@@ -684,126 +612,42 @@ export function ChatbotStudio() {
     notify("웹앱을 보관함에서 삭제했어요.");
   };
 
-  const selectTarget = (target: SelectedTarget) => {
-    setSelectedTarget(target);
+  const selectTarget = (target: Selected) => {
+    setSelected(target);
     if (window.innerWidth <= 960) setMobilePanel("properties");
   };
 
-  /**
-   * 적는 동안에는 빈 줄이 남아 있어야 엔터로 다음 줄에 이어 쓸 수 있습니다.
-   * 화면에 보이는 글자는 적은 그대로 두고, 웹앱에 넣을 항목을 만들 때만 빈 줄을
-   * 걸러냅니다.
-   */
-  const updateChecklistItems = (value: string) => {
-    const lines = value.split("\n").slice(0, MAX_CHECKLIST_ITEMS);
-    setChecklistDraft(lines.join("\n"));
-    updateProject(
-      "checklistItems",
-      lines
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .map((text, index) => ({
-          id: project.checklistItems[index]?.id ?? `check-${index + 1}`,
-          text,
-        })),
-    );
-  };
-
-  /**
-   * 적던 글자를 보여 주되, 예시를 고르는 등으로 항목이 바깥에서 바뀌었으면
-   * 바뀐 쪽을 따릅니다.
-   */
-  const checklistText = (() => {
-    const fromProject = project.checklistItems
-      .map((item) => item.text)
-      .join("\n");
-    if (checklistDraft === null) return fromProject;
-    const draftItems = checklistDraft
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .join("\n");
-    return draftItems === fromProject ? checklistDraft : fromProject;
-  })();
+  /* ---------------- 속성 판 ---------------- */
 
   const renderProperties = () => {
-    if (selectedAction) {
+    if (selectedNode) {
       return (
-        <div className="property-form">
-          <div className="selected-component-heading">
-            <span className="component-symbol yellow">
-              <MousePointerClick size={16} aria-hidden="true" />
-            </span>
-            <div>
-              <strong>내 질문과 답</strong>
-              <small>ChatbotQuestion</small>
-            </div>
-          </div>
-          <label>
-            <span>버튼에 보일 글</span>
-            <input
-              value={selectedAction.label}
-              maxLength={24}
-              onChange={(event) =>
-                updateAction(selectedAction.id, { label: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            <span>이 질문에 보여 줄 답</span>
-            <textarea
-              rows={5}
-              value={selectedAction.response}
-              maxLength={180}
-              onChange={(event) =>
-                updateAction(selectedAction.id, {
-                  response: event.target.value,
-                })
-              }
-            />
-            <small className="field-count">
-              {selectedAction.response.length}/180
-            </small>
-          </label>
-          <label>
-            <span>버튼 아이콘</span>
-            <select
-              value={selectedAction.icon}
-              onChange={(event) =>
-                updateAction(selectedAction.id, {
-                  icon: event.target.value as ActionIcon,
-                })
-              }
-            >
-              {ACTION_ICON_LABELS.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button
-            className="danger-button"
-            type="button"
-            onClick={() => removeAction(selectedAction.id)}
-          >
-            <Trash2 size={15} aria-hidden="true" />
-            이 질문 버튼 삭제
-          </button>
-        </div>
+        <PropertyEditor
+          node={selectedNode}
+          value={(key) =>
+            selectedNode.props[key] ??
+            REGISTRY[selectedNode.type].props.find((prop) => prop.key === key)
+              ?.default ??
+            ""
+          }
+          onChange={(key, value) => changeProp(selectedNode.id, key, value)}
+          onRename={(name) => renameNode(selectedNode.id, name)}
+          onDuplicate={() => duplicate(selectedNode.id)}
+          onDelete={() => deleteNode(selectedNode.id)}
+        />
       );
     }
 
-    if (selectedTarget === "header") {
+    if (selected === "header") {
       return (
         <div className="property-form">
           <div className="selected-component-heading">
             <span className="component-symbol violet">
-              <AppWindow size={16} aria-hidden="true" />
+              <Rocket size={16} aria-hidden="true" />
             </span>
             <div>
               <strong>앱 머리글</strong>
-              <small>AppHeader</small>
+              <small>AppHeader1</small>
             </div>
           </div>
           <label>
@@ -811,7 +655,12 @@ export function ChatbotStudio() {
             <input
               value={project.appName}
               maxLength={26}
-              onChange={(event) => updateProject("appName", event.target.value)}
+              onChange={(event) =>
+                history.commit(
+                  (current) => ({ ...current, appName: event.target.value }),
+                  { label: "웹앱 이름", coalesceKey: "app:name" },
+                )
+              }
             />
           </label>
           <label>
@@ -820,348 +669,13 @@ export function ChatbotStudio() {
               value={project.subtitle}
               maxLength={42}
               onChange={(event) =>
-                updateProject("subtitle", event.target.value)
+                history.commit(
+                  (current) => ({ ...current, subtitle: event.target.value }),
+                  { label: "한 줄 소개", coalesceKey: "app:subtitle" },
+                )
               }
             />
           </label>
-        </div>
-      );
-    }
-
-    if (selectedTarget === "notice") {
-      return (
-        <div className="property-form">
-          <div className="selected-component-heading">
-            <span className="component-symbol yellow">
-              <Info size={16} aria-hidden="true" />
-            </span>
-            <div>
-              <strong>안내 카드</strong>
-              <small>NoticeCard</small>
-            </div>
-          </div>
-          <label>
-            <span>카드 제목</span>
-            <input
-              value={project.noticeTitle}
-              maxLength={28}
-              onChange={(event) =>
-                updateProject("noticeTitle", event.target.value)
-              }
-            />
-          </label>
-          <label>
-            <span>안내 내용</span>
-            <textarea
-              rows={6}
-              value={project.noticeBody}
-              maxLength={220}
-              onChange={(event) =>
-                updateProject("noticeBody", event.target.value)
-              }
-            />
-          </label>
-          <button
-            className="danger-button"
-            type="button"
-            onClick={() => hideFeature("notice")}
-          >
-            <Trash2 size={15} aria-hidden="true" />
-            안내 카드 화면에서 빼기
-          </button>
-        </div>
-      );
-    }
-
-    if (selectedTarget === "checklist") {
-      return (
-        <div className="property-form">
-          <div className="selected-component-heading">
-            <span className="component-symbol mint">
-              <ListChecks size={16} aria-hidden="true" />
-            </span>
-            <div>
-              <strong>활동 체크</strong>
-              <small>Checklist</small>
-            </div>
-          </div>
-          <label>
-            <span>체크 목록 제목</span>
-            <input
-              value={project.checklistTitle}
-              maxLength={28}
-              onChange={(event) =>
-                updateProject("checklistTitle", event.target.value)
-              }
-            />
-          </label>
-          <label>
-            <span>체크할 항목 · 한 줄에 하나</span>
-            <textarea
-              rows={7}
-              value={checklistText}
-              onChange={(event) => updateChecklistItems(event.target.value)}
-            />
-            <small className="property-help">
-              최대 {MAX_CHECKLIST_ITEMS}개까지 만들 수 있어요.
-            </small>
-          </label>
-          <button
-            className="danger-button"
-            type="button"
-            onClick={() => hideFeature("checklist")}
-          >
-            <Trash2 size={15} aria-hidden="true" />
-            활동 체크 화면에서 빼기
-          </button>
-        </div>
-      );
-    }
-
-    if (selectedTarget === "journal") {
-      return (
-        <div className="property-form">
-          <div className="selected-component-heading">
-            <span className="component-symbol blue">
-              <NotebookPen size={16} aria-hidden="true" />
-            </span>
-            <div>
-              <strong>나의 기록</strong>
-              <small>MyJournal</small>
-            </div>
-          </div>
-          <label>
-            <span>기록 제목</span>
-            <input
-              value={project.journalTitle}
-              maxLength={28}
-              onChange={(event) =>
-                updateProject("journalTitle", event.target.value)
-              }
-            />
-          </label>
-          <label>
-            <span>입력창 안내 문구</span>
-            <textarea
-              rows={4}
-              value={project.journalPrompt}
-              maxLength={120}
-              onChange={(event) =>
-                updateProject("journalPrompt", event.target.value)
-              }
-            />
-          </label>
-          <label>
-            <span>저장 버튼 글</span>
-            <input
-              value={project.journalButtonLabel}
-              maxLength={20}
-              onChange={(event) =>
-                updateProject("journalButtonLabel", event.target.value)
-              }
-            />
-          </label>
-          <button
-            className="danger-button"
-            type="button"
-            onClick={() => hideFeature("journal")}
-          >
-            <Trash2 size={15} aria-hidden="true" />
-            나의 기록 화면에서 빼기
-          </button>
-        </div>
-      );
-    }
-
-    if (selectedTarget === "camp-report") {
-      return (
-        <div className="property-form">
-          <div className="selected-component-heading">
-            <span className="component-symbol blue">
-              <FileText size={16} aria-hidden="true" />
-            </span>
-            <div>
-              <strong>3일 캠프 기록</strong>
-              <small>CampReport</small>
-            </div>
-          </div>
-          <div className="camp-structure-note">
-            <FileText size={16} aria-hidden="true" />
-            <span>
-              <b>3일 × 하루 4차시 = 총 12차시</b>
-              <small>각 차시에 활동·사진·느낀 점을 기록해요.</small>
-            </span>
-          </div>
-          <label>
-            <span>보고서 제목</span>
-            <input
-              value={project.campReportTitle}
-              maxLength={36}
-              onChange={(event) =>
-                updateProject("campReportTitle", event.target.value)
-              }
-            />
-          </label>
-          <label>
-            <span>활동 입력 안내</span>
-            <textarea
-              rows={4}
-              value={project.campActivityPrompt}
-              maxLength={140}
-              onChange={(event) =>
-                updateProject("campActivityPrompt", event.target.value)
-              }
-            />
-          </label>
-          <label>
-            <span>마지막 전체 소감 안내</span>
-            <textarea
-              rows={4}
-              value={project.campFinalPrompt}
-              maxLength={160}
-              onChange={(event) =>
-                updateProject("campFinalPrompt", event.target.value)
-              }
-            />
-          </label>
-          <button
-            className="danger-button"
-            type="button"
-            onClick={() => hideFeature("camp-report")}
-          >
-            <Trash2 size={15} aria-hidden="true" />
-            3일 캠프 기록 화면에서 빼기
-          </button>
-        </div>
-      );
-    }
-
-    if (selectedTarget === "button") {
-      return (
-        <div className="property-form">
-          <div className="selected-component-heading">
-            <span className="component-symbol yellow">
-              <MousePointerClick size={16} aria-hidden="true" />
-            </span>
-            <div>
-              <strong>일반 버튼</strong>
-              <small>ActionButton</small>
-            </div>
-          </div>
-          <label>
-            <span>버튼에 보일 글</span>
-            <input
-              value={project.buttonLabel}
-              maxLength={28}
-              onChange={(event) =>
-                updateProject("buttonLabel", event.target.value)
-              }
-            />
-          </label>
-          <label>
-            <span>눌렀을 때 보여 줄 말</span>
-            <textarea
-              rows={5}
-              value={project.buttonMessage}
-              maxLength={160}
-              onChange={(event) =>
-                updateProject("buttonMessage", event.target.value)
-              }
-            />
-          </label>
-          <button
-            className="danger-button"
-            type="button"
-            onClick={() => hideFeature("button")}
-          >
-            <Trash2 size={15} aria-hidden="true" />
-            일반 버튼 화면에서 빼기
-          </button>
-        </div>
-      );
-    }
-
-    if (selectedTarget === "chatbot") {
-      return (
-        <div className="property-form">
-          <div className="selected-component-heading">
-            <span className="component-symbol violet">
-              <Bot size={16} aria-hidden="true" />
-            </span>
-            <div>
-              <strong>나만의 챗봇</strong>
-              <small>MyChatbot</small>
-            </div>
-          </div>
-          <label>
-            <span>챗봇 이름</span>
-            <input
-              value={project.botName}
-              maxLength={26}
-              onChange={(event) => updateProject("botName", event.target.value)}
-            />
-          </label>
-          <label>
-            <span>첫 인사</span>
-            <textarea
-              rows={4}
-              value={project.greeting}
-              maxLength={160}
-              onChange={(event) =>
-                updateProject("greeting", event.target.value)
-              }
-            />
-          </label>
-          <label className="toggle-row">
-            <span>
-              <b>직접 질문 입력</b>
-              <small>내가 만든 질문과 비슷한 문장을 찾아 답해요.</small>
-            </span>
-            <input
-              type="checkbox"
-              checked={project.inputEnabled}
-              onChange={(event) =>
-                updateProject("inputEnabled", event.target.checked)
-              }
-            />
-          </label>
-          {project.inputEnabled && (
-            <>
-              <label>
-                <span>입력창 안내 문구</span>
-                <input
-                  value={project.inputPlaceholder}
-                  maxLength={44}
-                  onChange={(event) =>
-                    updateProject("inputPlaceholder", event.target.value)
-                  }
-                />
-              </label>
-              <label>
-                <span>답을 찾지 못했을 때</span>
-                <textarea
-                  rows={4}
-                  value={project.fallbackResponse}
-                  maxLength={180}
-                  onChange={(event) =>
-                    updateProject("fallbackResponse", event.target.value)
-                  }
-                />
-              </label>
-            </>
-          )}
-          <button className="secondary-button" type="button" onClick={addAction}>
-            <Plus size={15} aria-hidden="true" />
-            질문과 답 추가
-          </button>
-          <button
-            className="danger-button"
-            type="button"
-            onClick={() => hideFeature("chatbot")}
-          >
-            <Trash2 size={15} aria-hidden="true" />
-            나만의 챗봇 화면에서 빼기
-          </button>
         </div>
       );
     }
@@ -1173,7 +687,7 @@ export function ChatbotStudio() {
             <Smartphone size={16} aria-hidden="true" />
           </span>
           <div>
-            <strong>Screen1</strong>
+            <strong>{screen.name}</strong>
             <small>웹앱 전체 화면</small>
           </div>
         </div>
@@ -1182,57 +696,37 @@ export function ChatbotStudio() {
           <input
             value={project.title}
             maxLength={32}
-            onChange={(event) => updateProject("title", event.target.value)}
+            onChange={(event) =>
+              history.commit(
+                (current) => ({ ...current, title: event.target.value }),
+                { label: "프로젝트 이름", coalesceKey: "app:title" },
+              )
+            }
           />
         </label>
-        <fieldset className="color-field">
-          <legend>대표 색</legend>
-          <div className="color-swatches">
-            {colorChoices.map((color) => (
-              <button
-                className={project.accent === color.value ? "selected" : ""}
-                key={color.value}
-                type="button"
-                style={{ backgroundColor: color.value }}
-                aria-label={`${color.name}색 선택`}
-                title={color.name}
-                onClick={() => updateProject("accent", color.value)}
-              >
-                {project.accent === color.value && (
-                  <Check size={13} aria-hidden="true" />
-                )}
-              </button>
-            ))}
-            <label className="custom-color" title="직접 색 고르기">
-              <Palette size={14} aria-hidden="true" />
-              <input
-                type="color"
-                value={project.accent}
-                aria-label="대표 색 직접 고르기"
-                onChange={(event) =>
-                  updateProject("accent", event.target.value)
-                }
-              />
-            </label>
-          </div>
-        </fieldset>
-        <label className="color-input-row">
-          <span>웹앱 화면 배경</span>
-          <span>
-            <input
-              type="color"
-              value={project.screenBackground}
-              aria-label="웹앱 화면 배경색"
-              onChange={(event) =>
-                updateProject("screenBackground", event.target.value)
-              }
-            />
-            <code>{project.screenBackground}</code>
-          </span>
-        </label>
+        <ColorField
+          label="대표 색"
+          value={project.accent}
+          onChange={(accent) =>
+            history.commit((current) => ({ ...current, accent }), {
+              label: "대표 색",
+            })
+          }
+        />
+        <ColorField
+          label="웹앱 화면 배경"
+          value={project.screenBackground}
+          onChange={(screenBackground) =>
+            history.commit((current) => ({ ...current, screenBackground }), {
+              label: "화면 배경",
+            })
+          }
+        />
       </div>
     );
   };
+
+  /* ---------------- 화면 ---------------- */
 
   if (!hydrated) {
     return (
@@ -1297,6 +791,7 @@ export function ChatbotStudio() {
           >
             <LayoutPanelTop size={16} aria-hidden="true" />
             디자이너
+            <span>{componentCount}</span>
           </button>
           <button
             className={mode === "blocks" ? "active" : ""}
@@ -1308,7 +803,7 @@ export function ChatbotStudio() {
           >
             <Workflow size={16} aria-hidden="true" />
             블록
-            <span>{visibleFeatureCount}</span>
+            <span>{project.blocks.events.length}</span>
           </button>
         </nav>
 
@@ -1320,8 +815,32 @@ export function ChatbotStudio() {
           <button
             className="icon-action"
             type="button"
-            aria-label="처음 예제로 되돌리기"
-            title="처음 예제로 되돌리기"
+            aria-label="되돌리기"
+            title={
+              history.canUndo ? `되돌리기: ${history.undoLabel}` : "되돌리기"
+            }
+            disabled={!history.canUndo}
+            onClick={history.undo}
+          >
+            <Undo2 size={17} aria-hidden="true" />
+          </button>
+          <button
+            className="icon-action"
+            type="button"
+            aria-label="다시 하기"
+            title={
+              history.canRedo ? `다시 하기: ${history.redoLabel}` : "다시 하기"
+            }
+            disabled={!history.canRedo}
+            onClick={history.redo}
+          >
+            <Redo2 size={17} aria-hidden="true" />
+          </button>
+          <button
+            className="icon-action"
+            type="button"
+            aria-label="빈 웹앱으로 되돌리기"
+            title="빈 웹앱으로 되돌리기"
             onClick={resetProject}
           >
             <RotateCcw size={17} aria-hidden="true" />
@@ -1390,24 +909,24 @@ export function ChatbotStudio() {
         <div className={mode === "designer" ? "current" : ""}>
           <span>1</span>
           <p>
-            <strong>예시 고르기</strong>
-            <small>빈 웹앱·3일 캠프·알림장에서 시작</small>
+            <strong>부품 놓기</strong>
+            <small>팔레트에서 끌어다 화면에 놓아요</small>
           </p>
         </div>
         <ChevronRight size={15} aria-hidden="true" />
         <div className={mode === "designer" ? "current" : ""}>
           <span>2</span>
           <p>
-            <strong>기능과 내용 바꾸기</strong>
-            <small>캠프 기록·버튼·챗봇을 꾸며요</small>
+            <strong>속성 바꾸기</strong>
+            <small>글·색·크기를 내 마음대로</small>
           </p>
         </div>
         <ChevronRight size={15} aria-hidden="true" />
         <div className={mode === "blocks" ? "current" : ""}>
           <span>3</span>
           <p>
-            <strong>움직임 확인하기</strong>
-            <small>블록으로 기능의 동작을 살펴봐요</small>
+            <strong>블록으로 움직이기</strong>
+            <small>언제 무엇을 할지 직접 만들어요</small>
           </p>
         </div>
         <button
@@ -1415,7 +934,7 @@ export function ChatbotStudio() {
           type="button"
           onClick={() =>
             notify(
-              "예시를 고르고, 필요한 기능을 누른 뒤 오른쪽 속성만 바꾸면 돼요.",
+              "부품을 놓고 속성을 바꾼 뒤, 블록 화면에서 ‘언제 무엇을 할지’를 만들어 보세요.",
             )
           }
         >
@@ -1425,9 +944,7 @@ export function ChatbotStudio() {
       </section>
 
       <nav
-        className={`mobile-panel-tabs ${
-          mode === "blocks" ? "blocks-tabs" : ""
-        }`}
+        className={`mobile-panel-tabs ${mode === "blocks" ? "blocks-tabs" : ""}`}
         aria-label="화면별 편집 영역 전환"
       >
         {mode === "designer" && (
@@ -1437,7 +954,7 @@ export function ChatbotStudio() {
             onClick={() => setMobilePanel("palette")}
           >
             <Plus size={15} aria-hidden="true" />
-            기능
+            부품
           </button>
         )}
         <button
@@ -1446,7 +963,7 @@ export function ChatbotStudio() {
           onClick={() => setMobilePanel("viewer")}
         >
           <Smartphone size={15} aria-hidden="true" />
-          {mode === "designer" ? "화면" : "블록"}
+          {mode === "designer" ? "뷰어" : "블록"}
         </button>
         <button
           className={mobilePanel === "properties" ? "active" : ""}
@@ -1458,19 +975,14 @@ export function ChatbotStudio() {
         </button>
       </nav>
 
-      <div
-        className={`studio-layout ${mode === "blocks" ? "blocks-mode" : ""}`}
-      >
+      <div className={`studio-layout ${mode === "blocks" ? "blocks-mode" : ""}`}>
         {mode === "designer" && (
           <aside
             className={`palette-panel ${
               mobilePanel === "palette" ? "mobile-active" : ""
             }`}
           >
-            <Link
-              className="worksheet-card"
-              href="/worksheets"
-            >
+            <Link className="worksheet-card" href="/worksheets">
               <span>
                 <Printer size={18} aria-hidden="true" />
               </span>
@@ -1495,77 +1007,39 @@ export function ChatbotStudio() {
               <small>만들고 싶은 웹앱을 골라요</small>
             </div>
             <div className="template-picker">
-              {PROJECT_TEMPLATES.map((template) => {
-                const Icon = templateIconMap[template.id];
-                return (
-                  <button
-                    className={
-                      project.template === template.id ? "selected" : ""
-                    }
-                    key={template.id}
-                    type="button"
-                    onClick={() => applyTemplate(template.id)}
-                  >
-                    <span>
-                      <Icon size={15} aria-hidden="true" />
-                    </span>
-                    <span>
-                      <strong>{template.name}</strong>
-                      <small>{template.hint}</small>
-                    </span>
-                    {project.template === template.id && (
-                      <Check size={13} aria-hidden="true" />
-                    )}
-                  </button>
-                );
-              })}
+              {PROJECT_TEMPLATES.map((template) => (
+                <button
+                  className={project.template === template.id ? "selected" : ""}
+                  key={template.id}
+                  type="button"
+                  onClick={() => applyTemplate(template.id)}
+                >
+                  <span>
+                    <Sparkles size={15} aria-hidden="true" />
+                  </span>
+                  <span>
+                    <strong>{template.name}</strong>
+                    <small>{template.hint}</small>
+                  </span>
+                  {project.template === template.id && (
+                    <Check size={13} aria-hidden="true" />
+                  )}
+                </button>
+              ))}
             </div>
 
-            <div className="panel-title palette-title">
-              <span>팔레트</span>
-              <small>끌어 놓거나 눌러 기능 추가</small>
-            </div>
-            <div className="palette-section-heading">
-              <span>웹앱 기능</span>
-              <ChevronDown size={14} aria-hidden="true" />
-            </div>
-            <div className="palette-list">
-              {paletteItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    className="palette-item"
-                    draggable
-                    key={item.kind}
-                    type="button"
-                    onDragStart={(event) => {
-                      event.dataTransfer.setData(
-                        "application/x-webapp-component",
-                        item.kind,
-                      );
-                      event.dataTransfer.effectAllowed = "copy";
-                    }}
-                    onClick={() => choosePaletteItem(item.kind)}
-                  >
-                    <span className={`palette-icon ${item.tone}`}>
-                      <Icon size={18} strokeWidth={2.2} aria-hidden="true" />
-                    </span>
-                    <span>
-                      <strong>{item.name}</strong>
-                      <small>{item.hint}</small>
-                    </span>
-                    <GripVertical size={15} aria-hidden="true" />
-                  </button>
-                );
-              })}
-            </div>
+            <PalettePanel
+              nodes={screen.children}
+              onAdd={(type) => addComponent(type)}
+            />
+
             <div className="palette-guide">
               <span>
                 <Sparkles size={16} aria-hidden="true" />
               </span>
               <div>
-                <strong>코드 없이 내 아이디어 완성</strong>
-                <p>필요한 기능을 고르고 글만 바꾸면 바로 작동해요.</p>
+                <strong>같은 부품을 몇 개든</strong>
+                <p>버튼을 세 개 놓아도 되고, 배치 안에 넣어도 됩니다.</p>
               </div>
             </div>
           </aside>
@@ -1581,11 +1055,12 @@ export function ChatbotStudio() {
               <header className="viewer-heading">
                 <div>
                   <span>뷰어</span>
-                  <small>Screen1 · 나만의 웹앱</small>
+                  <small>
+                    {screen.name} · {project.title}
+                  </small>
                 </div>
                 <span className="viewer-tip">
-                  <MousePointerClick size={14} aria-hidden="true" />
-                  화면의 요소를 누르면 속성을 바꿀 수 있어요
+                  화면의 부품을 누르면 속성을 바꿀 수 있어요
                 </span>
               </header>
               <div
@@ -1595,34 +1070,52 @@ export function ChatbotStudio() {
                   event.preventDefault();
                   event.dataTransfer.dropEffect = "copy";
                 }}
-                onDrop={dropPaletteItem}
+                onDrop={(event) =>
+                  dropAt(event, {
+                    parentId: null,
+                    index: screen.children.length,
+                  })
+                }
               >
                 <div className="stage-grid" aria-hidden="true" />
                 <div className="screen-label">
                   <Smartphone size={13} aria-hidden="true" />
-                  Screen1
+                  {screen.name}
                 </div>
                 <PhonePreview
                   project={project}
-                  selectedTarget={selectedTarget}
-                  onSelect={selectTarget}
-                  onReorder={reorderFeature}
-                  dataScope={dataScope}
+                  design={designHooks}
+                  chromeSelection={
+                    selected === "screen" || selected === "header"
+                      ? selected
+                      : ""
+                  }
+                  onSelectChrome={selectTarget}
+                  onDropAtEnd={(event) =>
+                    dropAt(event, {
+                      parentId: null,
+                      index: screen.children.length,
+                    })
+                  }
                 />
                 <p className="drop-hint">
                   <Plus size={14} aria-hidden="true" />
-                  왼쪽 기능을 이곳으로 끌어 놓으세요
+                  왼쪽 부품을 원하는 자리에 끌어 놓으세요
                 </p>
               </div>
             </>
           ) : (
-            <BlockWorkspace
+            <BlockEditor
               project={project}
-              selectedTarget={selectedTarget}
-              onSelect={selectTarget}
-              onAddAction={addAction}
-              onMoveAction={moveAction}
-              onDeleteAction={removeAction}
+              onChange={(blocks) =>
+                history.commit((current) => ({ ...current, blocks }), {
+                  label: "블록 고치기",
+                })
+              }
+              onSelectComponent={(id) => {
+                setMode("designer");
+                selectTarget(id);
+              }}
             />
           )}
         </section>
@@ -1635,138 +1128,14 @@ export function ChatbotStudio() {
           <section className="components-panel">
             <div className="panel-title horizontal">
               <span>컴포넌트</span>
-              <small>
-                {visibleFeatureCount +
-                  (project.chatbotEnabled ? project.actions.length : 0)}
-                개
-              </small>
+              <small>{componentCount}개</small>
             </div>
-            <div className="component-tree">
-              <button
-                className={selectedTarget === "screen" ? "selected" : ""}
-                type="button"
-                onClick={() => selectTarget("screen")}
-              >
-                <ChevronDown size={13} aria-hidden="true" />
-                <span className="tree-icon screen">
-                  <Smartphone size={13} aria-hidden="true" />
-                </span>
-                <span>
-                  <strong>Screen1</strong>
-                  <small>{project.title}</small>
-                </span>
-              </button>
-              <div className="tree-children">
-                <ComponentTreeItem
-                  active={selectedTarget === "header"}
-                  icon={AppWindow}
-                  name="AppHeader1"
-                  detail={project.appName}
-                  tone="violet"
-                  onClick={() => selectTarget("header")}
-                />
-                {project.featureOrder
-                  .filter((kind) => kind !== "chatbot")
-                  .map((kind) => {
-                    if (kind === "notice" && project.noticeEnabled) {
-                      return (
-                        <ComponentTreeItem
-                          key={kind}
-                          active={selectedTarget === "notice"}
-                          icon={Info}
-                          name="NoticeCard1"
-                          detail={project.noticeTitle}
-                          tone="yellow"
-                          onClick={() => selectTarget("notice")}
-                          reorder={featureReorderProps(kind)}
-                        />
-                      );
-                    }
-                    if (kind === "checklist" && project.checklistEnabled) {
-                      return (
-                        <ComponentTreeItem
-                          key={kind}
-                          active={selectedTarget === "checklist"}
-                          icon={ClipboardCheck}
-                          name="Checklist1"
-                          detail={`${project.checklistItems.length}개 활동`}
-                          tone="mint"
-                          onClick={() => selectTarget("checklist")}
-                          reorder={featureReorderProps(kind)}
-                        />
-                      );
-                    }
-                    if (kind === "journal" && project.journalEnabled) {
-                      return (
-                        <ComponentTreeItem
-                          key={kind}
-                          active={selectedTarget === "journal"}
-                          icon={NotebookPen}
-                          name="MyJournal1"
-                          detail={project.journalTitle}
-                          tone="blue"
-                          onClick={() => selectTarget("journal")}
-                          reorder={featureReorderProps(kind)}
-                        />
-                      );
-                    }
-                    if (kind === "camp-report" && project.campReportEnabled) {
-                      return (
-                        <ComponentTreeItem
-                          key={kind}
-                          active={selectedTarget === "camp-report"}
-                          icon={FileText}
-                          name="CampReport1"
-                          detail="3일 · 12차시 · 인쇄"
-                          tone="blue"
-                          onClick={() => selectTarget("camp-report")}
-                          reorder={featureReorderProps(kind)}
-                        />
-                      );
-                    }
-                    if (kind === "button" && project.buttonEnabled) {
-                      return (
-                        <ComponentTreeItem
-                          key={kind}
-                          active={selectedTarget === "button"}
-                          icon={MousePointerClick}
-                          name="ActionButton1"
-                          detail={project.buttonLabel}
-                          tone="yellow"
-                          onClick={() => selectTarget("button")}
-                          reorder={featureReorderProps(kind)}
-                        />
-                      );
-                    }
-                    return null;
-                  })}
-                {project.chatbotEnabled && (
-                  <>
-                    <ComponentTreeItem
-                      active={selectedTarget === "chatbot"}
-                      icon={Bot}
-                      name="MyChatbot1"
-                      detail={project.botName}
-                      tone="violet"
-                      onClick={() => selectTarget("chatbot")}
-                      reorder={featureReorderProps("chatbot")}
-                    />
-                    {project.actions.map((action, index) => (
-                      <ComponentTreeItem
-                        active={selectedTarget === action.id}
-                        icon={MousePointerClick}
-                        key={action.id}
-                        name={`MyQuestion${index + 1}`}
-                        detail={action.label}
-                        tone="yellow"
-                        nested
-                        onClick={() => selectTarget(action.id)}
-                      />
-                    ))}
-                  </>
-                )}
-              </div>
-            </div>
+            <ComponentTree
+              project={project}
+              selected={selected}
+              {...designHooks}
+              onSelect={selectTarget}
+            />
           </section>
 
           <section className="properties-panel">
@@ -1800,7 +1169,7 @@ export function ChatbotStudio() {
                   LIVE TEST
                 </span>
                 <h2 id="preview-title">내 웹앱 실행하기</h2>
-                <p>활동 기록과 사진 저장, 챗봇 질문·답을 직접 시험해 보세요.</p>
+                <p>블록이 실제로 움직이는지 여기서 바로 시험해 보세요.</p>
               </div>
               <button
                 type="button"
@@ -1816,7 +1185,7 @@ export function ChatbotStudio() {
             <footer>
               <span>
                 <Check size={14} aria-hidden="true" />
-                작동하는 기능 {visibleFeatureCount - 1}개가 들어 있어요
+                부품 {componentCount}개 · 블록 {project.blocks.events.length}개
               </span>
               <button
                 className="preview-save-app"
@@ -1862,64 +1231,5 @@ export function ChatbotStudio() {
         </div>
       )}
     </main>
-  );
-}
-
-type ComponentTreeItemProps = {
-  active: boolean;
-  icon: LucideIcon;
-  name: string;
-  detail: string;
-  tone: "violet" | "yellow" | "mint" | "blue";
-  nested?: boolean;
-  onClick: () => void;
-  /** 있으면 이 항목을 끌어서 화면의 카드 순서를 바꿀 수 있습니다. */
-  reorder?: {
-    kind: FeatureKind;
-    dragOver: boolean;
-    onDragStart: (event: DragEvent<HTMLButtonElement>) => void;
-    onDragOver: (event: DragEvent<HTMLButtonElement>) => void;
-    onDragLeave: () => void;
-    onDrop: (event: DragEvent<HTMLButtonElement>) => void;
-  };
-};
-
-function ComponentTreeItem({
-  active,
-  icon: Icon,
-  name,
-  detail,
-  tone,
-  nested = false,
-  onClick,
-  reorder,
-}: ComponentTreeItemProps) {
-  return (
-    <button
-      className={`${active ? "selected" : ""} ${
-        nested ? "nested-tree-item" : ""
-      } ${reorder?.dragOver ? "tree-drop-target" : ""}`}
-      type="button"
-      onClick={onClick}
-      draggable={Boolean(reorder)}
-      onDragStart={reorder?.onDragStart}
-      onDragOver={reorder?.onDragOver}
-      onDragLeave={reorder?.onDragLeave}
-      onDrop={reorder?.onDrop}
-    >
-      <span className="tree-line" aria-hidden="true" />
-      <span className={`tree-icon ${tone}`}>
-        <Icon size={13} aria-hidden="true" />
-      </span>
-      <span>
-        <strong>{name}</strong>
-        <small>{detail}</small>
-      </span>
-      {reorder && (
-        <span className="tree-grip" aria-hidden="true">
-          <GripVertical size={12} />
-        </span>
-      )}
-    </button>
   );
 }

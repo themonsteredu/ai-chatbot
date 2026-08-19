@@ -1,115 +1,123 @@
 import assert from "node:assert/strict";
 import { access, readFile, stat } from "node:fs/promises";
 import test from "node:test";
+import { matchQuestion } from "../lib/chatbot-match.ts";
+import { REGISTRY } from "../lib/components/registry.ts";
+import {
+  BLANK_PROJECT,
+  CAMP_PROJECT,
+  DEFAULT_PROJECT,
+  PROJECT_TEMPLATES,
+} from "../lib/project/defaults.ts";
+import { normalizeProject } from "../lib/project/normalize.ts";
+import { createNode, insertNode, moveNode } from "../lib/project/tree.ts";
 
 const root = new URL("../", import.meta.url);
 
 test("starts with a blank App Inventor-style web app project", async () => {
-  const [studio, phone, model] = await Promise.all([
-    readFile(
-      new URL("../app/components/chatbot-studio.tsx", import.meta.url),
-      "utf8",
-    ),
-    readFile(
-      new URL("../app/components/phone-preview.tsx", import.meta.url),
-      "utf8",
-    ),
-    readFile(new URL("../lib/chatbot-studio.ts", import.meta.url), "utf8"),
+  const [studio, phone] = await Promise.all([
+    readFile(new URL("app/components/chatbot-studio.tsx", root), "utf8"),
+    readFile(new URL("app/components/phone-preview.tsx", root), "utf8"),
   ]);
 
   assert.match(studio, /AI WEB APP LAB/);
   assert.match(studio, /나만의 웹앱 만들기/);
   assert.match(studio, /디자이너/);
   assert.match(studio, /블록/);
-  assert.match(studio, /팔레트/);
+  assert.match(studio, /my-webapp-inventor-project-v3/);
+  assert.match(phone, /첫 부품을 놓아 보세요/);
+
+  // 팔레트·컴포넌트·속성 네 칸은 App Inventor를 따라온 뼈대입니다.
+  const palette = await readFile(
+    new URL("app/components/designer/palette-panel.tsx", root),
+    "utf8",
+  );
+  assert.match(palette, /팔레트/);
+  assert.match(palette, /application\/x-webapp-component/);
   assert.match(studio, /컴포넌트/);
   assert.match(studio, /속성/);
-  assert.match(studio, /my-webapp-inventor-project-v3/);
-  assert.match(studio, /application\/x-webapp-component/);
-  assert.match(phone, /첫 기능을 추가해 보세요/);
-  assert.match(model, /export const DEFAULT_PROJECT = BLANK_PROJECT/);
-  assert.ok(
-    model.indexOf('id: "blank"') < model.indexOf('id: "camp"'),
-    "빈 웹앱이 템플릿 목록의 첫 항목이어야 합니다.",
+
+  // 시작 예시는 빈 웹앱이 먼저입니다.
+  assert.equal(DEFAULT_PROJECT, BLANK_PROJECT);
+  assert.deepEqual(
+    PROJECT_TEMPLATES.map((template) => template.name),
+    ["빈 웹앱", "3일 캠프 기록", "우리 반 알림장"],
   );
-  assert.match(model, /name: "빈 웹앱"/);
-  assert.match(model, /name: "3일 캠프 기록"/);
-  assert.match(model, /name: "우리 반 알림장"/);
+  assert.deepEqual(BLANK_PROJECT.screens[0].children, []);
 });
 
 test("provides a persistent 3-day, 12-session printable camp report", async () => {
-  const [studio, phone, blocks, camp, model, image, store] = await Promise.all([
-    readFile(
-      new URL("../app/components/chatbot-studio.tsx", import.meta.url),
-      "utf8",
-    ),
-    readFile(
-      new URL("../app/components/phone-preview.tsx", import.meta.url),
-      "utf8",
-    ),
-    readFile(
-      new URL("../app/components/block-workspace.tsx", import.meta.url),
-      "utf8",
-    ),
-    readFile(
-      new URL("../app/components/camp-report.tsx", import.meta.url),
-      "utf8",
-    ),
-    readFile(new URL("../lib/chatbot-studio.ts", import.meta.url), "utf8"),
-    readFile(new URL("../lib/image.ts", import.meta.url), "utf8"),
-    readFile(new URL("../lib/runtime-store.ts", import.meta.url), "utf8"),
+  const [camp, image, store, registry] = await Promise.all([
+    readFile(new URL("app/components/camp-report.tsx", root), "utf8"),
+    readFile(new URL("lib/image.ts", root), "utf8"),
+    readFile(new URL("lib/runtime-store.ts", root), "utf8"),
+    readFile(new URL("lib/components/registry.ts", root), "utf8"),
   ]);
 
-  assert.match(model, /campReportEnabled: true/);
-  assert.match(studio, /3일 × 하루 4차시/);
-  assert.match(studio, /총 12차시/);
-  assert.match(studio, /CampReport1/);
-  assert.match(phone, /<CampReport/);
+  // 캠프 기록은 완성형 부품으로 그대로 살아 있고, 화면에 하나만 놓입니다.
+  assert.equal(REGISTRY["camp-report"].name, "3일 캠프 기록");
+  assert.equal(REGISTRY["camp-report"].maxPerScreen, 1);
+  assert.deepEqual(
+    REGISTRY["camp-report"].events.map((event) => event.id),
+    ["session-saved", "printed"],
+  );
+  assert.match(registry, /12차시·사진·소감을 모아요/);
+
+  const campApp = normalizeProject(CAMP_PROJECT);
+  assert.deepEqual(
+    campApp.screens[0].children.map((node) => node.type),
+    ["notice-card", "camp-report"],
+  );
+
   assert.match(camp, /const DAYS = \[1, 2, 3\]/);
   assert.match(camp, /const PERIODS = \[1, 2, 3, 4\]/);
   assert.match(camp, /배운 내용과 활동/);
   assert.match(camp, /3일 캠프 전체 소감/);
   assert.match(camp, /accept="image\/\*"/);
   assert.match(camp, /capture="environment"/);
-  // 사진 줄이기는 lib/image.ts로 옮겼고, 저장 자리는 lib/runtime-store.ts가 정합니다.
+  assert.match(camp, /window\.print\(\)/);
+  assert.match(camp, /print-report/);
+
+  // 사진 줄이기는 lib/image.ts로, 저장 자리는 lib/runtime-store.ts로 옮겼습니다.
   assert.match(image, /canvas\.toDataURL/);
   assert.match(camp, /from "\.\.\/\.\.\/lib\/image"/);
   assert.match(store, /my-webapp-camp-report-v2:/);
   // 예전 이름 기반 자리는 한 번 옮겨 오는 용도로만 남습니다.
   assert.match(store, /my-webapp-camp-report-v1:/);
   assert.doesNotMatch(camp, /\$\{project\.title\}/);
-  assert.match(camp, /window\.print\(\)/);
-  assert.match(camp, /print-report/);
-  assert.match(blocks, /12차시 기록을 이 휴대폰에 자동 저장하기/);
-  assert.match(blocks, /3일·12차시 활동 보고서 만들기/);
 });
 
 test("runs only student-authored chatbot questions and answers", async () => {
-  const [studio, phone, blocks, model] = await Promise.all([
-    readFile(
-      new URL("../app/components/chatbot-studio.tsx", import.meta.url),
-      "utf8",
-    ),
-    readFile(
-      new URL("../app/components/phone-preview.tsx", import.meta.url),
-      "utf8",
-    ),
-    readFile(
-      new URL("../app/components/block-workspace.tsx", import.meta.url),
-      "utf8",
-    ),
-    readFile(new URL("../lib/chatbot-studio.ts", import.meta.url), "utf8"),
-  ]);
-  const chatbotImplementation = [studio, phone, blocks, model].join("\n");
+  const chatbot = await readFile(
+    new URL("app/components/runtime/parts/chatbot.tsx", root),
+    "utf8",
+  );
+  assert.match(chatbot, /내가 만든 질문·답만 사용해요/);
+  // 문장 맞추기는 화면과 떨어진 순수 함수라 그대로 돌려 볼 수 있습니다.
+  assert.match(chatbot, /from "\.\.\/\.\.\/\.\.\/\.\.\/lib\/chatbot-match"/);
 
-  assert.match(studio, /내 질문과 답/);
-  assert.match(studio, /질문과 답 추가/);
-  assert.match(phone, /내가 만든 질문·답만 사용해요/);
-  assert.match(phone, /matched\?\.response \?\? project\.fallbackResponse/);
-  assert.match(model, /아직 내가 답을 만들지 않은 질문/);
-  assert.match(blocks, /내가 만든 답/);
+  const questions = [
+    { id: "q1", label: "오늘 숙제", response: "수학 익힘책 42쪽", icon: "book" },
+    { id: "q2", label: "준비물", response: "과학 교과서", icon: "backpack" },
+  ];
+  // 등록한 질문과 비슷한 문장이면 그 답을, 아니면 아무것도 못 찾아야 합니다.
+  assert.equal(matchQuestion("숙제", questions)?.response, "수학 익힘책 42쪽");
+  assert.equal(matchQuestion("준비물 뭐야?", questions)?.response, "과학 교과서");
+  assert.equal(matchQuestion("점심 메뉴", questions), undefined);
+
+  // 외부 생성형 AI는 어디에서도 부르지 않습니다.
+  const sources = await Promise.all(
+    [
+      "lib/chatbot-match.ts",
+      "app/components/chatbot-studio.tsx",
+      "app/components/phone-preview.tsx",
+      "lib/project/defaults.ts",
+      "lib/blocks/interpreter.ts",
+      "lib/components/registry.ts",
+    ].map((path) => readFile(new URL(path, root), "utf8")),
+  );
   assert.doesNotMatch(
-    chatbotImplementation,
+    sources.join("\n"),
     /api\.openai\.com|OPENAI_API_KEY|generateText|chat\.completions/i,
   );
 });
@@ -425,34 +433,40 @@ test("grows the phone preview to fill the stage on wide screens", async () => {
 });
 
 test("lets students write to-dos, reorder cards, and keep typing with Enter", async () => {
-  const [studio, phone, model] = await Promise.all([
-    readFile(new URL("app/components/chatbot-studio.tsx", root), "utf8"),
-    readFile(new URL("app/components/phone-preview.tsx", root), "utf8"),
-    readFile(new URL("lib/chatbot-studio.ts", root), "utf8"),
+  const [field, features] = await Promise.all([
+    readFile(new URL("app/components/designer/item-list-field.tsx", root), "utf8"),
+    readFile(new URL("app/components/runtime/parts/features.tsx", root), "utf8"),
   ]);
 
-  // 속성 판의 체크 항목 칸: 빈 줄을 지우면 엔터로 줄을 못 바꿉니다.
-  // 화면에는 적은 그대로 두고, 웹앱에 넣을 때만 빈 줄을 걸러야 합니다.
-  assert.match(studio, /checklistDraft/);
-  assert.match(studio, /setChecklistDraft\(lines\.join\("\\n"\)\)/);
-  assert.match(studio, /value=\{checklistText\}/);
+  // 속성 판의 목록 칸: 빈 줄을 지우면 엔터로 줄을 못 바꿉니다. 화면에는 적은
+  // 그대로 두고, 웹앱에 넣을 때만 빈 줄을 걸러야 합니다.
+  assert.match(field, /const \[draft, setDraft\]/);
+  assert.match(field, /setDraft\(lines\.join\("\\n"\)\)/);
+  assert.match(field, /value=\{value\}/);
 
   // 실행 화면에서 쓰는 사람이 직접 할 일을 적고(엔터 포함) 지울 수 있습니다.
-  assert.match(phone, /addCustomItem/);
-  assert.match(phone, /removeCustomItem/);
-  assert.match(phone, /className="checklist-add"/);
-  assert.match(phone, /onSubmit=\{\(event\) => \{/);
-  assert.match(phone, /할 일을 적고 엔터를 눌러요/);
-  // 직접 적은 할 일도 기기에 저장되어 다시 열어도 남습니다.
-  assert.match(phone, /JSON\.stringify\(\{ checkedItems, customItems, journalText \}\)/);
+  assert.match(features, /className="checklist-add"/);
+  assert.match(features, /할 일을 적고 엔터를 눌러요/);
+  assert.match(features, /custom\.filter/);
 
-  // 기능 카드 순서는 모델에 저장되고, 미리보기와 컴포넌트 목록이 함께 따릅니다.
-  assert.match(model, /featureOrder: FeatureKind\[\]/);
-  assert.match(model, /DEFAULT_FEATURE_ORDER/);
-  assert.match(phone, /project\.featureOrder\.map/);
-  assert.match(studio, /reorderFeature/);
-  assert.match(studio, /featureReorderProps/);
-  assert.match(studio, /application\/x-webapp-reorder/);
+  // 순서는 트리 자체가 들고 있고, 끌어 놓으면 자리가 바뀝니다.
+  let nodes = [];
+  for (const type of ["label", "button", "image"]) {
+    nodes = insertNode(nodes, createNode(nodes, type), {
+      parentId: null,
+      index: nodes.length,
+    });
+  }
+  const moved = moveNode(nodes, nodes[2].id, { parentId: null, index: 0 });
+  assert.deepEqual(
+    moved.map((node) => node.type),
+    ["image", "label", "button"],
+  );
+  const tree = await readFile(
+    new URL("app/components/designer/component-tree.tsx", root),
+    "utf8",
+  );
+  assert.match(tree, /application\/x-webapp-reorder/);
 });
 
 test("collects camp records for the teacher and shares apps by QR", async () => {
@@ -499,9 +513,15 @@ test("collects camp records for the teacher and shares apps by QR", async () => 
   assert.match(qr, /홈 화면에 추가/);
 
   // 편집 화면에서는 기능 카드를 직접 끌어 순서를 바꿉니다.
-  assert.match(preview, /feature-slot/);
-  assert.match(preview, /onReorder\(moving, kind\)/);
-  assert.match(studio, /onReorder=\{reorderFeature\}/);
+  // 부품을 끌어 자리를 바꾸는 일은 이제 트리 전체에서 됩니다.
+  const render = await readFile(
+    new URL("app/components/runtime/render-node.tsx", root),
+    "utf8",
+  );
+  assert.match(render, /part-slot/);
+  assert.match(render, /onDropBefore/);
+  assert.match(preview, /RenderNode/);
+  assert.match(studio, /design=\{designHooks\}/);
 });
 
 test("keeps install guidance visible above the blurred toolbar", async () => {
@@ -521,15 +541,16 @@ test("keeps install guidance visible above the blurred toolbar", async () => {
 });
 
 test("builds share and QR links on the public production domain", async () => {
-  const [model, studio] = await Promise.all([
+  const [model, encode, studio] = await Promise.all([
     readFile(new URL("lib/chatbot-studio.ts", root), "utf8"),
+    readFile(new URL("lib/project/encode.ts", root), "utf8"),
     readFile(new URL("app/components/chatbot-studio.tsx", root), "utf8"),
   ]);
 
   // Vercel의 배포별 주소는 로그인 보호가 걸려 학생이 열 수 없습니다.
   // 어떤 주소로 접속했든 링크는 공개 주소로 만들어져야 합니다.
   assert.match(model, /canonicalShareOrigin/);
-  assert.match(model, /NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL/);
+  assert.match(encode, /NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL/);
   // 공유와 QR은 같은 buildShareUrl을 쓰므로 공개 주소 사용은 한 곳에 모입니다.
   assert.match(studio, /new URL\("\/", canonicalShareOrigin\(\)\)/);
   assert.match(studio, /const \{ url \} = await buildShareUrl\(\)/);
@@ -548,8 +569,9 @@ test("keeps QR codes sparse with server-stored share codes", async () => {
   // 내용을 서버에 저장하고 짧은 코드만 담아야 QR이 성겨져 잘 읽힙니다.
   assert.match(studio, /buildShareUrl/);
   assert.match(studio, /searchParams\.set\("sid", json\.id\)/);
-  // 저장소가 없으면 내용을 통째로 담은 긴 링크로 대체합니다.
-  assert.match(studio, /url\.searchParams\.set\("project", encodeProject\(project\)\)/);
+  // 저장소가 없으면 내용을 담은 긴 링크로 대체합니다. 사진까지 실으면 주소가
+  // 한도를 넘겨 QR이 만들어지지 않으므로 사진은 뺍니다.
+  assert.match(studio, /encodeProject\(project, \{ forManifest: true \}\)/);
   // 링크를 여는 쪽은 짧은 코드로 서버에서 내용을 받아 옵니다.
   assert.match(studio, /action: "get", id: sid/);
   assert.match(shareRoute, /normalizeProject/);
@@ -615,9 +637,8 @@ test("reads Supabase responses that have no body", async () => {
 });
 
 test("records activities per session and reflection only at the end", async () => {
-  const [camp, studio, viewer] = await Promise.all([
+  const [camp, viewer] = await Promise.all([
     readFile(new URL("app/components/camp-report.tsx", root), "utf8"),
-    readFile(new URL("app/components/chatbot-studio.tsx", root), "utf8"),
     readFile(new URL("app/components/record-viewer.ts", root), "utf8"),
   ]);
 
@@ -625,11 +646,17 @@ test("records activities per session and reflection only at the end", async () =
   assert.doesNotMatch(camp, /placeholder=\{project\.campReflectionPrompt\}/);
   assert.doesNotMatch(camp, /reflection: event\.target\.value/);
   assert.match(camp, /camp-final-reflection/);
-  assert.match(camp, /placeholder=\{project\.campFinalPrompt\}/);
+  assert.match(camp, /placeholder=\{runtime\.text\(node, "finalPrompt"\)\}/);
   // 완료 판정도 활동과 사진만 봅니다.
   assert.doesNotMatch(camp, /entry\.reflection\.trim\(\)/);
   // 이제 쓰이지 않는 차시별 안내 문구 입력은 속성 판에서 뺐습니다.
-  assert.doesNotMatch(studio, /campReflectionPrompt/);
+  // 차시별 안내 문구는 속성 판에 보이지 않습니다. 예전에 적어 둔 값은 사전에
+  // 자리만 남겨 두어 잃지 않습니다.
+  assert.equal(
+    REGISTRY["camp-report"].props.find((prop) => prop.key === "reflectionPrompt")
+      .hidden,
+    true,
+  );
   // 교사 문서는 예전에 적어 둔 느낀 점이 있으면 잃지 않고 보여 줍니다.
   assert.match(viewer, /session\.reflection\?\.trim\(\)/);
 });
