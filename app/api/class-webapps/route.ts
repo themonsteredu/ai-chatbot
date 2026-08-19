@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { normalizeProject } from "../../../lib/chatbot-studio";
+import { checkTeacherCode } from "../teacher-auth";
 import {
   listClassSummaries,
   listClassWebApps,
@@ -32,16 +33,6 @@ function cleanText(value: unknown, max: number) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
 
-function teacherCodes() {
-  const admin = (
-    process.env.TEACHER_ADMIN_CODE ??
-    process.env.TEACHER_ACCESS_CODE ??
-    ""
-  ).trim();
-  const instructor = (process.env.TEACHER_INSTRUCTOR_CODE ?? "1234").trim();
-  return [admin, instructor].filter(Boolean);
-}
-
 export async function POST(request: NextRequest) {
   if (!readConfig().ready) {
     return fail(
@@ -61,10 +52,8 @@ export async function POST(request: NextRequest) {
 
   // 반 목록 보기는 반 코드 없이, 교사 코드만으로 부릅니다.
   if (action === "classes") {
-    const code = cleanText(body.teacherCode, 100);
-    if (!code || !teacherCodes().includes(code)) {
-      return fail("교사 코드가 올바르지 않습니다.", 401);
-    }
+    const gate = checkTeacherCode(request, cleanText(body.teacherCode, 100));
+    if (!gate.ok) return fail(gate.message, gate.status);
     try {
       return ok({ classes: await listClassSummaries() });
     } catch (error) {
@@ -137,10 +126,8 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === "records") {
-      const code = cleanText(body.teacherCode, 100);
-      if (!code || !teacherCodes().includes(code)) {
-        return fail("교사 코드가 올바르지 않습니다.", 401);
-      }
+      const gate = checkTeacherCode(request, cleanText(body.teacherCode, 100));
+      if (!gate.ok) return fail(gate.message, gate.status);
       const rows = await listRecordRows(classCode);
       return ok({
         records: rows.map((row) => ({
@@ -153,10 +140,8 @@ export async function POST(request: NextRequest) {
 
     if (action === "class") {
       // 반 전체 목록은 교사 코드가 있어야 봅니다.
-      const code = cleanText(body.teacherCode, 100);
-      if (!code || !teacherCodes().includes(code)) {
-        return fail("교사 코드가 올바르지 않습니다.", 401);
-      }
+      const gate = checkTeacherCode(request, cleanText(body.teacherCode, 100));
+      if (!gate.ok) return fail(gate.message, gate.status);
       const rows = await listClassWebApps(classCode);
       return ok({
         apps: rows.map((row) => ({

@@ -346,14 +346,16 @@ test("keeps the teacher answer key on the server behind an access code", async (
 });
 
 test("stores class submissions in Supabase from the server only", async () => {
-  const [route, client, schema, submit, roster, studio] = await Promise.all([
-    readFile(new URL("app/api/class-webapps/route.ts", root), "utf8"),
-    readFile(new URL("app/api/class-webapps/supabase.ts", root), "utf8"),
-    readFile(new URL("supabase/schema.sql", root), "utf8"),
-    readFile(new URL("app/components/class-submit.tsx", root), "utf8"),
-    readFile(new URL("app/components/class-roster.tsx", root), "utf8"),
-    readFile(new URL("app/components/chatbot-studio.tsx", root), "utf8"),
-  ]);
+  const [route, auth, client, schema, submit, roster, studio] =
+    await Promise.all([
+      readFile(new URL("app/api/class-webapps/route.ts", root), "utf8"),
+      readFile(new URL("app/api/teacher-auth.ts", root), "utf8"),
+      readFile(new URL("app/api/class-webapps/supabase.ts", root), "utf8"),
+      readFile(new URL("supabase/schema.sql", root), "utf8"),
+      readFile(new URL("app/components/class-submit.tsx", root), "utf8"),
+      readFile(new URL("app/components/class-roster.tsx", root), "utf8"),
+      readFile(new URL("app/components/chatbot-studio.tsx", root), "utf8"),
+    ]);
 
   // 서비스 키는 서버에서만 읽고, 화면 코드에는 절대 들어가면 안 됩니다.
   assert.match(client, /process\.env\.SUPABASE_SERVICE_ROLE_KEY/);
@@ -365,8 +367,15 @@ test("stores class submissions in Supabase from the server only", async () => {
 
   // 반 전체 조회는 교사 코드가 있어야 합니다.
   assert.match(route, /action === "class"/);
-  assert.match(route, /teacherCodes\(\)\.includes\(code\)/);
-  assert.match(route, /교사 코드가 올바르지 않습니다/);
+  assert.match(route, /checkTeacherCode\(request, /);
+  assert.match(auth, /교사 코드가 올바르지 않습니다/);
+  // 학생 이름·사진이 오가는 곳이라 코드 비교는 상수 시간이고 시도 횟수를 셉니다.
+  assert.match(auth, /timingSafeEqual/);
+  assert.match(auth, /MAX_ATTEMPTS/);
+  // 널리 알려진 기본 코드로는 절대 열리면 안 됩니다.
+  assert.doesNotMatch(auth, /"1234"/);
+  assert.doesNotMatch(route, /"1234"/);
+  assert.match(auth, /TEACHER_INSTRUCTOR_CODE \?\? ""/);
   // 학생 본인 조회·저장에는 반 코드와 이름이 필요합니다.
   assert.match(route, /CLASS_CODE\.test\(classCode\)/);
   assert.match(route, /normalizeProject\(body\.project\)/);
@@ -462,7 +471,11 @@ test("collects camp records for the teacher and shares apps by QR", async () => 
   assert.match(viewer, /캠프 전체 소감/);
   assert.match(viewer, /window\.print\(\)/);
   // 사진은 데이터 주소 형식일 때만 문서에 넣습니다.
-  assert.match(viewer, /startsWith\("data:image\/"\)/);
+  // 사진은 형식 전체를 확인하고, 속성에 넣을 때도 이스케이프합니다. 접두사만 보면
+  // `data:image/png;" onerror="…` 같은 값이 따옴표를 빠져나갑니다.
+  assert.match(viewer, /PHOTO_DATA_URL\.test\(value\)/);
+  assert.match(viewer, /src="\$\{escapeHtml\(session\.photo\)\}"/);
+  assert.doesNotMatch(viewer, /startsWith\("data:image\/"\)/);
   assert.match(viewer, /escapeHtml/);
   // 서버는 교사 코드 없이 반 전체 기록을 주지 않고, 지나친 크기를 거릅니다.
   assert.match(route, /action === "save-record"/);
@@ -625,7 +638,7 @@ test("shows every class at once without typing a class code", async () => {
   assert.match(route, /action === "classes"/);
   assert.match(
     route,
-    /if \(action === "classes"\)[\s\S]{0,220}teacherCodes\(\)\.includes\(code\)/,
+    /if \(action === "classes"\)[\s\S]{0,220}checkTeacherCode\(request, /,
   );
   // 사진이 든 본문은 빼고 요약만 읽어 와야 반이 많아도 가볍습니다.
   assert.match(client, /select: "class_code,student_name,updated_at"/);

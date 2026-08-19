@@ -27,11 +27,19 @@ function escapeHtml(value: string) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
+/**
+ * 학생이 보낸 사진은 그대로 믿을 수 없습니다. `data:image/…` 로 시작하는지만
+ * 보면 `data:image/png;" onerror="…` 같은 값이 따옴표를 빠져나와 선생님 화면에서
+ * 실행됩니다. 그래서 형식 전체를 정규식으로 확인합니다.
+ */
+const PHOTO_DATA_URL = /^data:image\/(?:png|jpeg|jpg|gif|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
+
 function isSafePhoto(value: string | undefined): value is string {
-  return typeof value === "string" && value.startsWith("data:image/");
+  return typeof value === "string" && PHOTO_DATA_URL.test(value);
 }
 
 function renderStudent(entry: StudentRecord) {
@@ -40,7 +48,7 @@ function renderStudent(entry: StudentRecord) {
     const rows = PERIODS.map((period) => {
       const session = sessions[`day-${day}-period-${period}`] ?? {};
       const photo = isSafePhoto(session.photo)
-        ? `<img src="${session.photo}" alt="${day}일차 ${period}차시 사진"/>`
+        ? `<img src="${escapeHtml(session.photo)}" alt="${day}일차 ${period}차시 사진"/>`
         : "";
       // 차시에는 활동만 적습니다. 예전에 적어 둔 느낀 점이 있으면 잃지 않도록
       // 내용이 있을 때만 함께 보여 줍니다.
