@@ -1,0 +1,57 @@
+{
+  "template": "blank",
+  "title": "나만의 웹앱",
+  "appName": "나만의 웹앱",
+  "subtitle": "내 아이디어를 화면에 담아 보세요",
+  "accent": "#6956e8",
+  "screenBackground": "#f4f2ff",
+  "noticeEnabled": false,
+  "noticeTitle": "안내 제목",
+  "noticeBody": "웹앱에서 알려 줄 내용을 적어 보세요.",
+  "checklistEnabled": false,
+  "checklistTitle": "나의 할 일",
+  "checklistItems": [
+    {
+      "id": "check-1",
+      "text": "첫 번째 할 일"
+    },
+    {
+      "id": "check-2",
+      "text": "두 번째 할 일"
+    }
+  ],
+  "journalEnabled": false,
+  "journalTitle": "나의 기록",
+  "journalPrompt": "오늘 기억하고 싶은 내용을 적어 보세요.",
+  "journalButtonLabel": "기록 저장",
+  "campReportEnabled": false,
+  "campReportTitle": "나의 3일 캠프 활동 보고서",
+  "campActivityPrompt": "이번 차시에 배우고 활동한 내용을 적어 보세요.",
+  "campReflectionPrompt": "활동하면서 느낀 점이나 새롭게 알게 된 점을 적어 보세요.",
+  "campFinalPrompt": "3일 동안 가장 기억에 남은 활동과 앞으로 해 보고 싶은 것을 적어 보세요.",
+  "buttonEnabled": false,
+  "buttonLabel": "확인",
+  "buttonMessage": "버튼을 잘 눌렀어요!",
+  "chatbotEnabled": false,
+  "botName": "나의 챗봇",
+  "greeting": "안녕하세요! 아래에서 궁금한 내용을 골라 주세요.",
+  "inputPlaceholder": "내가 만든 질문을 입력해 보세요",
+  "fallbackResponse": "아직 내가 답을 만들지 않은 질문이에요. 아래 질문 버튼 중 하나를 골라 주세요.",
+  "inputEnabled": true,
+  "actions": [
+    {
+      "id": "first-help",
+      "label": "도움 요청",
+      "response": "내가 이 챗봇에 직접 만든 답이에요.",
+      "icon": "message"
+    }
+  ],
+  "featureOrder": [
+    "notice",
+    "checklist",
+    "journal",
+    "camp-report",
+    "button",
+    "chatbot"
+  ]
+}

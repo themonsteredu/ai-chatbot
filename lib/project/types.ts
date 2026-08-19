@@ -1,0 +1,165 @@
+/**
+ * 웹앱 설계를 담는 자료 구조입니다.
+ *
+ * v3까지는 기능 여섯 가지가 각각 켜짐/꺼짐 스위치 하나였습니다. 그래서 버튼을
+ * 두 개 놓을 자리가 아예 없었고, 부품 이름을 바꿀 수도, 부품을 다른 부품 안에
+ * 넣을 수도 없었습니다. v4는 App Inventor처럼 **부품 하나하나가 트리의 마디**가
+ * 됩니다.
+ */
+
+export const PROJECT_SCHEMA_VERSION = 4 as const;
+
+export type TemplateId = "blank" | "camp" | "notice";
+
+export type ActionIcon =
+  | "book"
+  | "backpack"
+  | "home"
+  | "sparkles"
+  | "heart"
+  | "message";
+
+/** 체크 목록·일반 목록의 한 줄입니다. */
+export type ListItem = { id: string; text: string };
+
+/** 챗봇에 학생이 직접 등록한 질문과 답 한 쌍입니다. */
+export type QaItem = {
+  id: string;
+  label: string;
+  response: string;
+  icon: ActionIcon;
+};
+
+export type PropValue = string | number | boolean | ListItem[] | QaItem[];
+
+export type ComponentTypeId =
+  // 기본
+  | "label"
+  | "image"
+  | "button"
+  | "divider"
+  | "list"
+  // 입력
+  | "textbox"
+  | "checkbox"
+  | "switch"
+  | "slider"
+  // 배치
+  | "row"
+  | "column"
+  // 기능 (v3부터 쓰던 완성형 부품)
+  | "notice-card"
+  | "checklist"
+  | "journal"
+  | "camp-report"
+  | "chatbot";
+
+/**
+ * 화면에 놓인 부품 하나입니다.
+ *
+ * `props`에는 **기본값과 다른 값만** 담습니다. 꾸미지 않은 라벨 하나가
+ * 스무 개의 기본 속성을 이고 다니면 QR에 실을 주소가 금방 한도를 넘습니다.
+ */
+export type ComponentNode = {
+  id: string;
+  type: ComponentTypeId;
+  /** 학생이 바꿀 수 있는 이름입니다. 블록에서 부품을 고를 때 보입니다. */
+  name: string;
+  props: Record<string, PropValue>;
+  /** 배치 부품만 가집니다. */
+  children?: ComponentNode[];
+};
+
+export type Screen = {
+  id: string;
+  name: string;
+  children: ComponentNode[];
+};
+
+/* ------------------------------------------------------------------ */
+/* 블록                                                                */
+/* ------------------------------------------------------------------ */
+
+export type EventId =
+  | "open"
+  | "click"
+  | "change"
+  | "item-checked"
+  | "saved"
+  | "session-saved"
+  | "printed"
+  | "asked";
+
+export type MathOp = "+" | "-" | "×" | "÷";
+export type CmpOp = "=" | "≠" | ">" | "<" | "≥" | "≤";
+export type LogicOp = "그리고" | "또는";
+
+/** 블록 구멍에 끼우는 값입니다. */
+export type Expr =
+  | { k: "text"; v: string }
+  | { k: "num"; v: number }
+  | { k: "bool"; v: boolean }
+  | { k: "var"; name: string }
+  | { k: "prop"; target: string; prop: string }
+  | { k: "math"; op: MathOp; a: Expr; b: Expr }
+  | { k: "cmp"; op: CmpOp; a: Expr; b: Expr }
+  | { k: "logic"; op: LogicOp; a: Expr; b: Expr }
+  | { k: "join"; parts: Expr[] };
+
+/** 이벤트가 일어났을 때 차례로 실행하는 동작입니다. */
+export type Action =
+  | { id: string; kind: "set-prop"; target: string; prop: string; value: Expr }
+  | { id: string; kind: "show-message"; value: Expr }
+  | { id: string; kind: "set-var"; name: string; value: Expr }
+  | { id: string; kind: "if"; test: Expr; then: Action[]; otherwise?: Action[] }
+  | { id: string; kind: "repeat"; times: Expr; body: Action[] }
+  | { id: string; kind: "open-screen"; screen: string };
+
+export type ActionKind = Action["kind"];
+
+/** 화면이나 부품 하나에 붙은 이벤트 묶음입니다. */
+export type EventBlock = {
+  id: string;
+  /** 부품 아이디, 또는 화면 자체를 뜻하는 "screen". */
+  componentId: string;
+  event: EventId;
+  body: Action[];
+};
+
+export type BlockVariable = { name: string; initial: Expr };
+
+export type BlockProgram = {
+  events: EventBlock[];
+  variables: BlockVariable[];
+};
+
+export const EMPTY_PROGRAM: BlockProgram = { events: [], variables: [] };
+
+/** 화면 자체를 가리키는 블록 대상입니다. */
+export const SCREEN_TARGET = "screen";
+
+/* ------------------------------------------------------------------ */
+/* 프로젝트                                                            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 웹앱 이름·소개·색은 트리에 넣지 않고 그대로 둡니다. 보관함 목록, 홈 화면
+ * 설치용 매니페스트, 반 제출 목록이 모두 이 값들을 곧바로 읽기 때문입니다.
+ */
+export type WebAppProject = {
+  version: typeof PROJECT_SCHEMA_VERSION;
+  template: TemplateId;
+  title: string;
+  appName: string;
+  subtitle: string;
+  accent: string;
+  screenBackground: string;
+  screens: Screen[];
+  blocks: BlockProgram;
+};
+
+/** 속성 판에서 지금 무엇을 고르고 있는지 가리킵니다. */
+export type Selection =
+  | { kind: "screen" }
+  | { kind: "header" }
+  | { kind: "component"; id: string };
