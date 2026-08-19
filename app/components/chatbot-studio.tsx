@@ -61,7 +61,7 @@ import {
   type SavedWebAppSummary,
 } from "../../lib/saved-webapps";
 import { clearRuntime, DRAFT_SCOPE_ID } from "../../lib/runtime-store";
-import { BlockEditor } from "./blocks/block-editor";
+import { BlockCanvas, BlockPalette } from "./blocks/block-editor";
 import { ColorField } from "./designer/color-field";
 import { ComponentTree, REORDER_MIME } from "./designer/component-tree";
 import { PALETTE_MIME, PalettePanel } from "./designer/palette-panel";
@@ -78,7 +78,7 @@ import { WebAppPlayer } from "./webapp-player";
 const STORAGE_KEY = "my-webapp-inventor-project-v3";
 const LEGACY_INSTALLED_PROJECT_KEY = "my-webapp-installed-project-v1";
 
-type MobilePanel = "palette" | "viewer" | "properties";
+type MobilePanel = "build" | "viewer";
 type Selected = "screen" | "header" | string;
 
 export function ChatbotStudio() {
@@ -88,7 +88,11 @@ export function ChatbotStudio() {
 
   const [mode, setMode] = useState<StudioMode>("designer");
   const [selected, setSelected] = useState<Selected>("screen");
-  const [mobilePanel, setMobilePanel] = useState<MobilePanel>("viewer");
+  const [mobilePanel, setMobilePanel] = useState<MobilePanel>("build");
+  // 블록에서 변수·조건·반복까지 보여 줄지입니다. 편집 판과 조립 판이 함께 씁니다.
+  const [advancedBlocks, setAdvancedBlocks] = useState(false);
+  // 수업에 쓰는 도구는 만들 때마다 필요하지 않아 접어 둡니다.
+  const [classToolsOpen, setClassToolsOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [standalone, setStandalone] = useState(false);
@@ -320,7 +324,7 @@ export function ChatbotStudio() {
       `${REGISTRY[type].name} 추가`,
     );
     setSelected(node.id);
-    setMobilePanel("properties");
+    setMobilePanel("build");
     notify(`${node.name}을(를) 놓았어요.`);
   };
 
@@ -399,7 +403,6 @@ export function ChatbotStudio() {
     });
     setSelected("screen");
     setMode("designer");
-    setMobilePanel("viewer");
     notify(`${template.name} 예제를 불러왔어요. 되돌리기로 돌아갈 수 있어요.`);
   };
 
@@ -614,7 +617,7 @@ export function ChatbotStudio() {
 
   const selectTarget = (target: Selected) => {
     setSelected(target);
-    if (window.innerWidth <= 960) setMobilePanel("properties");
+    if (window.innerWidth <= 960) setMobilePanel("build");
   };
 
   /* ---------------- 속성 판 ---------------- */
@@ -943,107 +946,143 @@ export function ChatbotStudio() {
         </button>
       </section>
 
-      <nav
-        className={`mobile-panel-tabs ${mode === "blocks" ? "blocks-tabs" : ""}`}
-        aria-label="화면별 편집 영역 전환"
-      >
-        {mode === "designer" && (
-          <button
-            className={mobilePanel === "palette" ? "active" : ""}
-            type="button"
-            onClick={() => setMobilePanel("palette")}
-          >
-            <Plus size={15} aria-hidden="true" />
-            부품
-          </button>
-        )}
+      <nav className="mobile-panel-tabs" aria-label="편집 영역 전환">
+        <button
+          className={mobilePanel === "build" ? "active" : ""}
+          type="button"
+          onClick={() => setMobilePanel("build")}
+        >
+          <Settings2 size={15} aria-hidden="true" />
+          만들기
+        </button>
         <button
           className={mobilePanel === "viewer" ? "active" : ""}
           type="button"
           onClick={() => setMobilePanel("viewer")}
         >
           <Smartphone size={15} aria-hidden="true" />
-          {mode === "designer" ? "뷰어" : "블록"}
-        </button>
-        <button
-          className={mobilePanel === "properties" ? "active" : ""}
-          type="button"
-          onClick={() => setMobilePanel("properties")}
-        >
-          <Settings2 size={15} aria-hidden="true" />
-          속성
+          {mode === "designer" ? "화면" : "블록"}
         </button>
       </nav>
 
       <div className={`studio-layout ${mode === "blocks" ? "blocks-mode" : ""}`}>
-        {mode === "designer" && (
-          <aside
-            className={`palette-panel ${
-              mobilePanel === "palette" ? "mobile-active" : ""
-            }`}
-          >
-            <Link className="worksheet-card" href="/worksheets">
-              <span>
-                <Printer size={18} aria-hidden="true" />
-              </span>
-              <span>
-                <b>웹앱 기획 활동지 작성</b>
-                <small>초등·중등·고등 학년별 양식을 골라요</small>
-              </span>
-              <ChevronRight size={15} aria-hidden="true" />
-            </Link>
-            <CodeReceive />
-            <div className="panel-title">
-              <span>반에 제출</span>
-              <small>선생님이 볼 수 있게 올려요</small>
+        {/*
+          부품을 고르는 곳과 그 부품을 고치는 곳이 화면 양 끝에 떨어져 있으면,
+          하나 누를 때마다 시선과 손이 화면을 가로질러야 합니다. 만드는 일은 전부
+          이 왼쪽 판에 모으고, 오른쪽은 결과만 보여 줍니다.
+        */}
+        <aside
+          className={`build-panel ${
+            mobilePanel === "build" ? "mobile-active" : ""
+          }`}
+        >
+          {mode === "designer" ? (
+            <section className="build-section palette-section">
+              <PalettePanel
+                nodes={screen.children}
+                onAdd={(type) => addComponent(type)}
+              />
+            </section>
+          ) : (
+            <section className="build-section palette-section">
+              <BlockPalette
+                project={project}
+                advanced={advancedBlocks}
+                onAdvancedChange={setAdvancedBlocks}
+                onChange={(blocks) =>
+                  history.commit((current) => ({ ...current, blocks }), {
+                    label: "블록 고치기",
+                  })
+                }
+              />
+            </section>
+          )}
+
+          <section className="build-section components-panel">
+            <div className="panel-title horizontal">
+              <span>컴포넌트</span>
+              <small>{componentCount}개</small>
             </div>
-            <ClassSubmit
-              ensureAppId={() => saveCurrentAsWebApp().id}
+            <ComponentTree
               project={project}
-              onRestore={restoreClassWebApp}
+              selected={selected}
+              {...designHooks}
+              onSelect={selectTarget}
             />
-            <div className="panel-title">
-              <span>시작 예시</span>
-              <small>만들고 싶은 웹앱을 골라요</small>
+          </section>
+
+          <section className="build-section properties-panel">
+            <div className="panel-title horizontal">
+              <span>속성</span>
+              <Settings2 size={14} aria-hidden="true" />
             </div>
-            <div className="template-picker">
-              {PROJECT_TEMPLATES.map((template) => (
-                <button
-                  className={project.template === template.id ? "selected" : ""}
-                  key={template.id}
-                  type="button"
-                  onClick={() => applyTemplate(template.id)}
-                >
+            {renderProperties()}
+          </section>
+
+          {/* 수업에 쓰는 도구는 만드는 내내 필요하지는 않아 접어 둡니다. */}
+          <section className="build-section class-tools">
+            <button
+              className={`build-section-heading ${classToolsOpen ? "open" : ""}`}
+              type="button"
+              aria-expanded={classToolsOpen}
+              onClick={() => setClassToolsOpen((open) => !open)}
+            >
+              <span>수업 도구</span>
+              <small>예시 · 제출 · 활동지</small>
+            </button>
+            {classToolsOpen && (
+              <div className="build-section-body">
+                <div className="panel-title">
+                  <span>시작 예시</span>
+                  <small>만들고 싶은 웹앱을 골라요</small>
+                </div>
+                <div className="template-picker">
+                  {PROJECT_TEMPLATES.map((template) => (
+                    <button
+                      className={
+                        project.template === template.id ? "selected" : ""
+                      }
+                      key={template.id}
+                      type="button"
+                      onClick={() => applyTemplate(template.id)}
+                    >
+                      <span>
+                        <Sparkles size={15} aria-hidden="true" />
+                      </span>
+                      <span>
+                        <strong>{template.name}</strong>
+                        <small>{template.hint}</small>
+                      </span>
+                      {project.template === template.id && (
+                        <Check size={13} aria-hidden="true" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <div className="panel-title">
+                  <span>반에 제출</span>
+                  <small>선생님이 볼 수 있게 올려요</small>
+                </div>
+                <ClassSubmit
+                  ensureAppId={() => saveCurrentAsWebApp().id}
+                  project={project}
+                  onRestore={restoreClassWebApp}
+                />
+                <CodeReceive />
+                <Link className="worksheet-card" href="/worksheets">
                   <span>
-                    <Sparkles size={15} aria-hidden="true" />
+                    <Printer size={18} aria-hidden="true" />
                   </span>
                   <span>
-                    <strong>{template.name}</strong>
-                    <small>{template.hint}</small>
+                    <b>웹앱 기획 활동지 작성</b>
+                    <small>초등·중등·고등 학년별 양식을 골라요</small>
                   </span>
-                  {project.template === template.id && (
-                    <Check size={13} aria-hidden="true" />
-                  )}
-                </button>
-              ))}
-            </div>
-
-            <PalettePanel
-              nodes={screen.children}
-              onAdd={(type) => addComponent(type)}
-            />
-
-            <div className="palette-guide">
-              <span>
-                <Sparkles size={16} aria-hidden="true" />
-              </span>
-              <div>
-                <strong>같은 부품을 몇 개든</strong>
-                <p>버튼을 세 개 놓아도 되고, 배치 안에 넣어도 됩니다.</p>
+                  <ChevronRight size={15} aria-hidden="true" />
+                </Link>
               </div>
-            </div>
-          </aside>
-        )}
+            )}
+          </section>
+        </aside>
 
         <section
           className={`viewer-panel ${
@@ -1060,7 +1099,7 @@ export function ChatbotStudio() {
                   </small>
                 </div>
                 <span className="viewer-tip">
-                  화면의 부품을 누르면 속성을 바꿀 수 있어요
+                  화면의 부품을 누르면 왼쪽에서 속성을 바꿀 수 있어요
                 </span>
               </header>
               <div
@@ -1105,8 +1144,9 @@ export function ChatbotStudio() {
               </div>
             </>
           ) : (
-            <BlockEditor
+            <BlockCanvas
               project={project}
+              advanced={advancedBlocks}
               onChange={(blocks) =>
                 history.commit((current) => ({ ...current, blocks }), {
                   label: "블록 고치기",
@@ -1119,33 +1159,6 @@ export function ChatbotStudio() {
             />
           )}
         </section>
-
-        <aside
-          className={`inspector-panel ${
-            mobilePanel === "properties" ? "mobile-active" : ""
-          }`}
-        >
-          <section className="components-panel">
-            <div className="panel-title horizontal">
-              <span>컴포넌트</span>
-              <small>{componentCount}개</small>
-            </div>
-            <ComponentTree
-              project={project}
-              selected={selected}
-              {...designHooks}
-              onSelect={selectTarget}
-            />
-          </section>
-
-          <section className="properties-panel">
-            <div className="panel-title horizontal">
-              <span>속성</span>
-              <Settings2 size={14} aria-hidden="true" />
-            </div>
-            {renderProperties()}
-          </section>
-        </aside>
       </div>
 
       {previewOpen && (

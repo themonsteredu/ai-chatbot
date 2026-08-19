@@ -29,35 +29,30 @@ import { ValueSocket } from "./value-socket";
 let serial = 0;
 const freshId = (prefix: string) => `${prefix}${(serial += 1)}-${Date.now() % 100000}`;
 
-type BlockEditorProps = {
+type BlockPaletteProps = {
   project: WebAppProject;
+  advanced: boolean;
+  onAdvancedChange: (advanced: boolean) => void;
   onChange: (blocks: BlockProgram) => void;
-  onSelectComponent: (id: string) => void;
 };
 
-export function BlockEditor({
+/** 이벤트를 고르는 곳입니다. 편집 판(왼쪽)에 놓입니다. */
+export function BlockPalette({
   project,
+  advanced,
+  onAdvancedChange,
   onChange,
-  onSelectComponent,
-}: BlockEditorProps) {
-  const [advanced, setAdvanced] = useState(false);
+}: BlockPaletteProps) {
   const screen = project.screens[0];
   const nodes: ComponentNode[] = [...walk(screen.children)].map(
     (entry) => entry.node,
   );
   const blocks = project.blocks;
-  const variables = blocks.variables.map((variable) => variable.name);
 
   /** 이벤트를 붙일 수 있는 대상만 모읍니다. */
   const triggerable = nodes.filter(
     (node) => REGISTRY[node.type].events.length > 0,
   );
-
-  const replaceEvent = (id: string, next: EventBlock) =>
-    onChange({
-      ...blocks,
-      events: blocks.events.map((event) => (event.id === id ? next : event)),
-    });
 
   const addEvent = (componentId: string, event: EventId) =>
     onChange({
@@ -68,20 +63,14 @@ export function BlockEditor({
       ],
     });
 
-  const removeEvent = (id: string) =>
-    onChange({
-      ...blocks,
-      events: blocks.events.filter((event) => event.id !== id),
-    });
-
   return (
-    <div className="blocks-editor">
-      <aside className="block-palette" aria-label="블록 종류">
-        <div className="panel-title">
-          <span>블록</span>
-          <small>이벤트를 고르면 스택이 생겨요</small>
-        </div>
+    <>
+      <div className="panel-title">
+        <span>블록</span>
+        <small>이벤트를 고르면 스택이 생겨요</small>
+      </div>
 
+      <div className="block-chip-list">
         <button
           className="block-chip event"
           type="button"
@@ -104,72 +93,106 @@ export function BlockEditor({
             </button>
           )),
         )}
+      </div>
 
-        {triggerable.length === 0 && (
-          <div className="block-tip">
-            <strong>먼저 부품을 놓아 보세요</strong>
+      {triggerable.length === 0 && (
+        <div className="block-tip">
+          <strong>먼저 부품을 놓아 보세요</strong>
+          <span>
+            버튼이나 입력창을 디자이너에 놓으면 여기에 블록이 생깁니다.
+          </span>
+        </div>
+      )}
+
+      <VariablePanel
+        blocks={blocks}
+        advanced={advanced}
+        nodes={nodes}
+        onChange={onChange}
+      />
+
+      <label className="block-advanced-toggle">
+        <input
+          type="checkbox"
+          checked={advanced}
+          onChange={(event) => onAdvancedChange(event.target.checked)}
+        />
+        <span>더 보기 (변수·조건·반복)</span>
+      </label>
+    </>
+  );
+}
+
+type BlockCanvasProps = {
+  project: WebAppProject;
+  advanced: boolean;
+  onChange: (blocks: BlockProgram) => void;
+  onSelectComponent: (id: string) => void;
+};
+
+/** 블록을 조립하는 판입니다. 결과 자리(오른쪽)에 놓입니다. */
+export function BlockCanvas({
+  project,
+  advanced,
+  onChange,
+  onSelectComponent,
+}: BlockCanvasProps) {
+  const screen = project.screens[0];
+  const nodes: ComponentNode[] = [...walk(screen.children)].map(
+    (entry) => entry.node,
+  );
+  const blocks = project.blocks;
+  const variables = blocks.variables.map((variable) => variable.name);
+
+  const replaceEvent = (id: string, next: EventBlock) =>
+    onChange({
+      ...blocks,
+      events: blocks.events.map((event) => (event.id === id ? next : event)),
+    });
+
+  const removeEvent = (id: string) =>
+    onChange({
+      ...blocks,
+      events: blocks.events.filter((event) => event.id !== id),
+    });
+
+  return (
+    <section className="block-canvas">
+      <header className="block-canvas-header">
+        <div>
+          <span className="canvas-kicker">
+            {screen.name.toUpperCase()} · WEB APP LOGIC
+          </span>
+          <h2>내 웹앱의 움직임</h2>
+        </div>
+        <span className="connected-count">{blocks.events.length}개 블록</span>
+      </header>
+
+      <div className="block-stacks">
+        {blocks.events.map((event) => (
+          <EventCard
+            key={event.id}
+            event={event}
+            nodes={nodes}
+            variables={variables}
+            advanced={advanced}
+            onSelectComponent={onSelectComponent}
+            onChange={(next) => replaceEvent(event.id, next)}
+            onRemove={() => removeEvent(event.id)}
+          />
+        ))}
+
+        {blocks.events.length === 0 && (
+          <div className="block-empty">
+            <Sparkles size={20} aria-hidden="true" />
+            <strong>아직 블록이 없어요</strong>
             <span>
-              버튼이나 입력창을 디자이너에 놓으면 여기에 블록이 생깁니다.
+              왼쪽에서 이벤트를 고르면 “언제 무엇을 할지” 만들 수 있어요.
             </span>
           </div>
         )}
-
-        <VariablePanel
-          blocks={blocks}
-          advanced={advanced}
-          nodes={nodes}
-          onChange={onChange}
-        />
-
-        <label className="block-advanced-toggle">
-          <input
-            type="checkbox"
-            checked={advanced}
-            onChange={(event) => setAdvanced(event.target.checked)}
-          />
-          <span>더 보기 (변수·조건·반복)</span>
-        </label>
-      </aside>
-
-      <section className="block-canvas">
-        <header className="block-canvas-header">
-          <div>
-            <span className="canvas-kicker">
-              {screen.name.toUpperCase()} · WEB APP LOGIC
-            </span>
-            <h2>내 웹앱의 움직임</h2>
-          </div>
-          <span className="connected-count">
-            {blocks.events.length}개 블록
-          </span>
-        </header>
-
-        <div className="block-stacks">
-          {blocks.events.map((event) => (
-            <EventCard
-              key={event.id}
-              event={event}
-              nodes={nodes}
-              variables={variables}
-              advanced={advanced}
-              onSelectComponent={onSelectComponent}
-              onChange={(next) => replaceEvent(event.id, next)}
-              onRemove={() => removeEvent(event.id)}
-            />
-          ))}
-
-          {blocks.events.length === 0 && (
-            <div className="block-empty">
-              <Sparkles size={20} aria-hidden="true" />
-              <strong>아직 블록이 없어요</strong>
-              <span>
-                왼쪽에서 이벤트를 고르면 “언제 무엇을 할지” 만들 수 있어요.
-              </span>
-            </div>
-          )}
-        </div>
-      </section>
-    </div>
+      </div>
+    </section>
   );
 }
 

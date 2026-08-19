@@ -6482,3 +6482,204 @@ select:focus-visible {
     scrollbar-width: thin;
   }
 }
+
+/* ==================================================================
+   만드는 일은 왼쪽 한 판에, 결과는 오른쪽에
+
+   예전에는 부품을 왼쪽 팔레트에서 고르고 속성은 오른쪽 판에서 고쳤습니다.
+   하나 누를 때마다 시선과 손이 화면을 가로질러야 해서, 색 하나 바꾸는 데도
+   왔다 갔다 해야 했습니다. 이제 팔레트·컴포넌트·속성이 모두 왼쪽에 있고,
+   오른쪽에는 만든 화면만 놓입니다.
+   ================================================================== */
+
+.studio-layout,
+.studio-layout.blocks-mode {
+  grid-template-columns: minmax(320px, 384px) minmax(0, 1fr);
+}
+
+.build-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-right: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.build-section {
+  padding: 15px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.build-section:last-child {
+  border-bottom: 0;
+}
+
+/*
+   판 하나에 네 칸이 들어가므로 자리를 나눠 줍니다. 팔레트와 컴포넌트 목록은
+   길어져도 정해진 만큼만 차지하고 그 안에서 넘깁니다. 남는 자리는 속성이
+   가져갑니다 — 여기가 가장 오래 머무는 칸이기 때문입니다.
+*/
+@media (min-width: 961px) {
+  /*
+     팔레트와 트리는 정해진 만큼만 차지하고 줄어들지는 않습니다. 줄어들 수 있게
+     두면 속성 판이 길 때 이 둘이 눌려서 한두 줄만 남습니다.
+  */
+  .build-panel .palette-section {
+    flex: 0 0 auto;
+    max-height: 30vh;
+    overflow-y: auto;
+  }
+
+  /* 트리는 최소한 몇 줄은 보여야 어떤 부품이 있는지 한눈에 들어옵니다. */
+  .build-panel .components-panel {
+    flex: 0 0 auto;
+    min-height: 152px;
+    max-height: 22vh;
+    overflow-y: auto;
+  }
+
+  /* 남는 자리는 속성이 가져가고, 넘치면 이 칸 안에서 넘깁니다. */
+  .build-panel .properties-panel {
+    flex: 1 1 auto;
+    min-height: 160px;
+    overflow-y: auto;
+  }
+
+  .build-panel .class-tools {
+    flex: 0 0 auto;
+    max-height: 45vh;
+    overflow-y: auto;
+  }
+}
+
+.build-section-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.build-section-heading small {
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.build-section-heading::after {
+  content: "▾";
+  margin-left: auto;
+  color: var(--muted);
+  transition: transform 0.15s ease;
+}
+
+.build-section-heading.open::after {
+  transform: rotate(180deg);
+}
+
+.build-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 12px;
+}
+
+/* 블록 칩은 이제 왼쪽 판에 들어가므로, 세로로 쌓고 넘치면 그 안에서 넘깁니다. */
+.block-chip-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* 블록 조립 판은 이제 오른쪽 전체를 씁니다. 자체 2단 구성은 필요 없습니다. */
+.blocks-editor {
+  display: block;
+}
+
+.viewer-panel .block-canvas {
+  min-height: 100%;
+}
+
+/* 왼쪽 판 안에서만 스크롤되게 해서, 휴대폰 화면이 밀려나지 않게 합니다. */
+@media (min-width: 961px) {
+  .studio-layout {
+    height: calc(100vh - 133px);
+    min-height: 0;
+  }
+
+  .build-panel {
+    position: static;
+    max-height: none;
+    overflow-y: auto;
+  }
+
+  .viewer-panel {
+    min-height: 0;
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 1280px) {
+  .studio-layout,
+  .studio-layout.blocks-mode {
+    grid-template-columns: minmax(300px, 340px) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 960px) {
+  .mobile-panel-tabs,
+  .mobile-panel-tabs.blocks-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .build-panel {
+    display: none;
+    min-height: calc(100dvh - 185px);
+    padding-bottom: 70px;
+    border-right: 0;
+    overflow-y: visible;
+  }
+
+  .build-panel.mobile-active {
+    display: flex;
+  }
+
+  /* 좁은 화면에서는 판 하나가 통째로 보이므로, 안쪽 칸을 따로 자르지 않습니다. */
+  .build-panel .palette-section,
+  .build-panel .components-panel,
+  .build-panel .properties-panel,
+  .build-panel .class-tools {
+    max-height: none;
+    overflow-y: visible;
+  }
+}
+
+/* 블록 화면에서는 이벤트 목록이 주된 도구입니다. 트리는 블록 안에서 부품을
+   드롭다운으로 고르기 때문에 자리를 조금만 줍니다. */
+@media (min-width: 961px) {
+  .studio-layout.blocks-mode .build-panel .palette-section {
+    max-height: 42vh;
+  }
+
+  .studio-layout.blocks-mode .build-panel .components-panel {
+    min-height: 0;
+    max-height: 15vh;
+  }
+}
+
+/* 칸 안에서 스크롤하면 무엇을 보고 있는지 알 수 있게 제목을 붙들어 둡니다. */
+.build-panel .build-section > .panel-title {
+  position: sticky;
+  z-index: 2;
+  top: -15px;
+  margin: -15px -14px 0;
+  padding: 15px 14px 8px;
+  background: rgba(255, 255, 255, 0.97);
+}

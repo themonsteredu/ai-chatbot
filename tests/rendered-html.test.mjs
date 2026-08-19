@@ -277,8 +277,14 @@ test("keeps the editor and saved web apps responsive across device sizes", async
     /@media \(max-width: 600px\), \(max-height: 600px\) and \(max-width: 960px\)/,
   );
   assert.match(studio, /window\.innerWidth <= 960/);
-  assert.match(studio, /mode === "blocks" \? "blocks-tabs" : ""/);
-  assert.match(studio, /\{mode === "designer" && \(/);
+  // 좁은 화면에서는 만드는 판과 결과 화면 둘로만 나눕니다.
+  assert.match(studio, /mobilePanel === "build" \? "active" : ""/);
+  assert.match(studio, /mobilePanel === "viewer" \? "active" : ""/);
+  assert.match(studio, /mobilePanel === "build" \? "mobile-active" : ""/);
+  assert.doesNotMatch(studio, /mobilePanel === "properties"/);
+  // 팔레트·컴포넌트·속성은 모두 왼쪽 판 안에 있어야 합니다.
+  assert.match(styles, /\.build-panel \.properties-panel/);
+  assert.match(styles, /\.build-panel \.palette-section/);
 });
 
 test("uses Korean metadata and the standard Vercel Next.js runtime", async () => {
