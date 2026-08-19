@@ -24,6 +24,13 @@ import type {
   SelectedTarget,
   WebAppProject,
 } from "../../lib/chatbot-studio";
+import { compressPhoto } from "../../lib/image";
+import {
+  DRAFT_SCOPE_ID,
+  readRuntime,
+  writeRuntime,
+  type RuntimeScope,
+} from "../../lib/runtime-store";
 
 type SessionRecord = {
   activity: string;
@@ -42,6 +49,8 @@ type CampReportProps = {
   interactive: boolean;
   selectedTarget?: SelectedTarget;
   onSelect?: (target: SelectedTarget) => void;
+  /** 이 웹앱의 기록을 저장할 자리입니다. 웹앱 아이디로 정해집니다. */
+  dataScope?: RuntimeScope;
 };
 
 const DAYS = [1, 2, 3] as const;
@@ -112,45 +121,12 @@ function normalizeReport(value: unknown): CampReportData {
   };
 }
 
-function compressPhoto(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    if (!file.type.startsWith("image/")) {
-      reject(new Error("사진 파일만 올릴 수 있어요."));
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error("사진을 읽지 못했어요."));
-    reader.onload = () => {
-      const image = new window.Image();
-      image.onerror = () => reject(new Error("사진을 열지 못했어요."));
-      image.onload = () => {
-        const maxSide = 720;
-        const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
-        const width = Math.max(1, Math.round(image.width * scale));
-        const height = Math.max(1, Math.round(image.height * scale));
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        const context = canvas.getContext("2d");
-        if (!context) {
-          reject(new Error("사진을 줄이지 못했어요."));
-          return;
-        }
-        context.drawImage(image, 0, 0, width, height);
-        resolve(canvas.toDataURL("image/jpeg", 0.66));
-      };
-      image.src = String(reader.result);
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
 export function CampReport({
   project,
   interactive,
   selectedTarget,
   onSelect,
+  dataScope,
 }: CampReportProps) {
   const [reportOpen, setReportOpen] = useState(false);
   const [activeDay, setActiveDay] = useState<(typeof DAYS)[number]>(1);
@@ -163,7 +139,14 @@ export function CampReport({
   const [uploadingSession, setUploadingSession] = useState("");
   // 사진 오류는 화면 아래 작은 상태줄로는 눈에 띄지 않아, 해당 칸 바로 밑에 보여 줍니다.
   const [photoError, setPhotoError] = useState<{ id: string; message: string } | null>(null);
-  const storageKey = `my-webapp-camp-report-v1:${project.title}`;
+  // 프로젝트 이름을 키로 쓰면 이름을 바꾸는 순간 12차시 기록과 사진이 사라진
+  // 것처럼 보입니다. 웹앱 아이디를 씁니다.
+  const scope: RuntimeScope = dataScope ?? {
+    appId: DRAFT_SCOPE_ID,
+    legacyTitle: project.title,
+  };
+  const scopeId = scope.appId;
+  const scopeLegacyTitle = scope.legacyTitle;
   // 반 코드는 편집 화면의 ‘반에 제출’과 같은 키를 써서 한 번만 적으면 됩니다.
   const [sendClassCode, setSendClassCode] = useState(() =>
     typeof window === "undefined"
@@ -180,7 +163,11 @@ export function CampReport({
     if (!interactive) return;
     const timer = window.setTimeout(() => {
       try {
-        const saved = window.localStorage.getItem(storageKey);
+        const saved = readRuntime(
+          window.localStorage,
+          { appId: scopeId, legacyTitle: scopeLegacyTitle },
+          "camp",
+        );
         if (saved) setReport(normalizeReport(JSON.parse(saved)));
       } catch {
         setStorageStatus("저장된 기록을 불러오지 못했어요");
@@ -190,21 +177,26 @@ export function CampReport({
     }, 0);
 
     return () => window.clearTimeout(timer);
-  }, [interactive, storageKey]);
+  }, [interactive, scopeId, scopeLegacyTitle]);
 
   useEffect(() => {
     if (!interactive || !storageReady) return;
     const timer = window.setTimeout(() => {
-      try {
-        window.localStorage.setItem(storageKey, JSON.stringify(report));
-        setStorageStatus("휴대폰에 자동 저장됨");
-      } catch {
-        setStorageStatus("저장 공간이 부족해요. 사진을 줄여 주세요");
-      }
+      const result = writeRuntime(
+        window.localStorage,
+        { appId: scopeId, legacyTitle: scopeLegacyTitle },
+        "camp",
+        JSON.stringify(report),
+      );
+      setStorageStatus(
+        result === "saved"
+          ? "휴대폰에 자동 저장됨"
+          : "저장 공간이 부족해요. 사진을 줄여 주세요",
+      );
     }, 0);
 
     return () => window.clearTimeout(timer);
-  }, [interactive, report, storageKey, storageReady]);
+  }, [interactive, report, scopeId, scopeLegacyTitle, storageReady]);
 
   const select = () => {
     if (!interactive) onSelect?.("camp-report");

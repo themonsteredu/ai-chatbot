@@ -38,6 +38,12 @@ import type {
   SelectedTarget,
   WebAppProject,
 } from "../../lib/chatbot-studio";
+import {
+  DRAFT_SCOPE_ID,
+  readRuntime,
+  writeRuntime,
+  type RuntimeScope,
+} from "../../lib/runtime-store";
 import { CampReport } from "./camp-report";
 
 type ChatMessage = {
@@ -54,6 +60,8 @@ type PhonePreviewProps = {
   onSelect?: (target: SelectedTarget) => void;
   /** 있으면 편집 화면에서 기능 카드를 끌어 순서를 바꿀 수 있습니다. */
   onReorder?: (moving: FeatureKind, target: FeatureKind) => void;
+  /** 이 웹앱의 기록을 저장할 자리입니다. 웹앱 아이디로 정해집니다. */
+  dataScope?: RuntimeScope;
 };
 
 const iconMap: Record<ActionIcon, LucideIcon> = {
@@ -80,6 +88,7 @@ export function PhonePreview({
   selectedTarget,
   onSelect,
   onReorder,
+  dataScope,
 }: PhonePreviewProps) {
   const [checkedItems, setCheckedItems] = useState<string[]>([]);
   // 편집 화면에서 카드를 끌어 옮길 때의 표시 상태입니다.
@@ -95,14 +104,26 @@ export function PhonePreview({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [runtimeReady, setRuntimeReady] = useState(false);
+  const [storageFull, setStorageFull] = useState(false);
   const messageSequence = useRef(0);
-  const runtimeStorageKey = `my-webapp-runtime-v1:${project.title}`;
+  // 프로젝트 이름은 학생이 바꿀 수 있어서 저장 키로 쓰면 이름을 고치는 순간
+  // 기록이 사라집니다. 웹앱 아이디를 씁니다.
+  const scope: RuntimeScope = dataScope ?? {
+    appId: DRAFT_SCOPE_ID,
+    legacyTitle: project.title,
+  };
+  const scopeId = scope.appId;
+  const scopeLegacyTitle = scope.legacyTitle;
 
   useEffect(() => {
     if (!interactive) return;
     const timer = window.setTimeout(() => {
       try {
-        const saved = window.localStorage.getItem(runtimeStorageKey);
+        const saved = readRuntime(
+          window.localStorage,
+          { appId: scopeId, legacyTitle: scopeLegacyTitle },
+          "runtime",
+        );
         if (saved) {
           const runtime = JSON.parse(saved) as {
             checkedItems?: unknown;
@@ -146,25 +167,30 @@ export function PhonePreview({
     }, 0);
 
     return () => window.clearTimeout(timer);
-  }, [interactive, runtimeStorageKey]);
+  }, [interactive, scopeId, scopeLegacyTitle]);
 
   useEffect(() => {
     if (!interactive || !runtimeReady) return;
-    try {
-      window.localStorage.setItem(
-        runtimeStorageKey,
+    const timer = window.setTimeout(() => {
+      const result = writeRuntime(
+        window.localStorage,
+        { appId: scopeId, legacyTitle: scopeLegacyTitle },
+        "runtime",
         JSON.stringify({ checkedItems, customItems, journalText }),
       );
-    } catch {
-      // The dedicated save actions still provide visible feedback when possible.
-    }
+      // 저장에 실패한 것을 말없이 넘기면 학생은 저장된 줄 압니다.
+      setStorageFull(result === "full");
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [
     checkedItems,
     customItems,
     interactive,
     journalText,
     runtimeReady,
-    runtimeStorageKey,
+    scopeId,
+    scopeLegacyTitle,
   ]);
 
   const select = (target: SelectedTarget) => {
@@ -215,10 +241,9 @@ export function PhonePreview({
 
   const saveJournal = () => {
     if (!interactive || !journalText.trim()) return;
-    window.localStorage.setItem(
-      `my-webapp-record-${project.title}`,
-      journalText.trim(),
-    );
+    // 글은 위의 자동 저장 이펙트가 이미 기록에 담아 둡니다. 예전에는 아무도 읽지
+    // 않는 자리에 한 번 더 썼는데, 저장 공간만 먹고 "저장했어요" 표시를 실제와
+    // 다른 곳에 붙여 두는 셈이라 없앴습니다.
     setJournalSaved(true);
   };
 
@@ -416,7 +441,7 @@ export function PhonePreview({
                   else select("journal");
                 }}
               >
-                {journalSaved ? (
+                {journalSaved && !storageFull ? (
                   <>
                     <Check size={13} aria-hidden="true" />
                     저장했어요
@@ -425,6 +450,11 @@ export function PhonePreview({
                   project.journalButtonLabel
                 )}
               </button>
+              {interactive && storageFull && (
+                <p className="journal-storage-warning" role="status">
+                  저장 공간이 부족해요. 사진이나 기록을 조금 줄여 주세요.
+                </p>
+              )}
             </section>
     ) : null,
     "camp-report": project.campReportEnabled ? (
@@ -433,6 +463,7 @@ export function PhonePreview({
               interactive={interactive}
               selectedTarget={selectedTarget}
               onSelect={onSelect}
+              dataScope={{ appId: scopeId, legacyTitle: scopeLegacyTitle }}
             />
     ) : null,
     "button": project.buttonEnabled ? (

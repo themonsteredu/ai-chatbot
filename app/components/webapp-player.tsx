@@ -2,6 +2,7 @@
 
 import { Pencil, Rocket } from "lucide-react";
 import type { WebAppProject } from "../../lib/chatbot-studio";
+import type { RuntimeScope } from "../../lib/runtime-store";
 import { PhonePreview } from "./phone-preview";
 import { PwaInstallButton } from "./pwa-install";
 
@@ -9,12 +10,15 @@ type WebAppPlayerProps = {
   appId: string;
   project: WebAppProject;
   onEdit: () => void;
+  /** 이 웹앱을 쓰는 사람의 기록을 저장할 자리입니다. */
+  dataScope: RuntimeScope;
 };
 
 export function WebAppPlayer({
   appId,
   project,
   onEdit,
+  dataScope,
 }: WebAppPlayerProps) {
   return (
     <main
@@ -46,7 +50,12 @@ export function WebAppPlayer({
         </nav>
       </header>
       <div className="standalone-phone-wrap">
-        <PhonePreview project={project} interactive standalone />
+        <PhonePreview
+          project={project}
+          interactive
+          standalone
+          dataScope={dataScope}
+        />
       </div>
     </main>
   );

@@ -63,6 +63,7 @@ import {
   saveWebApp,
   type SavedWebAppSummary,
 } from "../../lib/saved-webapps";
+import { clearRuntime, DRAFT_SCOPE_ID } from "../../lib/runtime-store";
 import { BlockWorkspace } from "./block-workspace";
 import { PhonePreview } from "./phone-preview";
 import { ClassSubmit } from "./class-submit";
@@ -507,6 +508,16 @@ export function ChatbotStudio() {
     }
   };
 
+  /**
+   * 실행 기록을 어디에 저장할지 정합니다. 아직 저장하지 않은 웹앱은 임시 자리를
+   * 쓰고, 저장한 뒤에는 그 웹앱의 아이디를 씁니다. `legacyTitle`은 이름으로
+   * 저장해 둔 예전 기록을 한 번 옮겨 오기 위해서만 넘깁니다.
+   */
+  const dataScope = {
+    appId: activeAppId || DRAFT_SCOPE_ID,
+    legacyTitle: project.title,
+  };
+
   const saveCurrentAsWebApp = () => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(project));
     const savedApp = saveWebApp(
@@ -662,6 +673,9 @@ export function ChatbotStudio() {
     }
 
     deleteSavedWebApp(window.localStorage, app.id);
+    // 설계만 지우고 기록을 남겨 두면, 사진 수 MB가 보이지 않는 채로 저장 공간을
+    // 차지하다가 다음 웹앱에 딸려 들어갑니다.
+    clearRuntime(window.localStorage, app.id);
     setSavedApps(listSavedWebApps(window.localStorage));
     if (app.id === activeAppId) {
       setActiveAppId("");
@@ -1249,6 +1263,7 @@ export function ChatbotStudio() {
         appId={activeAppId}
         project={project}
         onEdit={editStandalone}
+        dataScope={dataScope}
       />
     );
   }
@@ -1592,6 +1607,7 @@ export function ChatbotStudio() {
                   selectedTarget={selectedTarget}
                   onSelect={selectTarget}
                   onReorder={reorderFeature}
+                  dataScope={dataScope}
                 />
                 <p className="drop-hint">
                   <Plus size={14} aria-hidden="true" />
@@ -1795,7 +1811,7 @@ export function ChatbotStudio() {
               </button>
             </header>
             <div className="preview-phone-wrap">
-              <PhonePreview project={project} interactive />
+              <PhonePreview project={project} interactive dataScope={dataScope} />
             </div>
             <footer>
               <span>

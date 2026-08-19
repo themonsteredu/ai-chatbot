@@ -38,7 +38,7 @@ test("starts with a blank App Inventor-style web app project", async () => {
 });
 
 test("provides a persistent 3-day, 12-session printable camp report", async () => {
-  const [studio, phone, blocks, camp, model] = await Promise.all([
+  const [studio, phone, blocks, camp, model, image, store] = await Promise.all([
     readFile(
       new URL("../app/components/chatbot-studio.tsx", import.meta.url),
       "utf8",
@@ -56,6 +56,8 @@ test("provides a persistent 3-day, 12-session printable camp report", async () =
       "utf8",
     ),
     readFile(new URL("../lib/chatbot-studio.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/image.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/runtime-store.ts", import.meta.url), "utf8"),
   ]);
 
   assert.match(model, /campReportEnabled: true/);
@@ -69,8 +71,13 @@ test("provides a persistent 3-day, 12-session printable camp report", async () =
   assert.match(camp, /3일 캠프 전체 소감/);
   assert.match(camp, /accept="image\/\*"/);
   assert.match(camp, /capture="environment"/);
-  assert.match(camp, /canvas\.toDataURL/);
-  assert.match(camp, /my-webapp-camp-report-v1/);
+  // 사진 줄이기는 lib/image.ts로 옮겼고, 저장 자리는 lib/runtime-store.ts가 정합니다.
+  assert.match(image, /canvas\.toDataURL/);
+  assert.match(camp, /from "\.\.\/\.\.\/lib\/image"/);
+  assert.match(store, /my-webapp-camp-report-v2:/);
+  // 예전 이름 기반 자리는 한 번 옮겨 오는 용도로만 남습니다.
+  assert.match(store, /my-webapp-camp-report-v1:/);
+  assert.doesNotMatch(camp, /\$\{project\.title\}/);
   assert.match(camp, /window\.print\(\)/);
   assert.match(camp, /print-report/);
   assert.match(blocks, /12차시 기록을 이 휴대폰에 자동 저장하기/);
