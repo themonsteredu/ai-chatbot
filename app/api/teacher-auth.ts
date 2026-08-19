@@ -2,11 +2,16 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import type { NextRequest } from "next/server";
 
 /**
- * 학생 이름·사진·작품이 오가는 요청에 쓰는 교사 코드 확인입니다.
+ * 교사용 요청에 쓰는 PIN 확인입니다.
  *
- * 답안지 라우트와 달리 여기에는 기본 코드가 없습니다. 반 명단과 캠프 사진은
- * 널리 알려진 기본값으로 열려서는 안 되기 때문에, 코드를 등록하지 않은 배포에서는
- * 교사 전용 요청을 아예 받지 않고 무엇을 설정해야 하는지 알려 줍니다.
+ * 배포 환경 변수에 코드를 등록하면 **그 코드만** 받습니다. 아무것도 등록하지
+ * 않은 배포에서는 기본 PIN으로 엽니다. 학교에서 따로 설정하지 않고도 바로 쓸 수
+ * 있어야 하기 때문입니다.
+ *
+ * 기본 PIN은 소스에 적혀 있어 마음먹은 학생은 알아낼 수 있습니다. 반 명단과
+ * 캠프 사진까지 확실히 가리려면 TEACHER_ADMIN_CODE를 등록해 주세요. 등록하는
+ * 순간 기본 PIN은 더 이상 통하지 않습니다. 지금 기본 PIN으로 열리고 있으면
+ * 반 명단 화면 위에 그 사실을 띄웁니다.
  */
 
 const MAX_ATTEMPTS = 5;
@@ -31,14 +36,10 @@ function sameCode(input: string, expected: string) {
   return timingSafeEqual(a, b);
 }
 
-/**
- * 수업 자료(지도안·활동지 예시 답안)를 여는 코드입니다. 학생 이름이나 사진이
- * 아니라 가르치는 자료라, 아무것도 설정하지 않아도 바로 쓸 수 있게 기본값을
- * 둡니다. 소스에 적혀 있으므로 학생이 알아낼 수 있다는 점은 감안해야 합니다.
- * 진짜로 가려야 하면 TEACHER_ADMIN_CODE를 설정해 주세요.
- */
-export const DEFAULT_LESSON_CODE = "3035";
+/** 아무것도 등록하지 않은 배포에서 쓰는 기본 PIN입니다. */
+export const DEFAULT_TEACHER_PIN = "3035";
 
+/** 배포 환경 변수에 등록한 코드입니다. 없으면 빈 배열입니다. */
 export function readTeacherCodes() {
   // TEACHER_ACCESS_CODE는 운영자 코드만 있던 시절의 이름이라 계속 인정합니다.
   const admin = (
@@ -50,36 +51,41 @@ export function readTeacherCodes() {
   return [admin, instructor].filter(Boolean);
 }
 
+/**
+ * 실제로 받아 줄 코드입니다. 등록한 것이 하나라도 있으면 기본 PIN은 빠집니다.
+ * 학교가 자기 코드를 정한 순간부터 널리 알려진 번호로는 열리지 않아야 합니다.
+ */
+export function activeTeacherCodes() {
+  const configured = readTeacherCodes();
+  return configured.length > 0 ? configured : [DEFAULT_TEACHER_PIN];
+}
+
+/**
+ * 지금 기본 PIN으로 열리고 있는지입니다. 학생 이름과 사진이 보이는 화면에서
+ * 이 사실을 알려 주려고 씁니다.
+ */
+export function usingDefaultPin() {
+  return readTeacherCodes().length === 0;
+}
+
 export type TeacherCheck =
   | { ok: true }
   | { ok: false; message: string; status: number };
 
-/**
- * 수업 자료용 확인입니다. 설정한 코드가 있으면 그것도 받고, 없으면 기본 코드로
- * 엽니다. 학생 데이터를 다루는 `checkTeacherCode`와 달리 막아 두지 않습니다.
- */
+/** 수업 자료(지도안·활동지 예시 답안)를 여는 확인입니다. */
 export function checkLessonCode(
   request: NextRequest,
   code: string,
 ): TeacherCheck {
-  const codes = [...readTeacherCodes(), DEFAULT_LESSON_CODE];
-  return verify(request, code, codes);
+  return verify(request, code, activeTeacherCodes());
 }
 
+/** 반 명단·학생 작품·캠프 사진을 여는 확인입니다. */
 export function checkTeacherCode(
   request: NextRequest,
   code: string,
 ): TeacherCheck {
-  const codes = readTeacherCodes();
-  if (codes.length === 0) {
-    return {
-      ok: false,
-      status: 503,
-      message:
-        "교사 코드가 아직 등록되지 않았습니다. 배포 환경 변수 TEACHER_ADMIN_CODE 또는 TEACHER_INSTRUCTOR_CODE를 설정해 주세요.",
-    };
-  }
-  return verify(request, code, codes);
+  return verify(request, code, activeTeacherCodes());
 }
 
 function verify(

@@ -7204,3 +7204,22 @@ select:focus-visible {
     min-height: 46px;
   }
 }
+
+/* 기본 PIN으로 열렸을 때 반 명단 위에 뜨는 안내입니다. */
+.class-roster-default-pin {
+  margin: 0 0 12px;
+  padding: 11px 13px;
+  border: 1px solid #f3d9a8;
+  border-radius: 11px;
+  background: #fdf6e6;
+  color: #8a5a12;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.65;
+  word-break: keep-all;
+}
+
+.class-roster-default-pin b {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-weight: 800;
+}

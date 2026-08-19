@@ -304,7 +304,7 @@ test("uses Korean metadata and the standard Vercel Next.js runtime", async () =>
 });
 
 test("keeps the teacher answer key on the server behind an access code", async () => {
-  const [answerKey, renderer, route, gate, settings, worksheets] =
+  const [answerKey, renderer, route, auth, gate, settings, worksheets] =
     await Promise.all([
       readFile(
         new URL("app/api/teacher-answers/answer-key.ts", root),
@@ -312,6 +312,7 @@ test("keeps the teacher answer key on the server behind an access code", async (
       ),
       readFile(new URL("app/api/teacher-answers/render.ts", root), "utf8"),
       readFile(new URL("app/api/teacher-answers/route.ts", root), "utf8"),
+      readFile(new URL("app/api/teacher-auth.ts", root), "utf8"),
       readFile(
         new URL("app/components/teacher-answer-download.tsx", root),
         "utf8",
@@ -343,9 +344,14 @@ test("keeps the teacher answer key on the server behind an access code", async (
 
   // 강사 코드는 운영자로 확인했을 때만 응답에 실립니다.
   assert.match(route, /role === "admin" \? codes\.instructor : undefined/);
-  assert.match(route, /DEFAULT_INSTRUCTOR_CODE = "1234"/);
-  // 기본 강사 코드는 클라이언트 코드에 값으로 들어 있으면 안 됩니다.
+  // 교사용 화면은 모두 같은 기본 PIN을 씁니다. 번호는 한 곳에만 적혀 있어야
+  // 나중에 바꿀 때 어긋나지 않습니다.
+  assert.match(route, /DEFAULT_INSTRUCTOR_CODE = DEFAULT_TEACHER_PIN/);
+  assert.match(auth, /DEFAULT_TEACHER_PIN = "3035"/);
+  assert.doesNotMatch(route, /"3035"/);
+  // 기본 코드는 클라이언트 코드에 값으로 들어 있으면 안 됩니다.
   assert.doesNotMatch(gate, /"1234"/);
+  assert.doesNotMatch(gate, /"3035"/);
   assert.match(gate, /instructorCodeIsDefault/);
 
   // 답안 원본은 라우트와 렌더러 외 어디에서도 불러오지 않아야 합니다.

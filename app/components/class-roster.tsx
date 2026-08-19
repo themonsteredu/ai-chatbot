@@ -51,6 +51,8 @@ function openHref(app: ClassApp) {
 export function ClassRoster({ teacherCode }: { teacherCode: string }) {
   const [classCode, setClassCode] = useState("");
   const [apps, setApps] = useState<ClassApp[] | null>(null);
+  // 기본 PIN으로 열렸는지입니다. 학생 이름과 사진이 보이는 화면이라 알려 줍니다.
+  const [defaultPin, setDefaultPin] = useState(false);
   const [records, setRecords] = useState<StudentRecord[]>([]);
   // 반 코드를 외우지 않아도 되도록, 들어오자마자 반 목록을 먼저 보여 줍니다.
   const [classes, setClasses] = useState<ClassSummary[] | null>(null);
@@ -103,6 +105,7 @@ export function ClassRoster({ teacherCode }: { teacherCode: string }) {
         return;
       }
       setApps(body.apps ?? []);
+      setDefaultPin(body.defaultPin === true);
 
       // 웹앱 목록과 별개로, 학생이 보낸 캠프 기록도 함께 가져옵니다.
       const recordsResponse = await fetch("/api/class-webapps", {
@@ -223,6 +226,15 @@ export function ClassRoster({ teacherCode }: { teacherCode: string }) {
         <p className="class-roster-empty">
           아직 제출된 반이 없습니다. 학생에게 반 코드를 알려 주고 ‘반에
           제출하기’를 누르게 해 주세요.
+        </p>
+      )}
+
+      {apps && defaultPin && (
+        <p className="class-roster-default-pin" role="status">
+          기본 PIN으로 열려 있습니다. 이 번호는 소스에 적혀 있어 학생도 알아낼
+          수 있습니다. 학생 이름과 사진을 확실히 가리려면 배포 환경 변수
+          <b> TEACHER_ADMIN_CODE </b>에 우리 학교 코드를 등록해 주세요. 등록하면
+          기본 PIN은 더 이상 통하지 않습니다.
         </p>
       )}
 

@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { normalizeProject } from "../../../lib/chatbot-studio";
-import { checkTeacherCode } from "../teacher-auth";
+import { checkTeacherCode, usingDefaultPin } from "../teacher-auth";
 import {
   listClassSummaries,
   listClassWebApps,
@@ -152,6 +152,10 @@ export async function POST(request: NextRequest) {
           project: row.project,
           updatedAt: row.updated_at,
         })),
+        // 기본 PIN으로 열렸다면 화면에서 알려 줍니다. 학생 이름과 사진이
+        // 보이는 곳이라, 널리 알려진 번호로 열려 있다는 사실을 교사가 알아야
+        // 합니다.
+        defaultPin: usingDefaultPin(),
       });
     }
 

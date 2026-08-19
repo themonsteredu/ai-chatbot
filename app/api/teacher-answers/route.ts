@@ -1,5 +1,6 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import type { NextRequest } from "next/server";
+import { DEFAULT_TEACHER_PIN } from "../teacher-auth";
 import { renderAnswerKeyHtml } from "./render";
 
 export const runtime = "nodejs";
@@ -8,8 +9,11 @@ export const dynamic = "force-dynamic";
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MS = 5 * 60 * 1000;
 
-/** 강사 코드를 따로 등록하지 않았을 때 쓰는 값입니다. */
-export const DEFAULT_INSTRUCTOR_CODE = "1234";
+/**
+ * 강사 코드를 따로 등록하지 않았을 때 쓰는 값입니다. 교사용 화면 전체가 같은
+ * 번호를 쓰도록 `teacher-auth`의 기본 PIN을 그대로 씁니다.
+ */
+export const DEFAULT_INSTRUCTOR_CODE = DEFAULT_TEACHER_PIN;
 
 type Role = "admin" | "instructor";
 
@@ -82,14 +86,9 @@ function fail(message: string, status: number) {
 }
 
 export async function POST(request: NextRequest) {
+  // 운영자 코드를 등록하지 않아도 강사 코드(기본 PIN)로 예시 답안을 볼 수
+  // 있습니다. 학교가 따로 설정하지 않고도 수업 자료를 쓸 수 있어야 합니다.
   const codes = readCodes();
-  if (!codes.admin) {
-    return fail(
-      "운영자 코드가 아직 설정되지 않았습니다. 배포 환경 변수 TEACHER_ADMIN_CODE를 등록한 뒤 다시 시도해 주세요.",
-      503,
-    );
-  }
-
   const now = Date.now();
   const key = clientKey(request);
   if (isLockedOut(key, now)) {
