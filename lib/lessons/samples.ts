@@ -1,12 +1,13 @@
 /**
- * 수업에 그대로 쓸 수 있는 예시 웹앱 세 가지입니다.
+ * 수업에 그대로 쓸 수 있는 예시 웹앱입니다.
  *
- * 셋은 일부러 서로 다른 기능을 씁니다. 하나만 보면 "이 도구로 뭘 만들 수
+ * 각각 일부러 서로 다른 기능을 씁니다. 하나만 보면 "이 도구로 뭘 만들 수
  * 있는지"가 좁아 보이기 때문입니다.
  *
  *   1차시 · 나를 소개하는 카드   → 기본 부품과 첫 블록
  *   2차시 · 우리 반 설문판       → 입력 부품, 변수, 조건
  *   3차시 · 학교 안내 도우미     → 배치 부품, 같은 부품 여러 개, 챗봇
+ *   4차시 · 우리 반 알림장       → 빈 웹앱에서 시작하는 초등 40분 수업의 목표물
  *
  * 여기 담긴 것은 설계뿐입니다. 학생이 실행하며 적는 글과 사진은 늘 그렇듯
  * 그 기기에만 남습니다.
@@ -15,7 +16,11 @@
 import { PROJECT_SCHEMA_VERSION } from "../project/types";
 import type { WebAppProject } from "../project/types";
 
-export type SampleId = "intro-card" | "class-survey" | "school-guide";
+export type SampleId =
+  | "intro-card"
+  | "class-survey"
+  | "school-guide"
+  | "notice-board";
 
 export type Sample = {
   id: SampleId;
@@ -401,6 +406,139 @@ const SCHOOL_GUIDE: WebAppProject = {
   },
 };
 
+
+/* ------------------------------------------------------------------ */
+/* 4차시 · 우리 반 알림장 (초등 40분 수업의 목표물)                     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 초등 알림장 차시는 빈 웹앱에서 시작합니다. 이 예시는 학생이 따라 만들
+ * 완성본이라, 수업에서 실제로 놓을 부품만 담고 챗봇 같은 오늘 안 만드는
+ * 것은 넣지 않습니다. 시연이 곧 목표물이어야 하기 때문입니다.
+ */
+const NOTICE_BOARD: WebAppProject = {
+  version: PROJECT_SCHEMA_VERSION,
+  template: "blank",
+  title: "우리 반 알림장",
+  appName: "우리 반 알림장",
+  subtitle: "오늘 알림과 내일 준비물을 한곳에",
+  accent: "#6956e8",
+  screenBackground: "#f4f2ff",
+  screens: [
+    {
+      id: "s1",
+      name: "Screen1",
+      children: [
+        {
+          id: "c1",
+          type: "label",
+          name: "제목글",
+          props: {
+            text: "우리 반 알림장",
+            fontSize: "lg",
+            bold: true,
+            align: "center",
+          },
+        },
+        {
+          id: "c2",
+          type: "row",
+          name: "가로배치1",
+          props: { gap: "sm" },
+          children: [
+            {
+              id: "c3",
+              type: "button",
+              name: "알림버튼",
+              props: { label: "오늘 알림" },
+            },
+            {
+              id: "c4",
+              type: "button",
+              name: "준비물버튼",
+              props: { label: "내일 준비물" },
+            },
+          ],
+        },
+        {
+          id: "c5",
+          type: "notice-card",
+          name: "안내카드1",
+          props: {
+            title: "알림판",
+            body: "위의 버튼을 눌러 알림을 확인해 보세요.",
+          },
+        },
+        {
+          id: "c6",
+          type: "checklist",
+          name: "할일체크1",
+          props: {
+            title: "오늘 할 일",
+            items: [
+              { id: "t1", text: "알림장 확인하기" },
+              { id: "t2", text: "수학 익힘책 42~43쪽" },
+              { id: "t3", text: "가정통신문 부모님께 드리기" },
+            ],
+          },
+        },
+      ],
+    },
+  ],
+  // 버튼 두 개가 같은 안내 카드를 서로 다르게 바꿉니다. 3차시와 같은 짜임이지만
+  // 내용이 우리 반 알림이라, 초등 수업에서는 이쪽이 자기 일이 됩니다.
+  blocks: {
+    events: [
+      {
+        id: "e1",
+        componentId: "c3",
+        event: "click",
+        body: [
+          {
+            id: "a1",
+            kind: "set-prop",
+            target: "c5",
+            prop: "title",
+            value: { k: "text", v: "오늘의 알림" },
+          },
+          {
+            id: "a2",
+            kind: "set-prop",
+            target: "c5",
+            prop: "body",
+            value: {
+              k: "text",
+              v: "체험학습 동의서를 목요일까지 내 주세요. 수학 익힘책 42~43쪽이 숙제예요.",
+            },
+          },
+        ],
+      },
+      {
+        id: "e2",
+        componentId: "c4",
+        event: "click",
+        body: [
+          {
+            id: "a3",
+            kind: "set-prop",
+            target: "c5",
+            prop: "title",
+            value: { k: "text", v: "내일 준비물" },
+          },
+          {
+            id: "a4",
+            kind: "set-prop",
+            target: "c5",
+            prop: "body",
+            value: { k: "text", v: "과학 교과서, 필통과 색연필, 실내화" },
+          },
+        ],
+      },
+    ],
+    variables: [],
+  },
+};
+
 export const SAMPLES: Sample[] = [
   {
     id: "intro-card",
@@ -428,6 +566,15 @@ export const SAMPLES: Sample[] = [
     focus: ["가로 배치", "버튼 여러 개", "목록", "챗봇", "부품 간 상호작용"],
     minutes: 45,
     project: SCHOOL_GUIDE,
+  },
+  {
+    id: "notice-board",
+    order: 4,
+    name: "우리 반 알림장",
+    goal: "빈 웹앱에서 시작해, 우리 반의 진짜 알림을 담은 알림장을 조립합니다.",
+    focus: ["빈 웹앱에서 시작", "안내 카드", "활동 체크", "버튼 두 개"],
+    minutes: 40,
+    project: NOTICE_BOARD,
   },
 ];
 

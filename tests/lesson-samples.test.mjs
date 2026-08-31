@@ -125,6 +125,30 @@ test("3차시 — two buttons change the same card differently", () => {
   );
 });
 
+
+test("알림장 — two buttons change the card, and it is buildable in one period", () => {
+  const project = sampleById("notice-board").project;
+  const design = nodeIndex(project.screens[0].children);
+
+  const today = runEvent(project.blocks, design, emptyState(), {
+    componentId: "c3",
+    event: "click",
+  });
+  assert.equal(resolveProp(design, today, "c5", "title"), "오늘의 알림");
+  assert.match(resolveProp(design, today, "c5", "body"), /동의서/);
+
+  const supplies = runEvent(project.blocks, design, today, {
+    componentId: "c4",
+    event: "click",
+  });
+  assert.equal(resolveProp(design, supplies, "c5", "title"), "내일 준비물");
+  assert.match(resolveProp(design, supplies, "c5", "body"), /과학 교과서/);
+
+  // 빈 웹앱에서 40분 안에 조립할 양이어야 합니다. 부품이 늘면 차시가 깨집니다.
+  assert.ok([...walk(project.screens[0].children)].length <= 6);
+  assert.equal(typesIn(project).includes("chatbot"), false);
+});
+
 test("each sample opens from a link that fits in a QR", () => {
   for (const sample of SAMPLES) {
     assert.ok(
@@ -146,6 +170,6 @@ test("samples are described for the teacher", () => {
   }
   assert.deepEqual(
     SAMPLES.map((sample) => sample.order),
-    [1, 2, 3],
+    [1, 2, 3, 4],
   );
 });
