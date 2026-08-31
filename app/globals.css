@@ -6466,6 +6466,24 @@ select:focus-visible {
   min-width: 92px;
 }
 
+/*
+ * 1360px 이하에서는 위쪽 띠의 '프로젝트 이름' 칸을 감춥니다. 그래서 실제로
+ * 놓이는 칸은 셋(로고 · 탭 · 오른쪽 단추)인데, 바로 위의 네 칸짜리 틀을 그대로
+ * 두면 탭이 둘째 칸(최소 110px)에 들어가 제 폭을 못 받고, 오른쪽 단추 칸이
+ * 탭 위로 올라와 '블록' 탭이 눌리지 않았습니다. 칸 수를 실제 개수에 맞춥니다.
+ */
+@media (max-width: 1360px) {
+  .studio-topbar {
+    grid-template-columns: minmax(190px, 0.8fr) auto minmax(0, 2fr);
+  }
+}
+
+@media (max-width: 1160px) {
+  .studio-topbar {
+    grid-template-columns: 190px auto minmax(0, 1fr);
+  }
+}
+
 .icon-action:disabled {
   opacity: 0.35;
   cursor: not-allowed;
