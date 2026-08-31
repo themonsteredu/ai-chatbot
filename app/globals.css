@@ -308,6 +308,67 @@ select:focus-visible {
   box-shadow: 3px 4px 0 #362a8e;
 }
 
+/* 빈 화면으로 열렸을 때, 지난번에 만들던 것을 되살릴 수 있다고 알리는 띠입니다. */
+.resume-draft-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px clamp(14px, 3vw, 42px);
+  border-bottom: 1px solid var(--line);
+  background: var(--violet-soft);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.resume-draft-bar > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.resume-draft-bar svg {
+  color: var(--violet);
+  flex-shrink: 0;
+}
+
+.resume-draft-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.resume-draft-actions > button:first-child {
+  min-height: 40px;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--violet);
+  color: #fff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.resume-draft-actions > button:first-child:hover {
+  filter: brightness(1.05);
+}
+
+.resume-draft-dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  min-height: 40px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--muted);
+  cursor: pointer;
+}
+
 .learning-strip {
   display: flex;
   min-height: 60px;

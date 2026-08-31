@@ -101,6 +101,12 @@ export function ChatbotStudio() {
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [standalone, setStandalone] = useState(false);
   const [activeAppId, setActiveAppId] = useState("");
+  // 빈 웹앱으로 열되, 지난번에 만들던 것이 있으면 화면에 바로 되살리지 않고
+  // 여기에 들고 있다가 '이어서 만들기'로만 되돌립니다. 공용 태블릿에서 앞
+  // 학생 작품이 그대로 뜨지 않게 하려는 것입니다.
+  const [resumableDraft, setResumableDraft] = useState<WebAppProject | null>(
+    null,
+  );
   const [savedApps, setSavedApps] = useState<SavedWebAppSummary[]>([]);
   const [loadError, setLoadError] = useState("");
   const [hydrated, setHydrated] = useState(false);
@@ -129,6 +135,14 @@ export function ChatbotStudio() {
     [screen.children],
   );
 
+  // 지난 작업을 되살릴 수 있고, 아직 아무것도 만들지 않았을 때만 '이어서
+  // 만들기' 띠를 띄웁니다. 학생이 부품이나 블록을 하나라도 놓으면 새로
+  // 만드는 것으로 보고 띠를 거두며, 그때부터 자동 저장이 다시 켜집니다.
+  const showResumeBar =
+    resumableDraft !== null &&
+    componentCount === 0 &&
+    project.blocks.events.length === 0;
+
   const reset = history.reset;
 
   /* ---------------- 불러오기 ---------------- */
@@ -151,6 +165,9 @@ export function ChatbotStudio() {
             ? editingAppId!
             : "";
         let nextProject: WebAppProject | null = null;
+        // 편집기를 그냥 열었을 때(주소에 아무 표시가 없을 때) 되살릴 수 있는
+        // 지난 작업입니다. 화면은 빈 채로 열고, 이것만 따로 들고 갑니다.
+        let draftToResume: WebAppProject | null = null;
 
         // 설치한 앱의 시작 주소(run=saved)에는 내용이 같이 실려 있습니다. 홈 화면
         // 앱은 브라우저와 저장 공간이 달라 첫 실행 때 이 값으로 채워 넣어야
@@ -206,12 +223,18 @@ export function ChatbotStudio() {
             }
           }
         } else {
+          // 편집기를 그냥 열었습니다. 언제나 빈 웹앱으로 시작하고, 지난번에
+          // 만들던 것이 있으면 되살리지 않고 '이어서 만들기'로만 되돌립니다.
           const saved = window.localStorage.getItem(STORAGE_KEY);
           if (saved) {
             try {
-              nextProject = normalizeProject(JSON.parse(saved));
+              const draft = normalizeProject(JSON.parse(saved));
+              const hasContent =
+                draft.screens[0].children.length > 0 ||
+                draft.blocks.events.length > 0;
+              if (hasContent) draftToResume = draft;
             } catch {
-              nextProject = cloneProject(DEFAULT_PROJECT);
+              // 깨진 저장분은 무시하고 빈 화면으로 엽니다.
             }
           }
         }
@@ -226,6 +249,7 @@ export function ChatbotStudio() {
           reset(cloneProject(DEFAULT_PROJECT));
         }
 
+        setResumableDraft(draftToResume);
         setActiveAppId(nextAppId);
         setSavedApps(listSavedWebApps(window.localStorage));
         setStandalone(isStandalone);
@@ -259,6 +283,10 @@ export function ChatbotStudio() {
   /* 되돌리기를 여러 번 눌러도 저장이 몰아치지 않도록 잠깐 모았다 씁니다. */
   useEffect(() => {
     if (!hydrated || standalone) return;
+    // '이어서 만들기' 띠가 떠 있는 동안(빈 화면 + 되살릴 작업 있음)에는
+    // 저장하지 않습니다. 빈 화면을 그대로 저장하면 되돌릴 내용이 지워지기
+    // 때문입니다. 학생이 무언가 만들기 시작하면 띠가 사라지고 다시 저장합니다.
+    if (showResumeBar) return;
     const timer = window.setTimeout(() => {
       try {
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(project));
@@ -274,7 +302,7 @@ export function ChatbotStudio() {
     }, 400);
 
     return () => window.clearTimeout(timer);
-  }, [activeAppId, hydrated, project, standalone]);
+  }, [activeAppId, hydrated, project, showResumeBar, standalone]);
 
   useEffect(() => {
     if (!previewOpen && !libraryOpen) return;
@@ -440,6 +468,16 @@ export function ChatbotStudio() {
     setSelected("screen");
     setMode("designer");
     notify("빈 웹앱으로 돌아왔어요. 되돌리기로 되살릴 수 있어요.");
+  };
+
+  /** 빈 화면으로 열렸을 때, 지난번에 만들던 것을 다시 불러옵니다. */
+  const resumeDraft = () => {
+    if (!resumableDraft) return;
+    reset(cloneProject(resumableDraft));
+    setResumableDraft(null);
+    setSelected("screen");
+    setMode("designer");
+    notify("지난번에 만들던 것을 다시 불러왔어요.");
   };
 
   /* ---------------- 끌어 놓기 ---------------- */
@@ -934,6 +972,28 @@ export function ChatbotStudio() {
           </button>
         </div>
       </header>
+
+      {showResumeBar && (
+        <div className="resume-draft-bar" role="status">
+          <span>
+            <RotateCcw size={16} aria-hidden="true" />
+            지난번에 만들던 것이 있어요. 새로 시작하려면 그냥 만들면 돼요.
+          </span>
+          <span className="resume-draft-actions">
+            <button type="button" onClick={resumeDraft}>
+              이어서 만들기
+            </button>
+            <button
+              type="button"
+              className="resume-draft-dismiss"
+              aria-label="이 안내 닫기"
+              onClick={() => setResumableDraft(null)}
+            >
+              <X size={16} aria-hidden="true" />
+            </button>
+          </span>
+        </div>
+      )}
 
       <section className="learning-strip" aria-label="웹앱 만들기 순서">
         <div className={mode === "designer" ? "current" : ""}>
