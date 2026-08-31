@@ -149,17 +149,15 @@ export function useAppRuntime(
             parsed.extra === undefined
               ? adoptLegacy(parsed, screen.children)
               : (asRecord(parsed.extra) as Record<string, PartState>);
-          restored = {
-            runtime: {
-              ...restored.runtime,
-              props: asRecord(parsed.props) as RuntimeState["props"],
-              vars: {
-                ...restored.runtime.vars,
-                ...(asRecord(parsed.vars) as RuntimeState["vars"]),
-              },
-            },
-            extra,
-          };
+          // 블록이 바꿔 놓은 속성과 변수는 되살리지 않습니다. 그 값들은 지난번에
+          // 프로그램을 돌린 결과일 뿐인데, 되살리면 설계보다 앞서기 때문에
+          // (interpreter.ts의 resolveProp) 블록이나 속성을 고쳐도 화면이 예전
+          // 값 그대로 남습니다. 학생이 "고쳤는데 왜 안 바뀌지?"에서 막히던
+          // 자리입니다. 열 때마다 지금 블록으로 다시 계산합니다.
+          //
+          // 학생이 적은 것(체크한 항목, 기록장 글, 캠프 기록)은 extra에 있고,
+          // 이것만 그대로 이어집니다.
+          restored = { runtime: restored.runtime, extra };
         }
       } catch {
         // 저장 내용이 깨졌다고 웹앱까지 못 열리면 안 됩니다.
@@ -183,11 +181,10 @@ export function useAppRuntime(
         window.localStorage,
         { appId: scopeId, legacyTitle: scopeLegacyTitle },
         "runtime",
-        JSON.stringify({
-          props: state.runtime.props,
-          vars: state.runtime.vars,
-          extra: state.extra,
-        }),
+        // 학생이 적은 것만 남깁니다. 블록이 계산한 속성·변수를 같이 저장하면
+        // 다음에 열 때 그 값이 설계를 덮어써서 고친 것이 반영되지 않습니다.
+        // 사진이 든 기록에서 저장 공간을 아끼는 효과도 있습니다.
+        JSON.stringify({ extra: state.extra }),
       );
       // 저장에 실패한 것을 말없이 넘기면 학생은 저장된 줄 압니다.
       setStorageFull(result === "full");

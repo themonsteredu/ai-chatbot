@@ -5171,121 +5171,121 @@ select:focus-visible {
   transform: none !important;
 }
 
-.standalone-phone .app-hero strong {
+.readable-phone .app-hero strong {
   font-size: 17px;
 }
 
-.standalone-phone .app-hero em,
-.standalone-phone .notice-card p,
-.standalone-phone .journal-card textarea,
-.standalone-phone .action-feature > button,
-.standalone-phone .chatbot-feature-heading em,
-.standalone-phone .chatbot-action-preview button,
-.standalone-phone .open-chatbot-button,
-.standalone-phone .chatbot-empty-help,
-.standalone-phone .camp-report-heading em,
-.standalone-phone .camp-day-preview b,
-.standalone-phone .camp-report-card > button {
+.readable-phone .app-hero em,
+.readable-phone .notice-card p,
+.readable-phone .journal-card textarea,
+.readable-phone .action-feature > button,
+.readable-phone .chatbot-feature-heading em,
+.readable-phone .chatbot-action-preview button,
+.readable-phone .open-chatbot-button,
+.readable-phone .chatbot-empty-help,
+.readable-phone .camp-report-heading em,
+.readable-phone .camp-day-preview b,
+.readable-phone .camp-report-card > button {
   font-size: 11px;
 }
 
-.standalone-phone .app-hero small,
-.standalone-phone .card-eyebrow,
-.standalone-phone .checklist-card header small,
-.standalone-phone .journal-card header small,
-.standalone-phone .chatbot-feature-heading small,
-.standalone-phone .camp-report-heading small,
-.standalone-phone .camp-day-preview small {
+.readable-phone .app-hero small,
+.readable-phone .card-eyebrow,
+.readable-phone .checklist-card header small,
+.readable-phone .journal-card header small,
+.readable-phone .chatbot-feature-heading small,
+.readable-phone .camp-report-heading small,
+.readable-phone .camp-day-preview small {
   font-size: 9px;
 }
 
-.standalone-phone .notice-card h3,
-.standalone-phone .checklist-card header strong,
-.standalone-phone .journal-card header strong,
-.standalone-phone .chatbot-feature-heading strong,
-.standalone-phone .camp-report-heading strong {
+.readable-phone .notice-card h3,
+.readable-phone .checklist-card header strong,
+.readable-phone .journal-card header strong,
+.readable-phone .chatbot-feature-heading strong,
+.readable-phone .camp-report-heading strong {
   font-size: 15px;
 }
 
-.standalone-phone .empty-phone-state strong {
+.readable-phone .empty-phone-state strong {
   font-size: 14px;
 }
 
-.standalone-phone .empty-phone-state > span:last-child {
+.readable-phone .empty-phone-state > span:last-child {
   font-size: 11px;
 }
 
-.standalone-phone .phone-checklist label,
-.standalone-phone .journal-save-button {
+.readable-phone .phone-checklist label,
+.readable-phone .journal-save-button {
   font-size: 11px;
 }
 
-.standalone-phone .camp-report-sheet > header strong,
-.standalone-phone .phone-chatbot-sheet > header strong {
+.readable-phone .camp-report-sheet > header strong,
+.readable-phone .phone-chatbot-sheet > header strong {
   font-size: 15px;
 }
 
-.standalone-phone .camp-report-sheet > header small,
-.standalone-phone .camp-report-sheet > header > b,
-.standalone-phone .phone-chatbot-sheet > header small {
+.readable-phone .camp-report-sheet > header small,
+.readable-phone .camp-report-sheet > header > b,
+.readable-phone .phone-chatbot-sheet > header small {
   font-size: 10px;
 }
 
-.standalone-phone .student-name-field span,
-.standalone-phone .student-name-field input,
-.standalone-phone .camp-day-tabs b,
-.standalone-phone .camp-session-entry summary,
-.standalone-phone .camp-session-fields textarea,
-.standalone-phone .camp-final-reflection textarea {
+.readable-phone .student-name-field span,
+.readable-phone .student-name-field input,
+.readable-phone .camp-day-tabs b,
+.readable-phone .camp-session-entry summary,
+.readable-phone .camp-session-fields textarea,
+.readable-phone .camp-final-reflection textarea {
   font-size: 13px;
 }
 
-.standalone-phone .camp-day-tabs span,
-.standalone-phone .camp-session-entry summary strong,
-.standalone-phone .camp-session-fields > label > span,
-.standalone-phone .camp-photo-field > span,
-.standalone-phone .camp-photo-upload small,
-.standalone-phone .camp-report-sheet > footer > span {
+.readable-phone .camp-day-tabs span,
+.readable-phone .camp-session-entry summary strong,
+.readable-phone .camp-session-fields > label > span,
+.readable-phone .camp-photo-field > span,
+.readable-phone .camp-photo-upload small,
+.readable-phone .camp-report-sheet > footer > span {
   font-size: 10px;
 }
 
-.standalone-phone .camp-photo-upload strong,
-.standalone-phone .camp-photo-preview label,
-.standalone-phone .camp-photo-preview button,
-.standalone-phone .camp-report-sheet > footer > button {
+.readable-phone .camp-photo-upload strong,
+.readable-phone .camp-photo-preview label,
+.readable-phone .camp-photo-preview button,
+.readable-phone .camp-report-sheet > footer > button {
   font-size: 12px;
 }
 
-.standalone-phone .quick-question,
-.standalone-phone .phone-input input {
+.readable-phone .quick-question,
+.readable-phone .phone-input input {
   font-size: 12px;
 }
 
-.standalone-phone .quick-question,
-.standalone-phone .phone-input button,
-.standalone-phone .journal-save-button,
-.standalone-phone .action-feature > button,
-.standalone-phone .open-chatbot-button,
-.standalone-phone .camp-report-card > button,
-.standalone-phone .camp-day-tabs button,
-.standalone-phone .camp-session-entry summary,
-.standalone-phone .camp-photo-preview label,
-.standalone-phone .camp-photo-preview button,
-.standalone-phone .camp-report-sheet > footer > button {
+.readable-phone .quick-question,
+.readable-phone .phone-input button,
+.readable-phone .journal-save-button,
+.readable-phone .action-feature > button,
+.readable-phone .open-chatbot-button,
+.readable-phone .camp-report-card > button,
+.readable-phone .camp-day-tabs button,
+.readable-phone .camp-session-entry summary,
+.readable-phone .camp-photo-preview label,
+.readable-phone .camp-photo-preview button,
+.readable-phone .camp-report-sheet > footer > button {
   min-height: 44px;
 }
 
-.standalone-phone .phone-checklist label,
-.standalone-phone .phone-chatbot-sheet > header > button,
-.standalone-phone .camp-report-sheet > header > button {
+.readable-phone .phone-checklist label,
+.readable-phone .phone-chatbot-sheet > header > button,
+.readable-phone .camp-report-sheet > header > button {
   min-height: 40px;
 }
 
-.standalone-phone button,
-.standalone-phone input,
-.standalone-phone textarea,
-.standalone-phone summary,
-.standalone-phone label {
+.readable-phone button,
+.readable-phone input,
+.readable-phone textarea,
+.readable-phone summary,
+.readable-phone label {
   touch-action: manipulation;
 }
 

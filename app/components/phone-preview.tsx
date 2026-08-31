@@ -69,11 +69,13 @@ export function PhonePreview({
           },
         };
 
+  // 학생이 실제로 쓰는 화면(실행·설치한 웹앱)은 글자와 누를 자리를 읽을 수 있는
+  // 크기로 키웁니다. 편집 화면의 미리보기는 설계를 보는 곳이라 그대로 둡니다.
   return (
     <div
-      className={`phone ${interactive ? "phone-interactive" : ""} ${
-        standalone ? "standalone-phone" : ""
-      }`}
+      className={`phone ${
+        interactive ? "phone-interactive readable-phone" : ""
+      } ${standalone ? "standalone-phone" : ""}`}
       style={
         {
           "--phone-accent": project.accent,

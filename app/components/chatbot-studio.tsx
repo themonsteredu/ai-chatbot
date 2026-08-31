@@ -78,6 +78,10 @@ import { WebAppPlayer } from "./webapp-player";
 const STORAGE_KEY = "my-webapp-inventor-project-v3";
 const LEGACY_INSTALLED_PROJECT_KEY = "my-webapp-installed-project-v1";
 
+/** 저장 공간이 차서 자동 저장이 막혔을 때 학생에게 띄우는 말입니다. */
+const STORAGE_FULL_MESSAGE =
+  "저장 공간이 가득 찼어요. 사진을 몇 장 지우거나 '내 웹앱'에서 안 쓰는 웹앱을 지워 주세요.";
+
 type MobilePanel = "build" | "viewer";
 type Selected = "screen" | "header" | string;
 
@@ -256,8 +260,17 @@ export function ChatbotStudio() {
   useEffect(() => {
     if (!hydrated || standalone) return;
     const timer = window.setTimeout(() => {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(project));
-      if (activeAppId) saveWebApp(window.localStorage, project, activeAppId);
+      try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(project));
+        if (activeAppId) saveWebApp(window.localStorage, project, activeAppId);
+        // 자리를 비우고 다시 저장되면 경고를 거둡니다.
+        setToast((current) => (current === STORAGE_FULL_MESSAGE ? "" : current));
+      } catch {
+        // 저장 공간이 차면 setItem이 예외를 냅니다. 그대로 두면 타이머 안에서
+        // 조용히 죽어, 학생은 저장된 줄 알고 계속 만들다가 전부 잃습니다.
+        // 사진을 여러 장 넣으면 실제로 닿는 한계라 반드시 알려 줘야 합니다.
+        setToast(STORAGE_FULL_MESSAGE);
+      }
     }, 400);
 
     return () => window.clearTimeout(timer);
@@ -395,12 +408,25 @@ export function ChatbotStudio() {
     notify(`${node.name}을(를) 지웠어요. 되돌리기로 되살릴 수 있어요.`);
   };
 
+  /**
+   * 예제를 불러오거나 빈 웹앱으로 되돌리면, 지금 편집 중이던 저장된 웹앱에서
+   * 손을 뗍니다.
+   *
+   * 떼지 않으면 자동 저장이 `activeAppId` 자리에 새 내용을 그대로 덮어써서,
+   * 보관함에 있던 원래 웹앱이 예제나 빈 화면으로 바뀝니다. 화면은 "되돌리기로
+   * 되살릴 수 있어요"라고 하지만 되돌리기는 편집 중인 것만 되살리고 보관함의
+   * 사본은 이미 사라진 뒤입니다. 새로 만드는 것으로 보고, 저장은 학생이
+   * `내 웹앱으로 저장`을 누를 때 하도록 둡니다.
+   */
+  const detachFromSavedApp = () => setActiveAppId("");
+
   const applyTemplate = (templateId: TemplateId) => {
     const template = PROJECT_TEMPLATES.find((item) => item.id === templateId);
     if (!template || template.id === project.template) return;
     history.commit(() => cloneProject(template.project), {
       label: `${template.name} 불러오기`,
     });
+    detachFromSavedApp();
     setSelected("screen");
     setMode("designer");
     notify(`${template.name} 예제를 불러왔어요. 되돌리기로 돌아갈 수 있어요.`);
@@ -410,6 +436,7 @@ export function ChatbotStudio() {
     history.commit(() => cloneProject(DEFAULT_PROJECT), {
       label: "빈 웹앱으로 되돌리기",
     });
+    detachFromSavedApp();
     setSelected("screen");
     setMode("designer");
     notify("빈 웹앱으로 돌아왔어요. 되돌리기로 되살릴 수 있어요.");
