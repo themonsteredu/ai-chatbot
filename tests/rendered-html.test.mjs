@@ -27,14 +27,17 @@ test("starts with a blank App Inventor-style web app project", async () => {
   assert.match(studio, /my-webapp-inventor-project-v3/);
   assert.match(phone, /첫 부품을 놓아 보세요/);
 
-  // 팔레트·컴포넌트·속성 네 칸은 App Inventor를 따라온 뼈대입니다.
+  // 팔레트·부품 목록·속성 네 칸은 App Inventor를 따라온 뼈대입니다.
   const palette = await readFile(
     new URL("app/components/designer/palette-panel.tsx", root),
     "utf8",
   );
   assert.match(palette, /팔레트/);
   assert.match(palette, /application\/x-webapp-component/);
-  assert.match(studio, /컴포넌트/);
+  // 학생에게는 '컴포넌트'가 아니라 '부품'으로만 보여 줍니다. 같은 것을 두 이름으로
+  // 부르면 초등 교실에서 설명이 두 배로 듭니다.
+  assert.match(studio, /내가 놓은 부품/);
+  assert.doesNotMatch(studio, /<span>컴포넌트<\/span>/);
   assert.match(studio, /속성/);
 
   // 시작 예시는 빈 웹앱이 먼저입니다.

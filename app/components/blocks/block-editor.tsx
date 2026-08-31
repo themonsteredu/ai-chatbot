@@ -67,7 +67,7 @@ export function BlockPalette({
     <>
       <div className="panel-title">
         <span>블록</span>
-        <small>이벤트를 고르면 스택이 생겨요</small>
+        <small>‘언제’를 고르면 그 아래에 ‘무엇을 할지’를 붙여요</small>
       </div>
 
       <div className="block-chip-list">
@@ -187,7 +187,8 @@ export function BlockCanvas({
             <Sparkles size={20} aria-hidden="true" />
             <strong>아직 블록이 없어요</strong>
             <span>
-              왼쪽에서 이벤트를 고르면 “언제 무엇을 할지” 만들 수 있어요.
+              왼쪽에서 ‘언제’를 하나 골라 보세요. 고르면 그 아래에 무엇을 할지
+              붙일 수 있어요.
             </span>
           </div>
         )}

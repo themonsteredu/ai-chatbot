@@ -1027,7 +1027,7 @@ export function ChatbotStudio() {
 
           <section className="build-section components-panel">
             <div className="panel-title horizontal">
-              <span>컴포넌트</span>
+              <span>내가 놓은 부품</span>
               <small>{componentCount}개</small>
             </div>
             <ComponentTree
