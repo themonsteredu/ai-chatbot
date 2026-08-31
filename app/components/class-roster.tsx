@@ -231,10 +231,9 @@ export function ClassRoster({ teacherCode }: { teacherCode: string }) {
 
       {apps && defaultPin && (
         <p className="class-roster-default-pin" role="status">
-          기본 PIN으로 열려 있습니다. 이 번호는 소스에 적혀 있어 학생도 알아낼
-          수 있습니다. 학생 이름과 사진을 확실히 가리려면 배포 환경 변수
-          <b> TEACHER_ADMIN_CODE </b>에 우리 학교 코드를 등록해 주세요. 등록하면
-          기본 PIN은 더 이상 통하지 않습니다.
+          이 화면은 기본 PIN <b>3035</b>로 열립니다. 이 번호는 소스에 적혀
+          있어 학생도 알아낼 수 있습니다. 학생 이름과 사진이 보이는 화면이니,
+          수업 중에 아이들 앞에 띄워 두지 마세요.
         </p>
       )}
 

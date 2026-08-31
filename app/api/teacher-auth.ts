@@ -4,14 +4,13 @@ import type { NextRequest } from "next/server";
 /**
  * 교사용 요청에 쓰는 PIN 확인입니다.
  *
- * 배포 환경 변수에 코드를 등록하면 **그 코드만** 받습니다. 아무것도 등록하지
- * 않은 배포에서는 기본 PIN으로 엽니다. 학교에서 따로 설정하지 않고도 바로 쓸 수
- * 있어야 하기 때문입니다.
+ * 기본 PIN은 **언제나** 엽니다. 번호 하나(3035)로 지도안·예시 답안·반 명단이
+ * 전부 열려야 한다는 운영 결정입니다. 배포 환경 변수에 코드를 등록하면 그
+ * 코드도 **함께** 엽니다 — 기본 PIN을 막지 않습니다.
  *
- * 기본 PIN은 소스에 적혀 있어 마음먹은 학생은 알아낼 수 있습니다. 반 명단과
- * 캠프 사진까지 확실히 가리려면 TEACHER_ADMIN_CODE를 등록해 주세요. 등록하는
- * 순간 기본 PIN은 더 이상 통하지 않습니다. 지금 기본 PIN으로 열리고 있으면
- * 반 명단 화면 위에 그 사실을 띄웁니다.
+ * 기본 PIN은 소스와 README에 적혀 있어 마음먹은 학생은 알아낼 수 있습니다.
+ * 반 명단에는 학생 이름과 캠프 사진이 있으므로, 그 화면 위에 이 사실을 늘
+ * 띄웁니다.
  */
 
 const MAX_ATTEMPTS = 5;
@@ -52,20 +51,23 @@ export function readTeacherCodes() {
 }
 
 /**
- * 실제로 받아 줄 코드입니다. 등록한 것이 하나라도 있으면 기본 PIN은 빠집니다.
- * 학교가 자기 코드를 정한 순간부터 널리 알려진 번호로는 열리지 않아야 합니다.
+ * 실제로 받아 줄 코드입니다. 기본 PIN이 언제나 들어가고, 등록한 코드는 거기에
+ * 더해집니다. 번호 하나로 모든 교사 화면이 열리는 편을 학교가 골랐습니다.
  */
 export function activeTeacherCodes() {
   const configured = readTeacherCodes();
-  return configured.length > 0 ? configured : [DEFAULT_TEACHER_PIN];
+  return [
+    DEFAULT_TEACHER_PIN,
+    ...configured.filter((code) => code !== DEFAULT_TEACHER_PIN),
+  ];
 }
 
 /**
- * 지금 기본 PIN으로 열리고 있는지입니다. 학생 이름과 사진이 보이는 화면에서
- * 이 사실을 알려 주려고 씁니다.
+ * 기본 PIN으로 열리는지입니다. 기본 PIN은 이제 언제나 열리므로 항상 참이고,
+ * 학생 이름과 사진이 보이는 반 명단 화면은 이 사실을 늘 띄웁니다.
  */
 export function usingDefaultPin() {
-  return readTeacherCodes().length === 0;
+  return true;
 }
 
 export type TeacherCheck =

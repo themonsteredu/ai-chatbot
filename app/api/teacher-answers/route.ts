@@ -75,6 +75,9 @@ function resolveRole(code: string, codes: ReturnType<typeof readCodes>) {
   if (codes.instructor && sameCode(code, codes.instructor)) {
     return "instructor" as Role;
   }
+  // 기본 PIN은 다른 교사 화면과 같은 규칙으로 언제나 강사로 엽니다. 강사
+  // 코드를 다른 번호로 등록해도 기본 PIN이 막히지 않게 따로 확인합니다.
+  if (sameCode(code, DEFAULT_INSTRUCTOR_CODE)) return "instructor" as Role;
   return null;
 }
 

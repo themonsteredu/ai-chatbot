@@ -39,36 +39,37 @@ test("opens with the built-in PIN when the school configured nothing", async () 
   assert.equal(auth.usingDefault, true);
 });
 
-test("a configured code replaces the built-in PIN rather than joining it", async () => {
-  // 학교가 자기 코드를 정한 순간부터, 널리 알려진 번호로는 열리지 않아야 합니다.
+test("a configured code joins the built-in PIN instead of replacing it", async () => {
+  // 번호 하나(3035)로 모든 교사 화면이 열려야 한다는 운영 결정입니다.
+  // 코드를 등록해도 기본 PIN이 막히면 안 됩니다.
   const admin = await loadAuth({ TEACHER_ADMIN_CODE: "우리학교2026" });
-  assert.deepEqual(admin.active, ["우리학교2026"]);
-  assert.equal(admin.active.includes("3035"), false);
-  assert.equal(admin.usingDefault, false);
+  assert.deepEqual(admin.active, ["3035", "우리학교2026"]);
+  assert.equal(admin.usingDefault, true);
 
   const instructor = await loadAuth({ TEACHER_INSTRUCTOR_CODE: "8712" });
-  assert.deepEqual(instructor.active, ["8712"]);
-  assert.equal(instructor.usingDefault, false);
+  assert.deepEqual(instructor.active, ["3035", "8712"]);
 
   const both = await loadAuth({
     TEACHER_ADMIN_CODE: "운영자",
     TEACHER_INSTRUCTOR_CODE: "강사",
   });
-  assert.deepEqual(both.active, ["운영자", "강사"]);
-  assert.equal(both.usingDefault, false);
+  assert.deepEqual(both.active, ["3035", "운영자", "강사"]);
 });
 
 test("keeps honouring the old variable name", async () => {
   const legacy = await loadAuth({ TEACHER_ACCESS_CODE: "예전코드" });
-  assert.deepEqual(legacy.active, ["예전코드"]);
-  assert.equal(legacy.usingDefault, false);
+  assert.deepEqual(legacy.active, ["3035", "예전코드"]);
 });
 
-test("blank or spaces-only settings fall back to the built-in PIN", async () => {
+test("blank settings and a re-registered 3035 both leave one clean PIN", async () => {
   // 환경 변수를 만들어 두고 값을 비워 둔 배포가 잠겨 버리면 안 됩니다.
   const blank = await loadAuth({ TEACHER_ADMIN_CODE: "   " });
   assert.deepEqual(blank.active, ["3035"]);
   assert.equal(blank.usingDefault, true);
+
+  // 기본 PIN을 그대로 등록해도 같은 번호가 두 번 들어가지 않아야 합니다.
+  const same = await loadAuth({ TEACHER_ADMIN_CODE: "3035" });
+  assert.deepEqual(same.active, ["3035"]);
 });
 
 test("the roster tells the teacher when the built-in PIN is in use", async () => {
@@ -78,9 +79,9 @@ test("the roster tells the teacher when the built-in PIN is in use", async () =>
     readFile(new URL("app/api/class-webapps/route.ts", root), "utf8"),
     readFile(new URL("app/components/class-roster.tsx", root), "utf8"),
   ]);
-  // 학생 이름과 사진이 보이는 화면이라, 기본 PIN으로 열렸다는 사실을 숨기면 안 됩니다.
+  // 학생 이름과 사진이 보이는 화면이라, 기본 PIN으로 열린다는 사실을 숨기면 안 됩니다.
   assert.match(route, /defaultPin: usingDefaultPin\(\)/);
   assert.match(roster, /setDefaultPin\(body\.defaultPin === true\)/);
   assert.match(roster, /class-roster-default-pin/);
-  assert.match(roster, /TEACHER_ADMIN_CODE/);
+  assert.match(roster, /3035/);
 });

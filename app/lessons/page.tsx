@@ -31,9 +31,8 @@ export default function LessonsPage() {
 
         <p className="teacher-panel-note">
           <ShieldCheck size={15} aria-hidden="true" />
-          지도안 내용은 서버에만 있고, 코드가 맞을 때만 전송됩니다. 반 명단과
-          학생 작품을 보는 화면은 이 코드와 별개로 배포 환경 변수에 등록한
-          코드가 있어야 열립니다.
+          지도안 내용은 서버에만 있고, 코드가 맞을 때만 전송됩니다. 같은
+          코드로 반 명단과 학생 작품을 보는 화면도 열립니다.
         </p>
       </div>
     </main>
