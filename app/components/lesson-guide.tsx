@@ -17,6 +17,9 @@ import { SAMPLES, type Sample } from "../../lib/lessons/samples";
 
 type LessonPlan = {
   id: string;
+  sampleId: string;
+  band: string;
+  minutes: number;
   order: number;
   title: string;
   objectives: string[];
@@ -68,7 +71,7 @@ export function LessonGuide() {
     }
   };
 
-  const planFor = (id: string) => plans?.find((plan) => plan.id === id);
+  const sampleFor = (id: string) => SAMPLES.find((sample) => sample.id === id);
 
   return (
     <>
@@ -136,14 +139,22 @@ export function LessonGuide() {
       )}
 
       {plans &&
-        SAMPLES.map((sample) => {
-          const plan = planFor(sample.id);
-          if (!plan) return null;
+        plans.map((plan) => {
+          const sample = sampleFor(plan.sampleId);
           return (
             <section className="lesson-plan" key={plan.id}>
               <header className="lesson-plan-head">
-                <span className="lesson-order">{plan.order}차시</span>
+                <span className="lesson-band">{plan.band}</span>
+                <span className="lesson-order">
+                  {plan.order}차시 · {plan.minutes}분
+                </span>
                 <h2>{plan.title}</h2>
+                {sample && (
+                  <a className="lesson-open" href={openHref(sample)}>
+                    <Play size={14} aria-hidden="true" />
+                    예시 열기
+                  </a>
+                )}
                 <button
                   className="lesson-print"
                   type="button"
@@ -300,7 +311,7 @@ function printWorksheet(plan: LessonPlan) {
 <div class="top">
   <div>
     <h1>${escape(plan.title)}</h1>
-    <small>${plan.order}차시 활동지 · 나만의 웹앱 만들기</small>
+    <small>${escape(plan.band)} · ${plan.order}차시 활동지(${plan.minutes}분) · 나만의 웹앱 만들기</small>
   </div>
   <button onclick="window.print()">인쇄 / PDF로 저장</button>
 </div>
