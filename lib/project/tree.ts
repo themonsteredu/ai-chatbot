@@ -183,6 +183,81 @@ export function placeNear(nodes: ComponentNode[], selectedId: string): Location 
   return at?.parentId ? { parentId: at.parentId, index: at.index + 1 } : end;
 }
 
+/** 눌러서 한 칸씩 옮기는 네 가지입니다. */
+export type MoveStep = "up" | "down" | "in" | "out";
+
+/** 이 부품이 자기 안에 몇 겹을 데리고 있는지입니다. 혼자면 0입니다. */
+function heightOf(node: ComponentNode): number {
+  const children = node.children ?? [];
+  if (children.length === 0) return 0;
+  return 1 + Math.max(...children.map(heightOf));
+}
+
+/**
+ * 눌러서 한 칸 옮겼을 때 가 닿을 자리입니다. 옮길 수 없으면 null입니다.
+ *
+ * 끌어 놓기가 없는 태블릿에서도 배치 부품에 담고 뺄 수 있어야 해서, 부품 목록의
+ * 위·아래·안으로·밖으로 단추가 이 자리를 씁니다.
+ */
+function stepTarget(
+  nodes: ComponentNode[],
+  id: string,
+  step: MoveStep,
+): Location | null {
+  const node = findNode(nodes, id);
+  const at = locate(nodes, id);
+  if (!node || !at) return null;
+
+  const siblings = at.parentId
+    ? (findNode(nodes, at.parentId)?.children ?? [])
+    : nodes;
+
+  switch (step) {
+    case "up":
+      return at.index > 0 ? { parentId: at.parentId, index: at.index - 1 } : null;
+    case "down":
+      return at.index < siblings.length - 1
+        ? { parentId: at.parentId, index: at.index + 1 }
+        : null;
+    case "in": {
+      // 바로 위 배치 부품에 먼저 담고, 없으면 바로 아래 배치 부품에 담습니다.
+      const above = siblings[at.index - 1];
+      const below = siblings[at.index + 1];
+      const box = [above, below].find((one) => one && acceptsChildren(one));
+      if (!box) return null;
+      // 너무 깊이 겹치면 설계를 정리할 때 안쪽이 통째로 버려집니다.
+      if (depthOf(nodes, box.id) + 1 + heightOf(node) > MAX_NEST_DEPTH) return null;
+      return box === above
+        ? { parentId: box.id, index: box.children?.length ?? 0 }
+        : { parentId: box.id, index: 0 };
+    }
+    case "out": {
+      if (!at.parentId) return null;
+      // 담고 있던 배치 부품 바로 뒤로 나옵니다.
+      const outer = locate(nodes, at.parentId);
+      return outer ? { parentId: outer.parentId, index: outer.index + 1 } : null;
+    }
+  }
+}
+
+/** 그쪽으로 옮길 수 있는지입니다. 단추를 켜고 끌 때 씁니다. */
+export function canStep(nodes: ComponentNode[], id: string, step: MoveStep) {
+  return stepTarget(nodes, id, step) !== null;
+}
+
+/** 눌러서 한 칸 옮깁니다. 옮길 수 없으면 받은 트리를 그대로 돌려줍니다. */
+export function stepNode(
+  nodes: ComponentNode[],
+  id: string,
+  step: MoveStep,
+): ComponentNode[] {
+  const node = findNode(nodes, id);
+  const to = stepTarget(nodes, id, step);
+  if (!node || !to) return nodes;
+  // 자리 번호는 부품을 빼낸 뒤를 기준으로 셉니다.
+  return insertNode(removeNode(nodes, id), node, to);
+}
+
 /** 어떤 부품을 자기 자신이나 자기 안쪽으로 옮기면 트리가 끊깁니다. */
 export function isInside(
   nodes: ComponentNode[],

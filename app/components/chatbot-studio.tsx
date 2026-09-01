@@ -41,7 +41,9 @@ import {
 } from "../../lib/chatbot-studio";
 import { REGISTRY } from "../../lib/components/registry";
 import {
+  type MoveStep,
   canAdd,
+  canStep,
   createNode,
   duplicateNode,
   findNode,
@@ -50,6 +52,7 @@ import {
   moveNode,
   placeNear,
   removeNode,
+  stepNode,
   updateNode,
   walk,
 } from "../../lib/project/tree";
@@ -372,6 +375,19 @@ export function ChatbotStudio() {
       parent
         ? `${node.name}을(를) ${parent.name} 안에 놓았어요.`
         : `${node.name}을(를) 놓았어요.`,
+    );
+  };
+
+  /**
+   * 부품 목록의 위·아래·안으로·밖으로 단추입니다. 태블릿에는 끌어 놓기가 없어,
+   * 이미 놓은 부품을 배치 부품에 담고 빼는 길이 이것뿐입니다.
+   */
+  const moveStep = (nodeId: string, step: MoveStep) => {
+    const node = findNode(screen.children, nodeId);
+    if (!node) return;
+    setChildren(
+      (children) => stepNode(children, nodeId, step),
+      `${node.name} 옮기기`,
     );
   };
 
@@ -1101,6 +1117,8 @@ export function ChatbotStudio() {
               selected={selected}
               {...designHooks}
               onSelect={selectTarget}
+              onMove={moveStep}
+              canMove={(nodeId, step) => canStep(screen.children, nodeId, step)}
             />
           </section>
 

@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   MAX_NEST_DEPTH,
   canAdd,
+  canStep,
   createNode,
   depthOf,
   duplicateNode,
@@ -14,6 +15,7 @@ import {
   nextName,
   placeNear,
   removeNode,
+  stepNode,
   updateNode,
   walk,
 } from "../lib/project/tree.ts";
@@ -179,6 +181,7 @@ test("never changes the tree it was handed", () => {
 
   removeNode(nodes, nodes[0].id);
   moveNode(nodes, nodes[0].id, { parentId: null, index: 1 });
+  stepNode(nodes, nodes[0].id, "down");
   updateNode(nodes, nodes[0].id, (node) => ({ ...node, name: "바뀐 이름" }));
   duplicateNode(nodes, nodes[0].id);
 
@@ -249,4 +252,84 @@ test("never taps a part into a layout stacked deeper than the tree keeps", () =>
 
   assert.equal(depthOf(nodes, parent.id), MAX_NEST_DEPTH);
   assert.deepEqual(placeNear(nodes, parent.id), { parentId: null, index: 1 });
+});
+
+test("taps a part into the layout part beside it, and back out again", () => {
+  // 태블릿에는 끌어 놓기가 없어, 이 길로만 배치 부품을 채우고 비웁니다.
+  let nodes = build(["column", "button"]);
+  const [column, button] = nodes;
+
+  assert.equal(canStep(nodes, button.id, "in"), true);
+  nodes = stepNode(nodes, button.id, "in");
+  assert.deepEqual(nodes.map((node) => node.id), [column.id]);
+  assert.deepEqual(
+    findNode(nodes, column.id).children.map((child) => child.id),
+    [button.id],
+  );
+
+  // 밖으로 빼면 담고 있던 배치 부품 바로 뒤에 섭니다.
+  assert.equal(canStep(nodes, button.id, "out"), true);
+  nodes = stepNode(nodes, button.id, "out");
+  assert.deepEqual(nodes.map((node) => node.id), [column.id, button.id]);
+  assert.equal(findNode(nodes, column.id).children.length, 0);
+  assert.equal(canStep(nodes, button.id, "out"), false);
+});
+
+test("goes into the layout part below when there is none above", () => {
+  let nodes = build(["button", "column"]);
+  const [button, column] = nodes;
+
+  nodes = stepNode(nodes, button.id, "in");
+  assert.deepEqual(
+    findNode(nodes, column.id).children.map((child) => child.id),
+    [button.id],
+  );
+
+  // 옆에 배치 부품이 없으면 안으로 넣을 수 없습니다.
+  const flat = build(["label", "button"]);
+  assert.equal(canStep(flat, flat[1].id, "in"), false);
+});
+
+test("moves a part up and down among the parts beside it", () => {
+  let nodes = build(["label", "button", "divider"]);
+  const [label, button, divider] = nodes;
+
+  assert.equal(canStep(nodes, label.id, "up"), false);
+  assert.equal(canStep(nodes, divider.id, "down"), false);
+
+  nodes = stepNode(nodes, button.id, "up");
+  assert.deepEqual(nodes.map((node) => node.id), [button.id, label.id, divider.id]);
+
+  nodes = stepNode(nodes, button.id, "down");
+  nodes = stepNode(nodes, button.id, "down");
+  assert.deepEqual(nodes.map((node) => node.id), [label.id, divider.id, button.id]);
+  assert.equal(canStep(nodes, button.id, "down"), false);
+});
+
+test("keeps a tapped part from stacking deeper than the tree keeps", () => {
+  // 배치 부품을 정리 규칙이 버리는 깊이까지 겹쳐 둡니다.
+  let nodes = build(["column"]);
+  let deepest = nodes[0];
+  for (let depth = 1; depth <= MAX_NEST_DEPTH; depth += 1) {
+    const child = createNode(nodes, "column");
+    nodes = insertNode(nodes, child, { parentId: deepest.id, index: 0 });
+    deepest = child;
+  }
+  const parentOfDeepest = locate(nodes, deepest.id).parentId;
+
+  // 가장 깊은 배치 부품 옆에 선 부품은 그 안으로 못 들어갑니다.
+  const button = createNode(nodes, "button");
+  nodes = insertNode(nodes, button, { parentId: parentOfDeepest, index: 1 });
+  assert.equal(depthOf(nodes, deepest.id), MAX_NEST_DEPTH);
+  assert.equal(canStep(nodes, button.id, "in"), false);
+  assert.deepEqual(stepNode(nodes, button.id, "in"), nodes);
+
+  // 안에 부품을 담고 있는 배치 부품은 한 칸 더 얕은 곳에서도 막힙니다.
+  let shallow = build(["column", "column"]);
+  const filled = shallow[1];
+  shallow = insertNode(shallow, createNode(shallow, "label"), {
+    parentId: filled.id,
+    index: 0,
+  });
+  assert.equal(canStep(shallow, filled.id, "in"), true);
 });

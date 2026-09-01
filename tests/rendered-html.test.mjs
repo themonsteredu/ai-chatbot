@@ -698,3 +698,22 @@ test("shows every class at once without typing a class code", async () => {
   assert.match(roster, /studentCount/);
   assert.match(roster, /recordCount/);
 });
+
+test("builds layouts by tapping, for tablets with no drag and drop", async () => {
+  const [tree, palette, studio] = await Promise.all([
+    readFile(new URL("app/components/designer/component-tree.tsx", root), "utf8"),
+    readFile(new URL("app/components/designer/palette-panel.tsx", root), "utf8"),
+    readFile(new URL("app/components/chatbot-studio.tsx", root), "utf8"),
+  ]);
+
+  // 부품 목록에서 고른 부품을 눌러서 배치 부품에 담고 뺄 수 있어야 합니다.
+  for (const label of ["위로", "아래로", "안으로", "밖으로"]) {
+    assert.match(tree, new RegExp(`label: "${label}"`), `옮기기 단추 — ${label}`);
+  }
+  assert.match(tree, /canMove\(node\.id, step\)/);
+  assert.match(studio, /stepNode\(children, nodeId, step\)/);
+
+  // 팔레트를 눌러서 놓을 때도 고른 자리를 따라갑니다.
+  assert.match(studio, /placeNear\(screen\.children, selected\)/);
+  assert.match(palette, /놓을 자리를 고르고 눌러요/);
+});
