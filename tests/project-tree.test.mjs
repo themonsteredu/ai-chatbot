@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  MAX_NEST_DEPTH,
   canAdd,
   createNode,
+  depthOf,
   duplicateNode,
   findNode,
   insertNode,
@@ -10,6 +12,7 @@ import {
   locate,
   moveNode,
   nextName,
+  placeNear,
   removeNode,
   updateNode,
   walk,
@@ -180,4 +183,70 @@ test("never changes the tree it was handed", () => {
   duplicateNode(nodes, nodes[0].id);
 
   assert.deepEqual(nodes, snapshot, "되돌리기가 예전 상태를 붙들 수 있어야 합니다.");
+});
+
+test("counts how deep a part sits inside layout parts", () => {
+  let nodes = build(["column"]);
+  const column = nodes[0];
+  const inner = createNode(nodes, "row");
+  nodes = insertNode(nodes, inner, { parentId: column.id, index: 0 });
+  const button = createNode(nodes, "button");
+  nodes = insertNode(nodes, button, { parentId: inner.id, index: 0 });
+
+  assert.equal(depthOf(nodes, column.id), 0);
+  assert.equal(depthOf(nodes, inner.id), 1);
+  assert.equal(depthOf(nodes, button.id), 2);
+  assert.equal(depthOf(nodes, "없는부품"), -1);
+});
+
+test("puts a tapped part inside the layout part the student picked", () => {
+  // 태블릿에는 끌어 놓기가 없어, 눌러서도 세로 배치를 채울 수 있어야 합니다.
+  let nodes = build(["label", "column"]);
+  const column = nodes[1];
+
+  assert.deepEqual(placeNear(nodes, column.id), {
+    parentId: column.id,
+    index: 0,
+  });
+
+  const first = createNode(nodes, "button");
+  nodes = insertNode(nodes, first, placeNear(nodes, column.id));
+  assert.equal(findNode(nodes, column.id).children.length, 1);
+
+  // 방금 놓은 부품이 골라져 있으면, 다음 부품은 그 바로 뒤에 놓입니다.
+  assert.deepEqual(placeNear(nodes, first.id), {
+    parentId: column.id,
+    index: 1,
+  });
+  const second = createNode(nodes, "label");
+  nodes = insertNode(nodes, second, placeNear(nodes, first.id));
+  assert.deepEqual(
+    findNode(nodes, column.id).children.map((child) => child.id),
+    [first.id, second.id],
+  );
+});
+
+test("falls back to the end of the screen when nothing useful is picked", () => {
+  const nodes = build(["label", "button"]);
+  const end = { parentId: null, index: 2 };
+
+  // 화면이나 머리글을 골랐을 때, 아무것도 안 골랐을 때입니다.
+  assert.deepEqual(placeNear(nodes, "screen"), end);
+  assert.deepEqual(placeNear(nodes, ""), end);
+  // 화면 바로 아래 부품을 골랐을 때는 지금까지처럼 맨 끝에 놓습니다.
+  assert.deepEqual(placeNear(nodes, nodes[0].id), end);
+});
+
+test("never taps a part into a layout stacked deeper than the tree keeps", () => {
+  // 정리 규칙이 버리는 깊이까지 들어가면, 놓은 부품이 조용히 사라집니다.
+  let nodes = build(["column"]);
+  let parent = nodes[0];
+  for (let depth = 1; depth <= MAX_NEST_DEPTH; depth += 1) {
+    const child = createNode(nodes, "column");
+    nodes = insertNode(nodes, child, { parentId: parent.id, index: 0 });
+    parent = child;
+  }
+
+  assert.equal(depthOf(nodes, parent.id), MAX_NEST_DEPTH);
+  assert.deepEqual(placeNear(nodes, parent.id), { parentId: null, index: 1 });
 });

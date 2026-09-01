@@ -21,7 +21,7 @@ export function PalettePanel({ nodes, onAdd }: PalettePanelProps) {
     <>
       <div className="panel-title palette-title">
         <span>팔레트</span>
-        <small>끌어 놓거나 눌러 부품 추가</small>
+        <small>끌어 놓거나, 놓을 자리를 고르고 눌러요</small>
       </div>
       {CATEGORIES.map((category) => {
         const open = !closed[category.id];

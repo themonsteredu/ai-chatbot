@@ -6,6 +6,12 @@
 import { REGISTRY, clonePropValue, specFor } from "../components/registry";
 import type { ComponentNode, ComponentTypeId, Screen } from "./types";
 
+/**
+ * 배치 부품을 몇 겹까지 겹쳐 담을 수 있는지입니다. 이보다 깊은 부품은 밖에서
+ * 들어온 설계를 정리할 때 버려지므로, 새로 놓을 때도 이 선을 넘지 않습니다.
+ */
+export const MAX_NEST_DEPTH = 8;
+
 /** 트리에 있는 모든 부품을 위에서 아래 순서로 훑습니다. */
 export function* walk(
   nodes: ComponentNode[],
@@ -122,6 +128,24 @@ export function updateNode(
   });
 }
 
+/**
+ * 화면 바로 아래에 놓인 부품이 0입니다. 배치 부품 안에 담길수록 한 칸씩
+ * 깊어집니다. 트리에 없으면 -1입니다.
+ */
+export function depthOf(
+  nodes: ComponentNode[],
+  id: string,
+  depth = 0,
+): number {
+  for (const node of nodes) {
+    if (node.id === id) return depth;
+    if (!node.children) continue;
+    const found = depthOf(node.children, id, depth + 1);
+    if (found >= 0) return found;
+  }
+  return -1;
+}
+
 export function locate(
   nodes: ComponentNode[],
   id: string,
@@ -135,6 +159,28 @@ export function locate(
     if (found) return found;
   }
   return null;
+}
+
+/**
+ * 팔레트를 눌러서 부품을 놓을 자리입니다. 지금 고른 곳을 따라갑니다.
+ *
+ * 배치 부품을 골라 두었으면 그 안 맨 끝에, 배치 부품 안의 부품을 골라 두었으면
+ * 그 부품 바로 뒤에 놓습니다. 그 밖에는 화면 맨 끝입니다. 태블릿에서는 끌어
+ * 놓기가 아예 안 되므로, 눌러서도 배치 부품을 채울 수 있어야 합니다.
+ */
+export function placeNear(nodes: ComponentNode[], selectedId: string): Location {
+  const end: Location = { parentId: null, index: nodes.length };
+  const node = selectedId ? findNode(nodes, selectedId) : null;
+  if (!node) return end;
+
+  if (acceptsChildren(node)) {
+    // 너무 깊이 겹친 부품은 설계를 정리할 때 통째로 버려집니다.
+    if (depthOf(nodes, node.id) + 1 > MAX_NEST_DEPTH) return end;
+    return { parentId: node.id, index: node.children?.length ?? 0 };
+  }
+
+  const at = locate(nodes, selectedId);
+  return at?.parentId ? { parentId: at.parentId, index: at.index + 1 } : end;
 }
 
 /** 어떤 부품을 자기 자신이나 자기 안쪽으로 옮기면 트리가 끊깁니다. */

@@ -15,7 +15,7 @@ import {
 } from "../components/registry";
 import { migrateV3, normalizeLegacy } from "./migrate-v3";
 import { BLANK_PROJECT, DEFAULT_PROJECT } from "./defaults";
-import { walk } from "./tree";
+import { MAX_NEST_DEPTH, walk } from "./tree";
 import type {
   Action,
   ActionIcon,
@@ -34,7 +34,6 @@ import type {
 import { PROJECT_SCHEMA_VERSION, SCREEN_TARGET } from "./types";
 
 const MAX_COMPONENTS = 120;
-const MAX_DEPTH = 8;
 const MAX_EVENTS = 60;
 const MAX_ACTIONS = 40;
 const MAX_EXPR_DEPTH = 8;
@@ -176,7 +175,7 @@ function normalizeNode(
       ? candidate.children
       : [];
     node.children =
-      depth >= MAX_DEPTH
+      depth >= MAX_NEST_DEPTH
         ? []
         : rawChildren
             .map((child) => normalizeNode(child, used, budget, depth + 1))

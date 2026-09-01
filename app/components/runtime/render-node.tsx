@@ -90,7 +90,9 @@ function Part({ node, runtime, campScope, onOpenChat, design }: RenderNodeProps)
           />
         ))}
         {children.length === 0 && (
-          <span className="part-container-hint">여기에 부품을 놓아요</span>
+          <span className="part-container-hint">
+            여기를 고르고 부품을 눌러요
+          </span>
         )}
       </div>
     );

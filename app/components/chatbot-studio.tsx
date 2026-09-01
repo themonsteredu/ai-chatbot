@@ -48,6 +48,7 @@ import {
   insertNode,
   locate,
   moveNode,
+  placeNear,
   removeNode,
   updateNode,
   walk,
@@ -355,18 +356,23 @@ export function ChatbotStudio() {
       return;
     }
     const node = createNode(screen.children, type);
+    // 끌어 놓지 않고 팔레트를 눌렀을 때는, 지금 고른 자리를 따라 놓습니다.
+    // 태블릿에는 끌어 놓기가 없어 이 길로만 배치 부품을 채웁니다.
+    const place = at ?? placeNear(screen.children, selected);
     setChildren(
-      (children) =>
-        insertNode(
-          children,
-          node,
-          at ?? { parentId: null, index: children.length },
-        ),
+      (children) => insertNode(children, node, place),
       `${REGISTRY[type].name} 추가`,
     );
     setSelected(node.id);
     setMobilePanel("build");
-    notify(`${node.name}을(를) 놓았어요.`);
+    const parent = place.parentId
+      ? findNode(screen.children, place.parentId)
+      : null;
+    notify(
+      parent
+        ? `${node.name}을(를) ${parent.name} 안에 놓았어요.`
+        : `${node.name}을(를) 놓았어요.`,
+    );
   };
 
   const changeProp = (nodeId: string, key: string, value: PropValue) => {
