@@ -3,9 +3,12 @@ import test from "node:test";
 import {
   MAX_NEST_DEPTH,
   canAdd,
+  canHold,
   canStep,
   createNode,
   depthOf,
+  holdCandidates,
+  holdNode,
   duplicateNode,
   findNode,
   insertNode,
@@ -332,4 +335,57 @@ test("keeps a tapped part from stacking deeper than the tree keeps", () => {
     index: 0,
   });
   assert.equal(canStep(shallow, filled.id, "in"), true);
+});
+
+test("holds a part into a layout part that is nowhere near it", () => {
+  // 화면 맨 위 부품을 맨 아래 배치 부품에 담습니다. 옆으로 옮기지 않아도 됩니다.
+  let nodes = build(["button", "list", "column", "textbox"]);
+  const [button, list, column, textbox] = nodes;
+
+  assert.equal(canHold(nodes, column.id, button.id), true);
+  nodes = holdNode(nodes, column.id, button.id);
+  nodes = holdNode(nodes, column.id, textbox.id);
+
+  assert.deepEqual(nodes.map((node) => node.id), [list.id, column.id]);
+  assert.deepEqual(
+    findNode(nodes, column.id).children.map((child) => child.id),
+    [button.id, textbox.id],
+  );
+  // 이미 담긴 부품은 다시 담을 것이 없습니다.
+  assert.equal(canHold(nodes, column.id, button.id), false);
+});
+
+test("never holds a layout part inside something it already holds", () => {
+  let nodes = build(["column"]);
+  const outer = nodes[0];
+  const inner = createNode(nodes, "row");
+  nodes = insertNode(nodes, inner, { parentId: outer.id, index: 0 });
+
+  assert.equal(canHold(nodes, inner.id, outer.id), false);
+  assert.deepEqual(holdNode(nodes, inner.id, outer.id), nodes);
+  // 자기 자신도 담을 수 없습니다.
+  assert.equal(canHold(nodes, outer.id, outer.id), false);
+  // 배치 부품이 아닌 곳에는 아무것도 담기지 않습니다.
+  const flat = build(["label", "button"]);
+  assert.equal(canHold(flat, flat[0].id, flat[1].id), false);
+});
+
+test("offers every part a layout part could take", () => {
+  let nodes = build(["button", "column", "list"]);
+  const column = nodes[1];
+  const inside = createNode(nodes, "label");
+  nodes = insertNode(nodes, inside, { parentId: column.id, index: 0 });
+
+  assert.deepEqual(
+    holdCandidates(nodes, column.id).map((node) => node.name),
+    ["버튼1", "목록1"],
+  );
+
+  // 안에 담긴 것을 다른 배치 부품이 데려갈 수는 있습니다.
+  const row = createNode(nodes, "row");
+  nodes = insertNode(nodes, row, { parentId: null, index: 0 });
+  assert.ok(
+    holdCandidates(nodes, row.id).some((node) => node.id === inside.id),
+    "배치 부품 안에 있는 부품도 옮겨 담을 수 있어야 합니다.",
+  );
 });

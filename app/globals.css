@@ -2738,6 +2738,68 @@ select:focus-visible {
   cursor: not-allowed;
 }
 
+/* 배치 부품에 담을 부품을 고르는 자리입니다. 옆에 있지 않아도 담깁니다. */
+.tree-hold {
+  margin-bottom: 3px;
+}
+
+.component-tree .tree-hold > button {
+  display: flex;
+  min-height: 30px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--violet);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.component-tree .tree-hold > button.open {
+  border-style: solid;
+  border-color: #c9c0ff;
+  background: var(--violet-soft);
+}
+
+.tree-hold ul {
+  display: grid;
+  gap: 3px;
+  margin: 4px 0 0;
+  padding: 0 0 0 8px;
+  list-style: none;
+}
+
+.component-tree .tree-hold li button {
+  display: flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  text-align: left;
+}
+
+.component-tree .tree-hold li button:hover {
+  border-color: #c9c0ff;
+  background: var(--violet-soft);
+}
+
+.tree-hold-empty {
+  padding: 4px 8px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 700;
+}
+
 .tree-children button.tree-drop-target {
   box-shadow: inset 0 2px 0 var(--violet);
   background: var(--violet-soft);

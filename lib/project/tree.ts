@@ -245,6 +245,53 @@ export function canStep(nodes: ComponentNode[], id: string, step: MoveStep) {
   return stepTarget(nodes, id, step) !== null;
 }
 
+/**
+ * 이 배치 부품에 저 부품을 담을 수 있는지입니다.
+ *
+ * 옆에 있는지는 보지 않습니다. 상자를 고르고 담을 것을 고르는 쪽이, 담을 것을
+ * 상자 옆까지 옮겨 놓고 넣는 것보다 쉽습니다.
+ */
+export function canHold(
+  nodes: ComponentNode[],
+  boxId: string,
+  nodeId: string,
+) {
+  if (boxId === nodeId) return false;
+  const box = findNode(nodes, boxId);
+  const node = findNode(nodes, nodeId);
+  if (!box || !node || !acceptsChildren(box)) return false;
+  // 자기를 담고 있는 것을 자기 안에 담으면 트리가 끊깁니다.
+  if (isInside(nodes, nodeId, boxId)) return false;
+  // 이미 그 상자에 들어 있으면 담을 것이 없습니다.
+  if (locate(nodes, nodeId)?.parentId === boxId) return false;
+  return depthOf(nodes, boxId) + 1 + heightOf(node) <= MAX_NEST_DEPTH;
+}
+
+/** 배치 부품 안 맨 끝에 담습니다. 담을 수 없으면 트리를 그대로 돌려줍니다. */
+export function holdNode(
+  nodes: ComponentNode[],
+  boxId: string,
+  nodeId: string,
+): ComponentNode[] {
+  if (!canHold(nodes, boxId, nodeId)) return nodes;
+  const node = findNode(nodes, nodeId);
+  const box = findNode(nodes, boxId);
+  if (!node || !box) return nodes;
+  return insertNode(removeNode(nodes, nodeId), node, {
+    parentId: boxId,
+    index: box.children?.length ?? 0,
+  });
+}
+
+/** 이 배치 부품에 담을 수 있는 부품들입니다. 화면에 놓은 순서 그대로입니다. */
+export function holdCandidates(nodes: ComponentNode[], boxId: string) {
+  const out: ComponentNode[] = [];
+  for (const { node } of walk(nodes)) {
+    if (canHold(nodes, boxId, node.id)) out.push(node);
+  }
+  return out;
+}
+
 /** 눌러서 한 칸 옮깁니다. 옮길 수 없으면 받은 트리를 그대로 돌려줍니다. */
 export function stepNode(
   nodes: ComponentNode[],

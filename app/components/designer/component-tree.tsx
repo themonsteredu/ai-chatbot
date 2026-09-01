@@ -7,12 +7,13 @@ import {
   GripVertical,
   IndentDecrease,
   IndentIncrease,
+  PackagePlus,
   Smartphone,
 } from "lucide-react";
-import { useEffect, useRef, type DragEvent } from "react";
+import { useEffect, useRef, useState, type DragEvent } from "react";
 import type { ComponentNode, WebAppProject } from "../../../lib/chatbot-studio";
 import { REGISTRY } from "../../../lib/components/registry";
-import type { MoveStep } from "../../../lib/project/tree";
+import { holdCandidates, type MoveStep } from "../../../lib/project/tree";
 import { PartIcon } from "../runtime/part-icon";
 
 export const REORDER_MIME = "application/x-webapp-reorder";
@@ -59,6 +60,8 @@ type ComponentTreeProps = {
   /** 고른 부품을 눌러서 한 칸 옮깁니다. */
   onMove: (nodeId: string, step: MoveStep) => void;
   canMove: (nodeId: string, step: MoveStep) => boolean;
+  /** 고른 배치 부품 안에 다른 부품을 담습니다. */
+  onHold: (boxId: string, nodeId: string) => void;
 };
 
 /**
@@ -67,34 +70,81 @@ type ComponentTreeProps = {
  */
 function MoveBar({
   node,
+  nodes,
   onMove,
   canMove,
+  onHold,
 }: {
   node: ComponentNode;
+  nodes: ComponentNode[];
   onMove: (nodeId: string, step: MoveStep) => void;
   canMove: (nodeId: string, step: MoveStep) => boolean;
+  onHold: (boxId: string, nodeId: string) => void;
 }) {
   const bar = useRef<HTMLDivElement>(null);
+  const [holdOpen, setHoldOpen] = useState(false);
+  const holds = REGISTRY[node.type].acceptsChildren
+    ? holdCandidates(nodes, node.id)
+    : [];
 
+  // 담을 목록을 펼치면 줄이 길어져 화면 밖으로 밀려납니다. 펼칠 때도 보이는
+  // 자리까지 굴려 옵니다.
   useEffect(() => {
     bar.current?.scrollIntoView({ block: "nearest" });
-  }, [node.id]);
+  }, [node.id, holdOpen]);
 
   return (
-    <div className="tree-move" ref={bar}>
-      {MOVES.map(({ step, label, hint, Icon }) => (
-        <button
-          key={step}
-          type="button"
-          disabled={!canMove(node.id, step)}
-          title={`${node.name} ${hint}`}
-          aria-label={`${node.name} ${hint}`}
-          onClick={() => onMove(node.id, step)}
-        >
-          <Icon size={13} aria-hidden="true" />
-          {label}
-        </button>
-      ))}
+    <div ref={bar}>
+      <div className="tree-move">
+        {MOVES.map(({ step, label, hint, Icon }) => (
+          <button
+            key={step}
+            type="button"
+            disabled={!canMove(node.id, step)}
+            title={`${node.name} ${hint}`}
+            aria-label={`${node.name} ${hint}`}
+            onClick={() => onMove(node.id, step)}
+          >
+            <Icon size={13} aria-hidden="true" />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* 배치 부품은 옆에 있는 것만 넣을 수 있으면 답답합니다. 상자를 고른 채로
+          담을 부품을 골라 넣습니다. */}
+      {REGISTRY[node.type].acceptsChildren && (
+        <div className="tree-hold">
+          <button
+            className={holdOpen ? "open" : ""}
+            type="button"
+            aria-expanded={holdOpen}
+            onClick={() => setHoldOpen((current) => !current)}
+          >
+            <PackagePlus size={13} aria-hidden="true" />
+            여기에 부품 담기
+          </button>
+          {holdOpen && (
+            <ul>
+              {holds.map((one) => (
+                <li key={one.id}>
+                  <button
+                    type="button"
+                    onClick={() => onHold(node.id, one.id)}
+                    title={`${one.name}을(를) ${node.name} 안에 담기`}
+                  >
+                    <PartIcon type={one.type} size={12} />
+                    {one.name}
+                  </button>
+                </li>
+              ))}
+              {holds.length === 0 && (
+                <li className="tree-hold-empty">담을 부품이 없어요</li>
+              )}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -112,6 +162,7 @@ export function ComponentTree({
   onDragLeaveNode,
   onMove,
   canMove,
+  onHold,
 }: ComponentTreeProps) {
   const screen = project.screens[0];
 
@@ -152,7 +203,13 @@ export function ComponentTree({
           <GripVertical className="tree-grip" size={14} aria-hidden="true" />
         </button>
         {selected === node.id && (
-          <MoveBar node={node} onMove={onMove} canMove={canMove} />
+          <MoveBar
+            node={node}
+            nodes={screen.children}
+            onMove={onMove}
+            canMove={canMove}
+            onHold={onHold}
+          />
         )}
         {spec.acceptsChildren && (
           <div

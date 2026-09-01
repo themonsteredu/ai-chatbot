@@ -45,6 +45,7 @@ import {
   canAdd,
   canStep,
   createNode,
+  holdNode,
   duplicateNode,
   findNode,
   insertNode,
@@ -389,6 +390,22 @@ export function ChatbotStudio() {
       (children) => stepNode(children, nodeId, step),
       `${node.name} 옮기기`,
     );
+  };
+
+  /**
+   * 배치 부품 안에 다른 부품을 담습니다. 상자를 고른 채로 담을 것을 고르는 쪽이
+   * 옆으로 옮겨 놓고 넣는 것보다 쉬워, 담고 나서도 상자를 그대로 고른 채 둡니다.
+   * 여러 개를 이어서 담을 수 있습니다.
+   */
+  const holdIn = (boxId: string, nodeId: string) => {
+    const box = findNode(screen.children, boxId);
+    const node = findNode(screen.children, nodeId);
+    if (!box || !node) return;
+    setChildren(
+      (children) => holdNode(children, boxId, nodeId),
+      `${node.name} 담기`,
+    );
+    notify(`${node.name}을(를) ${box.name} 안에 담았어요.`);
   };
 
   const changeProp = (nodeId: string, key: string, value: PropValue) => {
@@ -1119,6 +1136,7 @@ export function ChatbotStudio() {
               onSelect={selectTarget}
               onMove={moveStep}
               canMove={(nodeId, step) => canStep(screen.children, nodeId, step)}
+              onHold={holdIn}
             />
           </section>
 
