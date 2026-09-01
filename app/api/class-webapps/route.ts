@@ -2,14 +2,18 @@ import type { NextRequest } from "next/server";
 import { normalizeProject } from "../../../lib/chatbot-studio";
 import { checkTeacherCode, usingDefaultPin } from "../teacher-auth";
 import {
+  getClassApp,
   getRecordRow,
   listClassSummaries,
   listClassWebApps,
+  listGalleryApps,
   listRecordRows,
   listStudentWebApps,
   readConfig,
+  readGalleryOpen,
   saveRecordRow,
   saveWebApp,
+  writeGalleryOpen,
   type RecordKind,
 } from "./supabase";
 
@@ -169,11 +173,61 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // 학생끼리 서로의 작품을 보는 갤러리입니다. 선생님이 열어 두었을 때만
+    // 열리므로 교사 코드 없이 반 코드로 부릅니다.
+    if (action === "gallery") {
+      if (!(await readGalleryOpen(classCode))) {
+        return ok({ open: false, apps: [] });
+      }
+      const rows = await listGalleryApps(classCode);
+      return ok({
+        open: true,
+        apps: rows.map((row) => ({
+          studentName: row.student_name,
+          appId: row.app_id,
+          appName: row.app_name,
+          updatedAt: row.updated_at,
+        })),
+      });
+    }
+
+    // 갤러리에서 하나를 눌렀을 때만 그 웹앱 내용을 내려보냅니다.
+    if (action === "gallery-app") {
+      const appId = cleanText(body.appId, 80);
+      if (!APP_ID.test(appId)) return fail("웹앱 주소가 올바르지 않습니다.", 400);
+      if (!(await readGalleryOpen(classCode))) {
+        return fail("아직 선생님이 반 작품 갤러리를 열지 않았습니다.", 403);
+      }
+      const row = await getClassApp(classCode, appId);
+      if (!row) return fail("그 웹앱을 찾지 못했습니다.", 404);
+      return ok({
+        app: {
+          studentName: row.student_name,
+          appId: row.app_id,
+          appName: row.app_name,
+          project: row.project,
+          updatedAt: row.updated_at,
+        },
+      });
+    }
+
+    // 갤러리를 열고 닫는 것은 선생님만 합니다.
+    if (action === "gallery-settings") {
+      const gate = checkTeacherCode(request, cleanText(body.teacherCode, 100));
+      if (!gate.ok) return fail(gate.message, gate.status);
+      const open = body.open === true;
+      await writeGalleryOpen(classCode, open);
+      return ok({ galleryOpen: open });
+    }
+
     if (action === "class") {
       // 반 전체 목록은 교사 코드가 있어야 봅니다.
       const gate = checkTeacherCode(request, cleanText(body.teacherCode, 100));
       if (!gate.ok) return fail(gate.message, gate.status);
-      const rows = await listClassWebApps(classCode);
+      const [rows, galleryOpen] = await Promise.all([
+        listClassWebApps(classCode),
+        readGalleryOpen(classCode),
+      ]);
       return ok({
         apps: rows.map((row) => ({
           studentName: row.student_name,
@@ -183,6 +237,8 @@ export async function POST(request: NextRequest) {
           project: row.project,
           updatedAt: row.updated_at,
         })),
+        // 반 작품 갤러리를 열어 두었는지도 함께 알려 줍니다.
+        galleryOpen,
         // 기본 PIN으로 열렸다면 화면에서 알려 줍니다. 학생 이름과 사진이
         // 보이는 곳이라, 널리 알려진 번호로 열려 있다는 사실을 교사가 알아야
         // 합니다.

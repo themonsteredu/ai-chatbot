@@ -188,6 +188,65 @@ export async function listRecordRows(
     []) as ClassRecordRow[];
 }
 
+const SETTINGS_TABLE = "class_settings";
+
+/**
+ * 반 작품 갤러리를 열어 두었는지입니다. 학생 이름이 함께 보이는 곳이라 기본은
+ * 닫힘이고, 선생님이 켤 때만 열립니다.
+ */
+export async function readGalleryOpen(classCode: string) {
+  const params = new URLSearchParams({
+    class_code: `eq.${classCode}`,
+    select: "gallery_open",
+    limit: "1",
+  });
+  const rows = ((await request(`${SETTINGS_TABLE}?${params}`, {
+    method: "GET",
+  })) ?? []) as Array<{ gallery_open: boolean }>;
+  return rows[0]?.gallery_open === true;
+}
+
+export async function writeGalleryOpen(classCode: string, open: boolean) {
+  await request(`${SETTINGS_TABLE}?on_conflict=class_code`, {
+    method: "POST",
+    body: JSON.stringify({
+      class_code: classCode,
+      gallery_open: open,
+      updated_at: new Date().toISOString(),
+    }),
+    headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+  });
+  return open;
+}
+
+/**
+ * 갤러리에 걸 목록입니다. 웹앱 내용은 빼고 이름표만 읽어 옵니다. 사진이 든
+ * 웹앱이 서른 개면 목록 한 번에 몇 MB가 되기 때문입니다.
+ */
+export async function listGalleryApps(classCode: string) {
+  const params = new URLSearchParams({
+    class_code: `eq.${classCode}`,
+    select: "student_name,app_id,app_name,updated_at",
+    order: "updated_at.desc",
+    limit: "120",
+  });
+  return ((await request(`${TABLE}?${params}`, { method: "GET" })) ??
+    []) as Array<Omit<ClassWebAppRow, "class_code" | "project">>;
+}
+
+/** 갤러리에서 하나를 눌렀을 때, 그 웹앱만 내용까지 읽어 옵니다. */
+export async function getClassApp(classCode: string, appId: string) {
+  const params = new URLSearchParams({
+    class_code: `eq.${classCode}`,
+    app_id: `eq.${appId}`,
+    select: "student_name,app_id,app_name,project,updated_at",
+    limit: "1",
+  });
+  const rows = ((await request(`${TABLE}?${params}`, { method: "GET" })) ??
+    []) as ClassWebAppRow[];
+  return rows[0] ?? null;
+}
+
 const SHARE_TABLE = "shared_webapps";
 
 /** QR·공유 링크에 담을 짧은 코드로 웹앱 내용을 저장합니다. */

@@ -5,10 +5,13 @@ import {
   Check,
   CloudDownload,
   CloudUpload,
+  ExternalLink,
   Loader2,
+  Users,
 } from "lucide-react";
 import { useState } from "react";
 import {
+  encodeProject,
   normalizeProject,
   type WebAppProject,
 } from "../../lib/chatbot-studio";
@@ -31,6 +34,14 @@ type MineApp = {
   updatedAt: string;
 };
 
+/** 갤러리 목록은 이름표만 옵니다. 내용은 누를 때 하나씩 받아 옵니다. */
+type FriendApp = {
+  studentName: string;
+  appId: string;
+  appName: string;
+  updatedAt: string;
+};
+
 export function ClassSubmit({
   ensureAppId,
   project,
@@ -47,10 +58,12 @@ export function ClassSubmit({
       ? ""
       : (window.localStorage.getItem(NAME_KEY) ?? ""),
   );
-  const [busy, setBusy] = useState<"" | "save" | "load">("");
+  const [busy, setBusy] = useState<"" | "save" | "load" | "friends">("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [mine, setMine] = useState<MineApp[] | null>(null);
+  // 선생님이 갤러리를 열어 두었을 때만 채워집니다.
+  const [friends, setFriends] = useState<FriendApp[] | null>(null);
 
   const ready = classCode.trim().length >= 2 && studentName.trim().length >= 1;
 
@@ -85,6 +98,54 @@ export function ClassSubmit({
       setMessage("반에 제출했어요. 다른 기기에서도 불러올 수 있어요.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "제출하지 못했어요.");
+    } finally {
+      setBusy("");
+    }
+  };
+
+  /**
+   * 친구들이 반에 제출한 작품을 봅니다. 이름은 필요 없고 반 코드만 씁니다.
+   * 선생님이 갤러리를 열지 않았으면 목록 대신 안내가 옵니다.
+   */
+  const loadFriends = async () => {
+    if (classCode.trim().length < 2 || busy) return;
+    setBusy("friends");
+    setError("");
+    setMessage("");
+    try {
+      const json = await call({ action: "gallery" });
+      if (!json.open) {
+        setFriends(null);
+        setMessage(
+          "아직 선생님이 반 작품 갤러리를 열지 않았어요. 선생님께 열어 달라고 해 보세요.",
+        );
+        return;
+      }
+      window.localStorage.setItem(CLASS_KEY, classCode.trim());
+      setFriends(json.apps ?? []);
+      if (!json.apps?.length) setMessage("아직 반에 올라온 작품이 없어요.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "불러오지 못했어요.");
+    } finally {
+      setBusy("");
+    }
+  };
+
+  /** 친구 작품은 누를 때 그것만 받아서 새 창으로 엽니다. */
+  const openFriend = async (app: FriendApp) => {
+    if (busy) return;
+    setBusy("friends");
+    setError("");
+    try {
+      const json = await call({ action: "gallery-app", appId: app.appId });
+      const params = new URLSearchParams({
+        run: "install",
+        app: app.appId,
+        project: encodeProject(normalizeProject(json.app?.project)),
+      });
+      window.open(`/?${params.toString()}`, "_blank", "noopener");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "열지 못했어요.");
     } finally {
       setBusy("");
     }
@@ -152,6 +213,19 @@ export function ClassSubmit({
           )}
           내 것 불러오기
         </button>
+        <button
+          type="button"
+          className="ghost"
+          onClick={loadFriends}
+          disabled={classCode.trim().length < 2 || busy !== ""}
+        >
+          {busy === "friends" ? (
+            <Loader2 size={14} aria-hidden="true" className="spin" />
+          ) : (
+            <Users size={14} aria-hidden="true" />
+          )}
+          우리 반 작품 보기
+        </button>
       </div>
 
       {message && (
@@ -165,6 +239,23 @@ export function ClassSubmit({
           <AlertCircle size={15} aria-hidden="true" />
           {error}
         </p>
+      )}
+
+      {friends && friends.length > 0 && (
+        <ul className="class-submit-list friends">
+          {friends.map((app) => (
+            <li key={app.appId}>
+              <span>
+                <b>{app.studentName}</b>
+                {app.appName}
+              </span>
+              <button type="button" onClick={() => openFriend(app)}>
+                <ExternalLink size={13} aria-hidden="true" />
+                열어 보기
+              </button>
+            </li>
+          ))}
+        </ul>
       )}
 
       {mine && mine.length > 0 && (

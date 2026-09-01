@@ -1398,6 +1398,63 @@ select:focus-visible {
   cursor: pointer;
 }
 
+/* 친구들 작품 목록입니다. 누가 만들었는지 이름을 앞에 세웁니다. */
+.class-submit-list.friends li span {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 7px;
+}
+
+.class-submit-list.friends li b {
+  flex: none;
+  padding: 2px 7px;
+  border-radius: 99px;
+  background: var(--violet-soft);
+  color: #4b3fb0;
+  font-size: 11px;
+}
+
+.class-submit-list.friends button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* 선생님이 반 작품 갤러리를 열고 닫는 자리입니다. */
+.class-gallery-switch {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 13px;
+  padding: 12px 15px;
+  border: 1px solid var(--line-strong);
+  border-radius: 11px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.class-gallery-switch input {
+  width: 19px;
+  height: 19px;
+  margin-top: 1px;
+  flex: none;
+  accent-color: var(--violet);
+}
+
+.class-gallery-switch b {
+  display: block;
+  font-size: 13px;
+}
+
+.class-gallery-switch small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+
 .class-roster-block {
   flex-basis: 100%;
   margin-top: 6px;

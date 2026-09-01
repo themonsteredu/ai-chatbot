@@ -65,6 +65,8 @@ export function ClassRoster({ teacherCode }: { teacherCode: string }) {
   // 날짜별 할 일입니다. 학생이 활동 체크에서 보낸 것만 모입니다.
   const [checklists, setChecklists] = useState<ChecklistRecord[]>([]);
   const [day, setDay] = useState("");
+  // 학생끼리 서로의 작품을 볼 수 있게 열어 둘지입니다. 기본은 닫힘입니다.
+  const [galleryOpen, setGalleryOpen] = useState(false);
   // 반 코드를 외우지 않아도 되도록, 들어오자마자 반 목록을 먼저 보여 줍니다.
   const [classes, setClasses] = useState<ClassSummary[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -118,6 +120,7 @@ export function ClassRoster({ teacherCode }: { teacherCode: string }) {
       }
       setApps(body.apps ?? []);
       setDefaultPin(body.defaultPin === true);
+      setGalleryOpen(body.galleryOpen === true);
       setChecklists([]);
 
       // 웹앱 목록과 별개로, 학생이 보낸 캠프 기록도 함께 가져옵니다.
@@ -156,6 +159,33 @@ export function ClassRoster({ teacherCode }: { teacherCode: string }) {
       setError("연결에 실패했습니다. 잠시 뒤 다시 시도해 주세요.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  /** 반 작품 갤러리를 열고 닫습니다. 학생 이름이 함께 보이는 곳이라 선생님만 바꿉니다. */
+  const toggleGallery = async (next: boolean) => {
+    const target = classCode.trim();
+    if (!target) return;
+    // 눌렀을 때 바로 움직이고, 실패하면 되돌립니다.
+    setGalleryOpen(next);
+    setError("");
+    try {
+      const response = await fetch("/api/class-webapps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "gallery-settings",
+          classCode: target,
+          teacherCode,
+          open: next,
+        }),
+      });
+      const body = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(body?.error ?? "바꾸지 못했습니다.");
+      setGalleryOpen(body.galleryOpen === true);
+    } catch (caught) {
+      setGalleryOpen(!next);
+      setError(caught instanceof Error ? caught.message : "바꾸지 못했습니다.");
     }
   };
 
@@ -298,6 +328,24 @@ export function ClassRoster({ teacherCode }: { teacherCode: string }) {
             </button>
           </span>
         </div>
+      )}
+
+      {apps && apps.length > 0 && (
+        <label className="class-gallery-switch">
+          <input
+            type="checkbox"
+            checked={galleryOpen}
+            onChange={(event) => void toggleGallery(event.target.checked)}
+          />
+          <span>
+            <b>우리 반 작품 갤러리 열기</b>
+            <small>
+              켜면 학생이 반 코드만으로 친구들 작품을 열어 볼 수 있습니다. 이름과
+              만든 웹앱이 함께 보이고, 체크·기록·사진 같은 개인 기록은 보이지
+              않습니다. 수업이 끝나면 다시 꺼 두세요.
+            </small>
+          </span>
+        </label>
       )}
 
       {apps && checklists.length > 0 && (

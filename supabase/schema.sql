@@ -60,6 +60,17 @@ create index if not exists class_records_class_idx
 
 alter table public.class_records enable row level security;
 
+-- 반마다 하나씩, 선생님이 정하는 것입니다. 지금은 '작품 갤러리를 열어 둘지'
+-- 하나뿐입니다. 기본은 닫힘이라, 선생님이 열기 전에는 학생끼리 반 작품을 볼 수
+-- 없습니다.
+create table if not exists public.class_settings (
+  class_code text primary key,
+  gallery_open boolean not null default false,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.class_settings enable row level security;
+
 -- QR·공유 링크용 표입니다. 내용을 서버에 두고 링크에는 짧은 코드만 담아,
 -- QR이 단순해져 휴대폰 카메라가 쉽게 읽습니다.
 create table if not exists public.shared_webapps (
