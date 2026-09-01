@@ -214,6 +214,7 @@ function Field({ spec, value, onChange }: FieldProps) {
             onChange={(event) => onChange(event.target.checked)}
           />
           <span>{spec.label}</span>
+          {spec.help && <small className="property-help">{spec.help}</small>}
         </label>
       );
 

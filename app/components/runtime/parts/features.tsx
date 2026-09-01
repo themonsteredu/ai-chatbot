@@ -2,6 +2,8 @@
 
 import {
   Check,
+  ChevronLeft,
+  ChevronRight,
   ClipboardCheck,
   Info,
   NotebookPen,
@@ -10,6 +12,15 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import type { ComponentNode, ListItem } from "../../../../lib/chatbot-studio";
+import {
+  dayKey,
+  dayName,
+  dayOf,
+  readDays,
+  shiftDay,
+  writeDay,
+  type DayEntry,
+} from "../../../../lib/checklist-days";
 import type { AppRuntime } from "../use-app-runtime";
 import { partStyle } from "../style";
 
@@ -32,16 +43,37 @@ export function NoticeCardPart({ node, runtime }: PartProps) {
 
 export function ChecklistPart({ node, runtime }: PartProps) {
   const [draft, setDraft] = useState("");
+  const daily = runtime.bool(node, "daily");
+  // 자정을 넘겨도 보던 날이 갑자기 바뀌지 않도록, 열었을 때의 오늘을 붙듭니다.
+  const [today] = useState(dayKey);
+  const [viewDay, setViewDay] = useState(today);
   const state = runtime.partState(node.id);
-  const checked = Array.isArray(state.checked) ? (state.checked as string[]) : [];
-  // 웹앱을 쓰는 사람이 직접 적은 할 일입니다. 설계에 있는 항목과 달리 그 기기에만
-  // 남습니다.
-  const custom = Array.isArray(state.custom) ? (state.custom as ListItem[]) : [];
+
+  // 날마다 새로 시작할 때는 날짜별로 나눠 담고, 아니면 예전처럼 한 벌만 씁니다.
+  // 두 모양을 나란히 두어, 스위치를 껐다 켜도 적어 둔 것이 사라지지 않습니다.
+  const days = daily ? readDays(state, today) : null;
+  const entry: DayEntry = days
+    ? dayOf(days, viewDay)
+    : {
+        checked: Array.isArray(state.checked) ? (state.checked as string[]) : [],
+        // 웹앱을 쓰는 사람이 직접 적은 할 일입니다. 설계에 있는 항목과 달리 그
+        // 기기에만 남습니다.
+        custom: Array.isArray(state.custom) ? (state.custom as ListItem[]) : [],
+      };
+  const { checked, custom } = entry;
   const all = [...runtime.items(node, "items"), ...custom];
+
+  const save = (patch: Partial<DayEntry>) => {
+    const next: DayEntry = { checked, custom, ...patch };
+    runtime.setPartState(
+      node.id,
+      days ? { days: writeDay(days, viewDay, next, today) } : next,
+    );
+  };
 
   const toggle = (id: string) => {
     if (!runtime.interactive) return;
-    runtime.setPartState(node.id, {
+    save({
       checked: checked.includes(id)
         ? checked.filter((item) => item !== id)
         : [...checked, id],
@@ -56,17 +88,20 @@ export function ChecklistPart({ node, runtime }: PartProps) {
     const taken = new Set(custom.map((item) => item.id));
     let serial = custom.length + 1;
     while (taken.has(`my-${serial}`)) serial += 1;
-    runtime.setPartState(node.id, {
-      custom: [...custom, { id: `my-${serial}`, text: value.slice(0, 40) }],
-    });
+    save({ custom: [...custom, { id: `my-${serial}`, text: value.slice(0, 40) }] });
     setDraft("");
   };
 
   const remove = (id: string) => {
-    runtime.setPartState(node.id, {
+    save({
       custom: custom.filter((item) => item.id !== id),
       checked: checked.filter((item) => item !== id),
     });
+  };
+
+  const goDay = (step: number) => (event: { stopPropagation: () => void }) => {
+    event.stopPropagation();
+    setViewDay((current) => (step === 0 ? today : shiftDay(current, step)));
   };
 
   return (
@@ -84,6 +119,36 @@ export function ChecklistPart({ node, runtime }: PartProps) {
           {all.length}
         </b>
       </header>
+      {daily && (
+        <nav className="checklist-days" aria-label="날짜 고르기">
+          <button
+            type="button"
+            aria-label="하루 앞으로"
+            disabled={!runtime.interactive}
+            onClick={goDay(-1)}
+          >
+            <ChevronLeft size={12} aria-hidden="true" />
+          </button>
+          <button
+            className="checklist-day-name"
+            type="button"
+            aria-label={`${dayName(viewDay, today)}${viewDay === today ? "" : " · 오늘로 가기"}`}
+            disabled={!runtime.interactive || viewDay === today}
+            onClick={goDay(0)}
+          >
+            <b>{dayName(viewDay, today)}</b>
+            {viewDay !== today && <span>오늘로</span>}
+          </button>
+          <button
+            type="button"
+            aria-label="하루 뒤로"
+            disabled={!runtime.interactive}
+            onClick={goDay(1)}
+          >
+            <ChevronRight size={12} aria-hidden="true" />
+          </button>
+        </nav>
+      )}
       <div className="phone-checklist">
         {all.map((item) => (
           <label key={item.id}>

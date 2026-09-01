@@ -3679,6 +3679,46 @@ select:focus-visible {
   font-size: 7px;
 }
 
+/* 활동 체크의 날짜 띠입니다. 날마다 새로 시작할 때만 나옵니다. */
+.checklist-days {
+  display: grid;
+  grid-template-columns: 21px minmax(0, 1fr) 21px;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.checklist-days button {
+  display: flex;
+  min-height: 21px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 2px 5px;
+  border: 1px solid #dce2ed;
+  border-radius: 7px;
+  background: #fff;
+  color: #555e70;
+  cursor: pointer;
+}
+
+.checklist-days button:disabled {
+  cursor: default;
+}
+
+.checklist-day-name b {
+  font-size: 8px;
+}
+
+.checklist-day-name span {
+  padding: 1px 4px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--phone-accent) 13%, #fff);
+  color: var(--phone-accent);
+  font-size: 6px;
+  font-weight: 800;
+}
+
 .phone-checklist {
   display: grid;
   gap: 5px;
