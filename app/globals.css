@@ -1631,6 +1631,128 @@ select:focus-visible {
   cursor: pointer;
 }
 
+/* 학생이 보낸 날짜별 할 일입니다. 하루를 골라 반 전체를 한눈에 봅니다. */
+.class-roster-days {
+  margin-top: 13px;
+  padding: 12px 15px;
+  border: 1px solid #d5d9e6;
+  border-radius: 11px;
+  background: #fbfbfe;
+}
+
+.class-roster-days > header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.class-roster-days > header b {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+}
+
+.class-roster-days > header label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.class-roster-days > header select {
+  padding: 7px 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: #fff;
+  font-size: 12px;
+}
+
+.class-roster-days > ul {
+  display: grid;
+  gap: 8px;
+  margin: 11px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.class-roster-days > ul > li {
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #fff;
+}
+
+.class-roster-days > ul > li > div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.class-roster-days > ul > li b {
+  font-size: 13px;
+}
+
+.class-roster-days > ul > li small {
+  flex: 1;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.class-roster-days em {
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: var(--line);
+  color: #4a5268;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.class-roster-days em.all-done {
+  background: var(--mint-soft);
+  color: #0b8c67;
+}
+
+.class-roster-days > ul ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 7px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.class-roster-days > ul ul li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 99px;
+  background: #f2f3f8;
+  color: #5a6178;
+  font-size: 11px;
+}
+
+.class-roster-days > ul ul li.done {
+  background: var(--mint-soft);
+  color: #0b8c67;
+  font-weight: 800;
+}
+
+.class-roster-days > ul ul li span {
+  padding: 1px 5px;
+  border-radius: 99px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+}
+
 .report-send {
   margin: 12px 12px 0;
   padding: 11px 12px;
@@ -3835,6 +3957,81 @@ select:focus-visible {
 
 .phone-checklist input:disabled {
   opacity: 1;
+}
+
+/* 오늘까지 한 것을 선생님께 보내는 칸입니다. */
+.checklist-send-open {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 22px;
+  margin-top: 6px;
+  padding: 2px 6px;
+  border: 1px dashed #c9cede;
+  border-radius: 7px;
+  background: #fff;
+  color: var(--phone-accent, var(--violet));
+  font-size: 7px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.checklist-send {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.checklist-send input {
+  /* 입력칸은 제 속내용 너비를 고집합니다. 칸에 꽉 차게 눌러 줍니다. */
+  width: 100%;
+  min-width: 0;
+  height: 22px;
+  padding: 0 6px;
+  border: 1px solid #dce2ed;
+  border-radius: 6px;
+  background: #fff;
+  color: #383f52;
+  font-size: 7px;
+}
+
+.checklist-send button {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 22px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--phone-accent, var(--violet));
+  color: #fff;
+  font-size: 7px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.checklist-send button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.checklist-send p {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 6.5px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.checklist-send p.ok {
+  color: #0b8c67;
+}
+
+.checklist-send p.bad {
+  color: var(--danger);
 }
 
 .journal-card textarea {

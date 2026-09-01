@@ -33,6 +33,13 @@ export type RuntimeScope = {
 /** 아직 저장하지 않고 편집 중인 웹앱이 쓰는 자리입니다. */
 export const DRAFT_SCOPE_ID = "draft";
 
+/**
+ * 반 코드와 이름은 반에 제출할 때마다 다시 적기 번거로워 이 기기에만 기억해
+ * 둡니다. 여러 화면이 같은 값을 쓰므로 키를 한곳에 둡니다.
+ */
+export const CLASS_CODE_KEY = "my-webapp-class-code-v1";
+export const STUDENT_NAME_KEY = "my-webapp-student-name-v1";
+
 export function runtimeKey(scope: RuntimeScope, kind: RuntimeKind) {
   return `${PREFIX[kind]}${scope.appId || DRAFT_SCOPE_ID}`;
 }

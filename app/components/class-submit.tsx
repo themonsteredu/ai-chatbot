@@ -12,9 +12,10 @@ import {
   normalizeProject,
   type WebAppProject,
 } from "../../lib/chatbot-studio";
-
-const CLASS_KEY = "my-webapp-class-code-v1";
-const NAME_KEY = "my-webapp-student-name-v1";
+import {
+  CLASS_CODE_KEY as CLASS_KEY,
+  STUDENT_NAME_KEY as NAME_KEY,
+} from "../../lib/runtime-store";
 
 type ClassSubmitProps = {
   /** 아직 저장 전이면 먼저 이 기기에 저장하고 웹앱 주소를 돌려줍니다. */

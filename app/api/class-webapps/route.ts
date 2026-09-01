@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { normalizeProject } from "../../../lib/chatbot-studio";
 import { checkTeacherCode, usingDefaultPin } from "../teacher-auth";
 import {
+  getRecordRow,
   listClassSummaries,
   listClassWebApps,
   listRecordRows,
@@ -9,6 +10,7 @@ import {
   readConfig,
   saveRecordRow,
   saveWebApp,
+  type RecordKind,
 } from "./supabase";
 
 export const runtime = "nodejs";
@@ -31,6 +33,26 @@ function ok(body: unknown) {
 
 function cleanText(value: unknown, max: number) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
+}
+
+/** 기록의 종류입니다. 적지 않고 보내던 예전 앱은 캠프 기록입니다. */
+function recordKind(value: unknown): RecordKind {
+  return cleanText(value, 20) === "checklist" ? "checklist" : "camp";
+}
+
+const asLists = (record: unknown) => {
+  const lists = (record as { lists?: unknown } | null)?.lists;
+  return lists && typeof lists === "object" && !Array.isArray(lists)
+    ? (lists as Record<string, unknown>)
+    : {};
+};
+
+/**
+ * 활동 체크는 한 웹앱에 여러 개 놓을 수 있고, 부품마다 따로 보냅니다. 그대로
+ * 덮어쓰면 먼저 보낸 목록이 사라지므로 부품별로 합칩니다.
+ */
+function mergeChecklists(previous: unknown, incoming: unknown) {
+  return { lists: { ...asLists(previous), ...asLists(incoming) } };
 }
 
 export async function POST(request: NextRequest) {
@@ -117,10 +139,19 @@ export async function POST(request: NextRequest) {
           413,
         );
       }
+      const kind = recordKind(body.kind);
+      const record =
+        kind === "checklist"
+          ? mergeChecklists(
+              (await getRecordRow(classCode, studentName, kind))?.record,
+              body.record,
+            )
+          : body.record;
       const saved = await saveRecordRow({
         classCode,
         studentName,
-        record: body.record,
+        kind,
+        record,
       });
       return ok({ saved: Boolean(saved), updatedAt: saved?.updated_at ?? null });
     }
@@ -128,7 +159,7 @@ export async function POST(request: NextRequest) {
     if (action === "records") {
       const gate = checkTeacherCode(request, cleanText(body.teacherCode, 100));
       if (!gate.ok) return fail(gate.message, gate.status);
-      const rows = await listRecordRows(classCode);
+      const rows = await listRecordRows(classCode, recordKind(body.kind));
       return ok({
         records: rows.map((row) => ({
           studentName: row.student_name,

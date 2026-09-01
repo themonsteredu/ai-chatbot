@@ -4,6 +4,7 @@ import {
   AlertCircle,
   ExternalLink,
   FileText,
+  ListChecks,
   Loader2,
   RefreshCw,
   School,
@@ -11,6 +12,13 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { encodeProject, normalizeProject } from "../../lib/chatbot-studio";
+import { dayKey, dayName } from "../../lib/checklist-days";
+import {
+  collectDays,
+  readChecklistRecords,
+  summarizeDay,
+  type ChecklistRecord,
+} from "../../lib/class-checklists";
 import { buildRecordsHtml, type StudentRecord } from "./record-viewer";
 
 type ClassSummary = {
@@ -54,6 +62,9 @@ export function ClassRoster({ teacherCode }: { teacherCode: string }) {
   // 기본 PIN으로 열렸는지입니다. 학생 이름과 사진이 보이는 화면이라 알려 줍니다.
   const [defaultPin, setDefaultPin] = useState(false);
   const [records, setRecords] = useState<StudentRecord[]>([]);
+  // 날짜별 할 일입니다. 학생이 활동 체크에서 보낸 것만 모입니다.
+  const [checklists, setChecklists] = useState<ChecklistRecord[]>([]);
+  const [day, setDay] = useState("");
   // 반 코드를 외우지 않아도 되도록, 들어오자마자 반 목록을 먼저 보여 줍니다.
   const [classes, setClasses] = useState<ClassSummary[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -102,10 +113,12 @@ export function ClassRoster({ teacherCode }: { teacherCode: string }) {
         setError(body?.error ?? "목록을 가져오지 못했습니다.");
         setApps(null);
         setRecords([]);
+        setChecklists([]);
         return;
       }
       setApps(body.apps ?? []);
       setDefaultPin(body.defaultPin === true);
+      setChecklists([]);
 
       // 웹앱 목록과 별개로, 학생이 보낸 캠프 기록도 함께 가져옵니다.
       const recordsResponse = await fetch("/api/class-webapps", {
@@ -119,6 +132,25 @@ export function ClassRoster({ teacherCode }: { teacherCode: string }) {
       });
       const recordsBody = await recordsResponse.json().catch(() => null);
       setRecords(recordsResponse.ok ? (recordsBody?.records ?? []) : []);
+
+      // 날짜별 할 일은 기록과 종류만 다르고 같은 자리에서 옵니다.
+      const dayResponse = await fetch("/api/class-webapps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "records",
+          kind: "checklist",
+          classCode: target,
+          teacherCode,
+        }),
+      });
+      const dayBody = await dayResponse.json().catch(() => null);
+      const days = dayResponse.ok
+        ? readChecklistRecords(dayBody?.records ?? [])
+        : [];
+      setChecklists(days);
+      // 가장 최근 날짜를 먼저 보여 줍니다. 오늘 것이 있으면 오늘입니다.
+      setDay(collectDays(days)[0] ?? "");
       loadClasses();
     } catch {
       setError("연결에 실패했습니다. 잠시 뒤 다시 시도해 주세요.");
@@ -265,6 +297,51 @@ export function ClassRoster({ teacherCode }: { teacherCode: string }) {
               전체 보기·인쇄
             </button>
           </span>
+        </div>
+      )}
+
+      {apps && checklists.length > 0 && (
+        <div className="class-roster-days">
+          <header>
+            <b>
+              <ListChecks size={14} aria-hidden="true" />
+              날짜별 할 일 · {checklists.length}명
+            </b>
+            <label>
+              <span>날짜</span>
+              <select value={day} onChange={(event) => setDay(event.target.value)}>
+                {collectDays(checklists).map((one) => (
+                  <option key={one} value={one}>
+                    {one} · {dayName(one, dayKey())}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </header>
+          <ul>
+            {summarizeDay(checklists, day).map((line, index) => (
+              <li key={`${line.studentName}:${line.title}:${index}`}>
+                <div>
+                  <b>{line.studentName}</b>
+                  <small>{line.title}</small>
+                  <em className={line.done === line.total ? "all-done" : ""}>
+                    {line.done}/{line.total}
+                  </em>
+                </div>
+                <ul>
+                  {line.items.map((item, place) => (
+                    <li
+                      key={`${item.text}:${place}`}
+                      className={item.done ? "done" : ""}
+                    >
+                      {item.text}
+                      {item.own && <span>직접 적음</span>}
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 

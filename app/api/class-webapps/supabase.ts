@@ -113,27 +113,36 @@ export async function listClassWebApps(classCode: string) {
 
 const RECORD_TABLE = "class_records";
 
+/**
+ * 기록의 종류입니다. 캠프 기록과 날짜별 할 일은 한 학생이 둘 다 보낼 수 있어서
+ * 줄을 나눠 둡니다.
+ */
+export type RecordKind = "camp" | "checklist";
+
 export type ClassRecordRow = {
   class_code: string;
   student_name: string;
+  kind: RecordKind;
   record: unknown;
   updated_at: string;
 };
 
-/** 학생이 보낸 캠프 기록을 저장합니다. 같은 학생이 다시 보내면 덮어씁니다. */
+/** 학생이 보낸 기록을 저장합니다. 같은 학생·같은 종류면 덮어씁니다. */
 export async function saveRecordRow(row: {
   classCode: string;
   studentName: string;
+  kind: RecordKind;
   record: unknown;
 }) {
   const payload = {
     class_code: row.classCode,
     student_name: row.studentName,
+    kind: row.kind,
     record: row.record,
     updated_at: new Date().toISOString(),
   };
   const result = (await request(
-    `${RECORD_TABLE}?on_conflict=class_code,student_name`,
+    `${RECORD_TABLE}?on_conflict=class_code,student_name,kind`,
     {
       method: "POST",
       body: JSON.stringify(payload),
@@ -145,11 +154,34 @@ export async function saveRecordRow(row: {
   return result?.[0] ?? null;
 }
 
-/** 교사가 반 전체의 캠프 기록을 봅니다. */
-export async function listRecordRows(classCode: string) {
+/** 한 학생이 앞서 보낸 기록입니다. 여러 체크 목록을 합칠 때 씁니다. */
+export async function getRecordRow(
+  classCode: string,
+  studentName: string,
+  kind: RecordKind,
+) {
   const params = new URLSearchParams({
     class_code: `eq.${classCode}`,
-    select: "student_name,record,updated_at",
+    student_name: `eq.${studentName}`,
+    kind: `eq.${kind}`,
+    select: "student_name,kind,record,updated_at",
+    limit: "1",
+  });
+  const rows = ((await request(`${RECORD_TABLE}?${params}`, {
+    method: "GET",
+  })) ?? []) as ClassRecordRow[];
+  return rows[0] ?? null;
+}
+
+/** 교사가 반 전체의 기록을 봅니다. */
+export async function listRecordRows(
+  classCode: string,
+  kind: RecordKind = "camp",
+) {
+  const params = new URLSearchParams({
+    class_code: `eq.${classCode}`,
+    kind: `eq.${kind}`,
+    select: "student_name,kind,record,updated_at",
     order: "student_name.asc",
   });
   return ((await request(`${RECORD_TABLE}?${params}`, { method: "GET" })) ??

@@ -6,8 +6,10 @@ import {
   ChevronRight,
   ClipboardCheck,
   Info,
+  Loader2,
   NotebookPen,
   Plus,
+  Send,
   X,
 } from "lucide-react";
 import { useState } from "react";
@@ -21,6 +23,11 @@ import {
   writeDay,
   type DayEntry,
 } from "../../../../lib/checklist-days";
+import type { ChecklistReport } from "../../../../lib/class-checklists";
+import {
+  CLASS_CODE_KEY,
+  STUDENT_NAME_KEY,
+} from "../../../../lib/runtime-store";
 import type { AppRuntime } from "../use-app-runtime";
 import { partStyle } from "../style";
 
@@ -201,8 +208,140 @@ export function ChecklistPart({ node, runtime }: PartProps) {
             <Plus size={13} aria-hidden="true" />
           </button>
         </form>
+        {runtime.interactive && (
+          <ChecklistSend
+            nodeId={node.id}
+            report={{
+              title: runtime.text(node, "title"),
+              items: runtime.items(node, "items"),
+              // 날짜를 안 쓰는 목록은 오늘 하루치로 보냅니다.
+              days: days ?? { [today]: entry },
+            }}
+          />
+        )}
       </div>
     </section>
+  );
+}
+
+/**
+ * 오늘까지 한 것을 선생님께 보냅니다. 반 코드와 이름은 반에 제출할 때 쓰던 것을
+ * 그대로 꺼내 써서, 학생이 다시 적지 않아도 됩니다.
+ */
+function ChecklistSend({
+  nodeId,
+  report,
+}: {
+  nodeId: string;
+  report: ChecklistReport;
+}) {
+  const remembered = (key: string) =>
+    typeof window === "undefined" ? "" : (window.localStorage.getItem(key) ?? "");
+  const [open, setOpen] = useState(false);
+  const [classCode, setClassCode] = useState(() => remembered(CLASS_CODE_KEY));
+  const [studentName, setStudentName] = useState(() =>
+    remembered(STUDENT_NAME_KEY),
+  );
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(
+    null,
+  );
+
+  const send = async () => {
+    const code = classCode.trim();
+    const student = studentName.trim();
+    if (sending || code.length < 2 || !student) {
+      setResult({ ok: false, message: "이름과 반 코드를 적어 주세요." });
+      return;
+    }
+
+    setSending(true);
+    setResult(null);
+    try {
+      const response = await fetch("/api/class-webapps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save-record",
+          kind: "checklist",
+          classCode: code,
+          studentName: student,
+          // 부품 아이디로 담아 보내면, 활동 체크를 여러 개 놓아도 서로 지우지
+          // 않습니다.
+          record: { lists: { [nodeId]: report } },
+        }),
+      });
+      const json = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(json?.error ?? "보내지 못했어요.");
+      window.localStorage.setItem(CLASS_CODE_KEY, code);
+      window.localStorage.setItem(STUDENT_NAME_KEY, student);
+      setResult({
+        ok: true,
+        message: "선생님께 보냈어요. 다시 보내면 최신 내용으로 바뀌어요.",
+      });
+    } catch (caught) {
+      setResult({
+        ok: false,
+        message: caught instanceof Error ? caught.message : "보내지 못했어요.",
+      });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  if (!open) {
+    return (
+      <button
+        className="checklist-send-open"
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          setOpen(true);
+        }}
+      >
+        <Send size={10} aria-hidden="true" />
+        선생님께 보내기
+      </button>
+    );
+  }
+
+  return (
+    <form
+      className="checklist-send"
+      onClick={(event) => event.stopPropagation()}
+      onSubmit={(event) => {
+        event.preventDefault();
+        void send();
+      }}
+    >
+      <input
+        aria-label="이름"
+        placeholder="이름"
+        value={studentName}
+        maxLength={20}
+        onChange={(event) => setStudentName(event.target.value)}
+      />
+      <input
+        aria-label="반 코드"
+        placeholder="반 코드"
+        value={classCode}
+        maxLength={24}
+        onChange={(event) => setClassCode(event.target.value)}
+      />
+      <button type="submit" disabled={sending}>
+        {sending ? (
+          <Loader2 size={11} aria-hidden="true" />
+        ) : (
+          <Send size={11} aria-hidden="true" />
+        )}
+        보내기
+      </button>
+      {result && (
+        <p className={result.ok ? "ok" : "bad"} role="status">
+          {result.message}
+        </p>
+      )}
+    </form>
   );
 }
 

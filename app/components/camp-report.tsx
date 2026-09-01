@@ -24,6 +24,7 @@ import type { AppRuntime } from "./runtime/use-app-runtime";
 import { partStyle } from "./runtime/style";
 import { compressPhoto } from "../../lib/image";
 import {
+  CLASS_CODE_KEY,
   DRAFT_SCOPE_ID,
   readRuntime,
   writeRuntime,
@@ -149,7 +150,7 @@ export function CampReport({
   const [sendClassCode, setSendClassCode] = useState(() =>
     typeof window === "undefined"
       ? ""
-      : (window.localStorage.getItem("my-webapp-class-code-v1") ?? ""),
+      : (window.localStorage.getItem(CLASS_CODE_KEY) ?? ""),
   );
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState<{
@@ -271,7 +272,7 @@ export function CampReport({
       if (!response.ok) {
         throw new Error(json?.error ?? "보내지 못했어요.");
       }
-      window.localStorage.setItem("my-webapp-class-code-v1", classCode);
+      window.localStorage.setItem(CLASS_CODE_KEY, classCode);
       setSendResult({
         ok: true,
         message: "선생님께 보냈어요. 다시 보내면 최신 내용으로 바뀌어요.",

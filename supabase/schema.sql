@@ -41,6 +41,20 @@ create table if not exists public.class_records (
   unique (class_code, student_name)
 );
 
+-- 활동 체크를 날짜별로 받으면서 기록 종류가 둘이 되었습니다. 예전에 쌓인 줄은
+-- 모두 캠프 기록이라 기본값을 'camp'로 둡니다. 이미 만들어 둔 표에도 그대로
+-- 다시 실행하면 됩니다.
+alter table public.class_records
+  add column if not exists kind text not null default 'camp';
+
+-- 같은 학생이 캠프 기록과 할 일 기록을 따로 보낼 수 있어야 하므로, 학생마다
+-- 한 줄이던 제약을 종류까지 묶은 것으로 바꿉니다.
+alter table public.class_records
+  drop constraint if exists class_records_class_code_student_name_key;
+
+create unique index if not exists class_records_student_kind_idx
+  on public.class_records (class_code, student_name, kind);
+
 create index if not exists class_records_class_idx
   on public.class_records (class_code, updated_at desc);
 
