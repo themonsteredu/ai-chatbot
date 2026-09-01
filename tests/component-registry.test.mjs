@@ -105,6 +105,7 @@ test("every component carries the shared styling props", () => {
     if (!spec.acceptsChildren) {
       // 글자를 직접 그리지 않는 배치 부품만 글자 속성을 뺍니다.
       assert.ok(keys.has("fontSize"), `${spec.type}: 글자 크기가 없습니다.`);
+      assert.ok(keys.has("font"), `${spec.type}: 글꼴이 없습니다.`);
       assert.ok(keys.has("align"), `${spec.type}: 정렬이 없습니다.`);
     }
   }

@@ -22,6 +22,7 @@ import type { PropGroup, PropSpec } from "../../../lib/components/registry";
 import { REGISTRY } from "../../../lib/components/registry";
 import { compressPhoto } from "../../../lib/image";
 import { PartIcon } from "../runtime/part-icon";
+import { FONT_STACK } from "../runtime/style";
 import { ColorField } from "./color-field";
 import { ItemListField } from "./item-list-field";
 
@@ -226,22 +227,34 @@ function Field({ spec, value, onChange }: FieldProps) {
         />
       );
 
-    case "select":
+    case "select": {
+      // 글꼴은 이름만 읽어서는 고르기 어려워, 목록을 그 글꼴로 보여 줍니다.
+      const showsFont = spec.key === "font";
+      const chosen = String(value ?? "");
       return (
         <label>
           <span>{spec.label}</span>
           <select
-            value={String(value ?? "")}
+            value={chosen}
+            style={showsFont ? { fontFamily: FONT_STACK[chosen] } : undefined}
             onChange={(event) => onChange(event.target.value)}
           >
             {spec.options?.map((option) => (
-              <option key={option.value} value={option.value}>
+              <option
+                key={option.value}
+                value={option.value}
+                style={
+                  showsFont ? { fontFamily: FONT_STACK[option.value] } : undefined
+                }
+              >
                 {option.label}
               </option>
             ))}
           </select>
+          {spec.help && <small className="property-help">{spec.help}</small>}
         </label>
       );
+    }
 
     case "align":
       return (

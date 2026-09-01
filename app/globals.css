@@ -3582,7 +3582,7 @@ select:focus-visible {
 .journal-card header small,
 .chatbot-feature-heading small {
   display: block;
-  color: var(--phone-accent);
+  color: var(--part-ink, var(--phone-accent));
   font-size: 6px;
   font-weight: 900;
   letter-spacing: 0.11em;
@@ -3596,7 +3596,7 @@ select:focus-visible {
 
 .notice-card p {
   margin: 0;
-  color: #61697c;
+  color: var(--part-ink, #61697c);
   font-size: 7px;
   line-height: 1.55;
 }
@@ -3655,7 +3655,7 @@ select:focus-visible {
   padding: 4px 6px;
   border-radius: 7px;
   background: #f7f8fb;
-  color: #555d70;
+  color: var(--part-ink, #555d70);
   font-size: 7px;
   cursor: pointer;
 }
@@ -3768,7 +3768,7 @@ select:focus-visible {
   border-radius: 9px;
   outline: 0;
   background: #f8f9fc;
-  color: #42495a;
+  color: var(--part-ink, #42495a);
   font-size: 7px;
   line-height: 1.5;
   resize: none;
@@ -3789,7 +3789,7 @@ select:focus-visible {
   border: 0;
   border-radius: 8px;
   background: color-mix(in srgb, var(--phone-accent) 11%, white);
-  color: var(--phone-accent);
+  color: var(--part-ink, var(--phone-accent));
   font-size: 7px;
   font-weight: 850;
   cursor: pointer;
@@ -5862,22 +5862,25 @@ select:focus-visible {
   padding: 11px 14px;
   border: 0;
   border-radius: 12px;
-  background: var(--phone-accent, var(--violet));
-  color: #fff;
+  background: var(--part-surface, var(--phone-accent, var(--violet)));
+  color: var(--part-ink, #fff);
   font: inherit;
   font-weight: 800;
   cursor: pointer;
 }
 
 .part-button-face.outline {
-  border: 2px solid var(--phone-accent, var(--violet));
-  background: transparent;
-  color: var(--phone-accent, var(--violet));
+  border: 2px solid var(--part-ink, var(--phone-accent, var(--violet)));
+  background: var(--part-surface, transparent);
+  color: var(--part-ink, var(--phone-accent, var(--violet)));
 }
 
 .part-button-face.soft {
-  background: color-mix(in srgb, var(--phone-accent, #6956e8) 16%, #fff);
-  color: var(--phone-accent, var(--violet));
+  background: var(
+    --part-surface,
+    color-mix(in srgb, var(--phone-accent, #6956e8) 16%, #fff)
+  );
+  color: var(--part-ink, var(--phone-accent, var(--violet)));
 }
 
 .part-button-face:disabled {
@@ -5890,7 +5893,7 @@ select:focus-visible {
   height: 0;
   margin: 0;
   border: 0;
-  border-top: 1px solid var(--line-strong);
+  border-top: 1px solid var(--part-ink, var(--line-strong));
 }
 
 .part-list {
@@ -5931,7 +5934,7 @@ select:focus-visible {
   justify-content: space-between;
   font-size: 0.85em;
   font-weight: 800;
-  color: var(--muted);
+  color: var(--part-ink, var(--muted));
 }
 
 .part-textbox input,
@@ -5941,13 +5944,14 @@ select:focus-visible {
   border: 1px solid var(--line-strong);
   border-radius: 10px;
   background: var(--surface);
+  color: var(--part-ink, inherit);
   font: inherit;
   resize: vertical;
 }
 
 .part-slider input[type="range"] {
   width: 100%;
-  accent-color: var(--phone-accent, var(--violet));
+  accent-color: var(--part-ink, var(--phone-accent, var(--violet)));
 }
 
 .part-checkbox {
@@ -5960,7 +5964,7 @@ select:focus-visible {
 .part-checkbox input {
   width: 17px;
   height: 17px;
-  accent-color: var(--phone-accent, var(--violet));
+  accent-color: var(--part-ink, var(--phone-accent, var(--violet)));
 }
 
 .part-switch {
@@ -6000,7 +6004,7 @@ select:focus-visible {
 }
 
 .part-switch.on i {
-  background: var(--phone-accent, var(--violet));
+  background: var(--part-ink, var(--phone-accent, var(--violet)));
 }
 
 .part-switch.on i::after {

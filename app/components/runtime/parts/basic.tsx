@@ -51,7 +51,9 @@ export function ImagePart({ node, runtime }: PartProps) {
 export function ButtonPart({ node, runtime }: PartProps) {
   const style = runtime.text(node, "style") || "solid";
   return (
-    <div className="part-button" style={partStyle(node.props)}>
+    // 색은 눌리는 얼굴이 직접 칠합니다. 겉칸을 칠하면 버튼 둘레에 색 테두리만
+    // 생기고 정작 버튼은 그대로였습니다.
+    <div className="part-button" style={partStyle(node.props, { innerFill: true })}>
       <button
         className={`part-button-face ${style}`}
         type="button"

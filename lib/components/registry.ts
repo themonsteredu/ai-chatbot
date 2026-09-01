@@ -85,6 +85,18 @@ const FONT_SIZES = [
   { value: "xl", label: "아주 크게" },
 ];
 
+/**
+ * 글꼴은 기기에 이미 있는 것만 고르게 합니다. 실제 글꼴 이름은 화면 쪽
+ * style.ts가 가지고 있습니다.
+ */
+const FONTS = [
+  { value: "", label: "기본" },
+  { value: "gothic", label: "또렷한 고딕" },
+  { value: "myeongjo", label: "차분한 명조" },
+  { value: "handwriting", label: "손글씨" },
+  { value: "typewriter", label: "타자기" },
+];
+
 const SPACES = [
   { value: "none", label: "없음" },
   { value: "sm", label: "좁게" },
@@ -120,6 +132,17 @@ function commonProps(): PropSpec[] {
       default: "md",
       group: "style",
       options: FONT_SIZES,
+      blockReadable: true,
+      blockWritable: true,
+    },
+    {
+      key: "font",
+      label: "글꼴",
+      kind: "select",
+      default: "",
+      group: "style",
+      options: FONTS,
+      help: "기기에 그 글꼴이 없으면 가장 비슷한 글꼴로 보여 줍니다",
       blockReadable: true,
       blockWritable: true,
     },
@@ -661,7 +684,7 @@ function withCommon(spec: ComponentSpec): ComponentSpec {
   const shared = commonProps().filter((prop) => !own.has(prop.key));
   // 배치 부품은 글자를 직접 그리지 않으므로 글자 속성은 뺍니다.
   const skip = spec.acceptsChildren
-    ? new Set(["fontSize", "bold", "textColor", "align"])
+    ? new Set(["fontSize", "font", "bold", "textColor", "align"])
     : new Set<string>();
   return {
     ...spec,
