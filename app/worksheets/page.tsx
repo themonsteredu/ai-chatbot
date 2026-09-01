@@ -4,6 +4,7 @@ import {
   Download,
   FileText,
   Lock,
+  Presentation,
   Printer,
 } from "lucide-react";
 import Link from "next/link";
@@ -32,6 +33,45 @@ const worksheets = [
   },
 ] as const;
 
+/**
+ * 초등 수업용 자료 묶음입니다. 수업 PPT는 선생님을 따라 만드는 1부와
+ * 스스로 바꿔 보는 2부로 되어 있고, 활동지는 A4 두 쪽입니다.
+ */
+const lessonPacks = [
+  {
+    order: "1차시",
+    title: "나를 소개하는 카드",
+    band: "초등 3~4학년",
+    summary: "사진과 글자로 내 소개 카드를 만들고, 버튼에 블록을 하나 붙여요.",
+    slides: "/lessons/lesson1-intro-card-slides.pptx",
+    sheet: "/lessons/lesson1-intro-card-worksheet.pdf",
+  },
+  {
+    order: "2차시",
+    title: "우리 반 설문판",
+    band: "초등 5~6학년",
+    summary: "슬라이더로 점수를 받고, ‘만약 ~라면’으로 답이 달라지게 해요.",
+    slides: "/lessons/lesson2-class-survey-slides.pptx",
+    sheet: "/lessons/lesson2-class-survey-worksheet.pdf",
+  },
+  {
+    order: "3차시",
+    title: "학교 안내 도우미",
+    band: "초등 5~6학년 심화",
+    summary: "버튼을 나란히 놓고, 버튼마다 다른 안내가 나오게 만들어요.",
+    slides: "/lessons/lesson3-school-guide-slides.pptx",
+    sheet: "/lessons/lesson3-school-guide-worksheet.pdf",
+  },
+  {
+    order: "4차시",
+    title: "우리 반 알림장",
+    band: "초등 3~4학년",
+    summary: "오늘의 알림과 할 일을 담은 우리 반 알림장을 만들어요.",
+    slides: "/lessons/lesson4-notice-board-slides.pptx",
+    sheet: "/lessons/lesson4-notice-board-worksheet.pdf",
+  },
+] as const;
+
 export default function WorksheetsPage() {
   return (
     <main className="worksheets-page">
@@ -56,7 +96,7 @@ export default function WorksheetsPage() {
           </span>
           <span>
             <b>수업 예시와 지도안 보기</b>
-            <small>차시별 예시 웹앱 3종 · 수업 흐름 · 평가 기준 · 활동지</small>
+            <small>차시별 예시 웹앱 4종 · 수업 흐름 · 평가 기준 · 활동지</small>
           </span>
           <ChevronRight size={16} aria-hidden="true" />
         </Link>
@@ -92,6 +132,52 @@ export default function WorksheetsPage() {
               </a>
             </article>
           ))}
+        </section>
+
+        <section className="lesson-pack" aria-label="차시별 수업 자료">
+          <header className="lesson-pack-heading">
+            <h2>차시별 수업 자료</h2>
+            <p>
+              수업에 그대로 띄우는 PPT(17장)와 아이들이 쓰는 A4 활동지(2쪽)예요.
+              PPT 앞부분은 선생님을 따라 만들고, 뒷부분은 스스로 바꿔 보는
+              차례로 되어 있어요.
+            </p>
+          </header>
+
+          <div className="lesson-pack-grid">
+            {lessonPacks.map((pack) => (
+              <article className="lesson-pack-card" key={pack.order}>
+                <div className="lesson-pack-top">
+                  <span className="lesson-pack-order">{pack.order}</span>
+                  <span className="lesson-pack-band">{pack.band}</span>
+                </div>
+                <h3>{pack.title}</h3>
+                <p>{pack.summary}</p>
+                <div className="lesson-pack-links">
+                  <a
+                    className="lesson-pack-link slides"
+                    href={pack.slides}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <Presentation size={16} aria-hidden="true" />
+                    수업 PPT 받기
+                    <Download size={14} aria-hidden="true" />
+                  </a>
+                  <a
+                    className="lesson-pack-link sheet"
+                    href={pack.sheet}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <Printer size={16} aria-hidden="true" />
+                    활동지 인쇄하기
+                    <Download size={14} aria-hidden="true" />
+                  </a>
+                </div>
+              </article>
+            ))}
+          </div>
         </section>
 
         <aside className="worksheet-print-guide">

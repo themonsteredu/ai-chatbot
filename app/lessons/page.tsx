@@ -1,4 +1,4 @@
-import { ArrowLeft, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ChevronRight, FileText, ShieldCheck } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LessonGuide } from "../components/lesson-guide";
@@ -21,11 +21,22 @@ export default function LessonsPage() {
           <span className="worksheets-kicker">SAMPLE LESSONS</span>
           <h1>수업 예시와 지도안</h1>
           <p>
-            이 도구로 무엇을 만들 수 있는지 보여 주는 예시 세 가지입니다. 세
+            이 도구로 무엇을 만들 수 있는지 보여 주는 예시 네 가지입니다. 네
             예시는 일부러 서로 다른 기능을 씁니다. 눌러서 바로 열어 보고, 그대로
             수업에 쓰거나 학교 사정에 맞게 고쳐 쓰세요.
           </p>
         </header>
+
+        <Link className="lesson-banner" href="/worksheets">
+          <span>
+            <FileText size={19} aria-hidden="true" />
+          </span>
+          <span>
+            <b>차시별 수업 PPT와 활동지 내려받기</b>
+            <small>수업에 바로 띄우는 PPT 17장 · 아이들이 쓰는 A4 활동지 2쪽</small>
+          </span>
+          <ChevronRight size={16} aria-hidden="true" />
+        </Link>
 
         <LessonGuide />
 
