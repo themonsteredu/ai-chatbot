@@ -7128,13 +7128,15 @@ select:focus-visible {
   accent-color: var(--violet);
 }
 
-/* ‘몇 초마다 되풀이’ 블록의 초를 적는 칸입니다. */
+/* ‘몇 초마다 되풀이’ 블록의 초를 적는 칸입니다. 블록 글씨가 흰색이라, 적은
+   숫자가 흰 바탕에 묻히지 않도록 글자색을 따로 정합니다. */
 .event-block .tick-seconds {
   width: 52px;
   padding: 3px 6px;
   border: 1px solid var(--line-strong);
   border-radius: 7px;
   background: #fff;
+  color: var(--ink);
   font-size: 12px;
   font-weight: 800;
   text-align: center;
