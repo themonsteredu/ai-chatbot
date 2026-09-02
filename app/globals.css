@@ -6276,6 +6276,23 @@ select:focus-visible {
 }
 
 /* 끌어온 부품이 어디에 놓일지 보여 줍니다. */
+/* 손가락으로 부품을 집었을 때 따라다니는 그림자입니다. 손가락 아래에서 조금
+   비켜 두어야 무엇을 집었는지 보입니다. */
+.drag-ghost {
+  position: fixed;
+  z-index: 60;
+  transform: translate(-50%, -170%);
+  padding: 7px 12px;
+  border-radius: 99px;
+  background: var(--violet);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 8px 20px rgba(42, 47, 70, 0.28);
+  pointer-events: none;
+}
+
 .part-slot.drop-before::before {
   content: "";
   position: absolute;
@@ -6284,6 +6301,13 @@ select:focus-visible {
   height: 3px;
   border-radius: 99px;
   background: var(--violet);
+}
+
+/* 화면 맨 끝에 놓으려고 빈 곳 위에 있을 때입니다. */
+.webapp-scroll.drop-end {
+  outline: 2px dashed var(--violet);
+  outline-offset: -4px;
+  border-radius: 12px;
 }
 
 .part-container.drop-inside {

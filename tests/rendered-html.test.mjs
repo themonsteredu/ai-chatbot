@@ -770,3 +770,30 @@ test("copies a link that carries the design, not the bare install address", asyn
   assert.match(installer, /await buildShareLink\(project, appId\)/);
   assert.doesNotMatch(installer, /writeText\(window\.location\.href\)/);
 });
+
+test("lets a finger drag parts, since touch screens have no drag and drop", async () => {
+  const [hook, palette, slot, phone, studio] = await Promise.all([
+    readFile(new URL("app/components/designer/use-pointer-drag.ts", root), "utf8"),
+    readFile(new URL("app/components/designer/palette-panel.tsx", root), "utf8"),
+    readFile(new URL("app/components/runtime/render-node.tsx", root), "utf8"),
+    readFile(new URL("app/components/phone-preview.tsx", root), "utf8"),
+    readFile(new URL("app/components/chatbot-studio.tsx", root), "utf8"),
+  ]);
+
+  // 마우스는 브라우저가 가진 끌어 놓기를 그대로 씁니다. 두 길이 겹치면 두 번 놓입니다.
+  assert.match(hook, /event\.pointerType === "mouse"/);
+  // 손가락을 대자마자 끌면 화면을 넘기려던 것과 구별할 수 없어, 잠깐 눌러야 집힙니다.
+  assert.match(hook, /HOLD_MS = \d+/);
+  assert.match(hook, /passive: false/);
+
+  // 놓을 자리는 화면에 심어 둔 표로 찾습니다.
+  assert.match(hook, /data-drop-before\],\[data-drop-inside\],\[data-drop-end/);
+  assert.match(slot, /data-drop-before=\{node\.id\}/);
+  assert.match(slot, /data-drop-inside=\{design \? node\.id : undefined\}/);
+  assert.match(phone, /data-drop-end=/);
+
+  // 팔레트와 이미 놓은 부품 양쪽에서 집을 수 있어야 합니다.
+  assert.match(palette, /onTouchDragStart\?\.\(type, spec\.name\)/);
+  assert.match(studio, /kind: "new", type, label: name/);
+  assert.match(studio, /kind: "move", nodeId: node\.id/);
+});

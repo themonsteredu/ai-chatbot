@@ -115,7 +115,10 @@ export function PhonePreview({
         </header>
 
         <div
-          className="webapp-scroll"
+          className={`webapp-scroll ${
+            design?.dropTargetId === "end" ? "drop-end" : ""
+          }`}
+          data-drop-end={design ? "" : undefined}
           onDragOver={onDropAtEnd ? (event) => event.preventDefault() : undefined}
           onDrop={onDropAtEnd}
         >

@@ -69,6 +69,12 @@ import { ColorField } from "./designer/color-field";
 import { ComponentTree, REORDER_MIME } from "./designer/component-tree";
 import { buildShareLink } from "./share-link";
 import { PALETTE_MIME, PalettePanel } from "./designer/palette-panel";
+import {
+  targetKey,
+  usePointerDrag,
+  type DragPayload,
+  type DropTarget,
+} from "./designer/use-pointer-drag";
 import { PropertyEditor } from "./designer/property-editor";
 import { useProjectHistory } from "./designer/use-project-history";
 import { PhonePreview } from "./phone-preview";
@@ -547,6 +553,38 @@ export function ChatbotStudio() {
     if (type && type in REGISTRY) addComponent(type, at);
   };
 
+  /**
+   * 손가락으로 끌어다 놓았습니다. 마우스 길(dropAt)과 같은 자리 셈을 쓰되,
+   * 브라우저 끌어 놓기 사건이 없으므로 집어 든 것을 직접 받습니다.
+   */
+  const dropByTouch = (payload: DragPayload, target: DropTarget) => {
+    if (!target) return;
+    let at: { parentId: string | null; index: number } | null = null;
+    if (target.kind === "before") {
+      at = locate(screen.children, target.nodeId);
+    } else if (target.kind === "inside") {
+      const parent = findNode(screen.children, target.parentId);
+      at = { parentId: target.parentId, index: parent?.children?.length ?? 0 };
+    } else {
+      at = { parentId: null, index: screen.children.length };
+    }
+    if (!at) return;
+
+    if (payload.kind === "new") {
+      addComponent(payload.type, at);
+      return;
+    }
+    const node = findNode(screen.children, payload.nodeId);
+    if (!node) return;
+    setChildren(
+      (children) => moveNode(children, payload.nodeId, at),
+      `${node.name} 옮기기`,
+    );
+    setSelected(payload.nodeId);
+  };
+
+  const { drag, dragHandlers } = usePointerDrag(dropByTouch);
+
   const designHooks = {
     selectedId: typeof selected === "string" ? selected : "",
     onSelect: (id: string) => selectTarget(id),
@@ -570,7 +608,7 @@ export function ChatbotStudio() {
       dragged.current = "";
       setDropTargetId("");
     },
-    dropTargetId,
+    dropTargetId: drag ? targetKey(drag.target) : dropTargetId,
     onDragOverNode: (target: string, event: DragEvent<HTMLElement>) => {
       event.dataTransfer.dropEffect = event.dataTransfer.types.includes(
         REORDER_MIME,
@@ -581,6 +619,8 @@ export function ChatbotStudio() {
     },
     onDragLeaveNode: (target: string) =>
       setDropTargetId((current) => (current === target ? "" : current)),
+    onTouchDragStart: (node: ComponentNode) =>
+      dragHandlers({ kind: "move", nodeId: node.id, label: node.name }),
   };
 
   /* ---------------- 저장·공유 ---------------- */
@@ -852,6 +892,15 @@ export function ChatbotStudio() {
 
   return (
     <main className="studio-shell">
+      {drag && (
+        <span
+          className="drag-ghost"
+          style={{ left: drag.x, top: drag.y }}
+          aria-hidden="true"
+        >
+          {drag.payload.label}
+        </span>
+      )}
       <header className="studio-topbar">
         <div className="studio-brand">
           <span className="studio-logo">
@@ -1088,6 +1137,9 @@ export function ChatbotStudio() {
               <PalettePanel
                 nodes={screen.children}
                 onAdd={(type) => addComponent(type)}
+                onTouchDragStart={(type, name) =>
+                  dragHandlers({ kind: "new", type, label: name })
+                }
               />
             </section>
           ) : (

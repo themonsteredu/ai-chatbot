@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
-import { useState, type DragEvent } from "react";
+import { useState, type DragEvent, type PointerEvent } from "react";
 import type { ComponentNode, ComponentTypeId } from "../../../lib/chatbot-studio";
 import { CATEGORIES, REGISTRY } from "../../../lib/components/registry";
 import { canAdd } from "../../../lib/project/tree";
@@ -12,9 +12,18 @@ export const PALETTE_MIME = "application/x-webapp-component";
 type PalettePanelProps = {
   nodes: ComponentNode[];
   onAdd: (type: ComponentTypeId) => void;
+  /** 손가락으로 부품을 집을 때 붙는 손잡이입니다. */
+  onTouchDragStart?: (
+    type: ComponentTypeId,
+    name: string,
+  ) => { onPointerDown: (event: PointerEvent<HTMLElement>) => void };
 };
 
-export function PalettePanel({ nodes, onAdd }: PalettePanelProps) {
+export function PalettePanel({
+  nodes,
+  onAdd,
+  onTouchDragStart,
+}: PalettePanelProps) {
   const [closed, setClosed] = useState<Record<string, boolean>>({});
 
   return (
@@ -63,6 +72,9 @@ export function PalettePanel({ nodes, onAdd }: PalettePanelProps) {
                         event.dataTransfer.setData(PALETTE_MIME, type);
                         event.dataTransfer.effectAllowed = "copy";
                       }}
+                      {...(allowed
+                        ? (onTouchDragStart?.(type, spec.name) ?? {})
+                        : {})}
                       onClick={() => onAdd(type)}
                     >
                       <span className={`palette-icon ${spec.tone}`}>

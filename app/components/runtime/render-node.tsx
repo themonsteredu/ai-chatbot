@@ -1,7 +1,12 @@
 "use client";
 
 import { EyeOff } from "lucide-react";
-import type { DragEvent, KeyboardEvent, MouseEvent } from "react";
+import type {
+  DragEvent,
+  KeyboardEvent,
+  MouseEvent,
+  PointerEvent,
+} from "react";
 import type { ComponentNode } from "../../../lib/chatbot-studio";
 import { REGISTRY } from "../../../lib/components/registry";
 import type { RuntimeScope } from "../../../lib/runtime-store";
@@ -37,6 +42,10 @@ export type DesignHooks = {
   dropTargetId: string;
   onDragOverNode: (nodeId: string, event: DragEvent<HTMLElement>) => void;
   onDragLeaveNode: (nodeId: string) => void;
+  /** 손가락으로 부품을 집을 때 붙는 손잡이입니다. 마우스는 위의 끌어 놓기를 씁니다. */
+  onTouchDragStart?: (node: ComponentNode) => {
+    onPointerDown: (event: PointerEvent<HTMLElement>) => void;
+  };
 };
 
 export type RenderNodeProps = {
@@ -58,6 +67,8 @@ function Part({ node, runtime, campScope, onOpenChat, design }: RenderNodeProps)
           children.length === 0 ? "empty" : ""
         } ${design?.dropTargetId === `inside:${node.id}` ? "drop-inside" : ""}`}
         style={containerStyle(node.props)}
+        // 손가락으로 끌어 놓을 때 여기가 어디인지 알아보는 표입니다.
+        data-drop-inside={design ? node.id : undefined}
         onDragOver={
           design
             ? (event) => {
@@ -160,6 +171,8 @@ export function RenderNode(props: RenderNodeProps) {
       tabIndex={0}
       aria-label={node.name}
       draggable
+      data-drop-before={node.id}
+      {...(design.onTouchDragStart?.(node) ?? {})}
       onClick={select}
       onKeyDown={(event) => {
         if (event.key !== "Enter" && event.key !== " ") return;
