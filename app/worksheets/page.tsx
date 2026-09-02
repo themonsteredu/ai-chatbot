@@ -6,6 +6,7 @@ import {
   Lock,
   Presentation,
   Printer,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -71,6 +72,17 @@ const lessonPacks = [
     sheet: "/lessons/lesson4-notice-board-worksheet.pdf",
   },
 ] as const;
+
+/**
+ * 차시 수업과 별개로, 그동안 더해진 기능만 모아 둔 안내 PPT입니다. 활동지 없이
+ * 슬라이드만 있어 위쪽에 따로 둡니다.
+ */
+const whatsNew = {
+  title: "새로 생긴 기능 둘러보기",
+  summary:
+    "꾸미기·부품 옮기기·블록·날짜별 할 일·설치 도움말까지, 최근에 더해진 것들을 15장에 담았어요.",
+  slides: "/lessons/whats-new-slides.pptx",
+} as const;
 
 export default function WorksheetsPage() {
   return (
@@ -143,6 +155,22 @@ export default function WorksheetsPage() {
               차례로 되어 있어요.
             </p>
           </header>
+
+          <a
+            className="lesson-pack-new"
+            href={whatsNew.slides}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <span>
+              <Sparkles size={19} aria-hidden="true" />
+            </span>
+            <span>
+              <b>{whatsNew.title}</b>
+              <small>{whatsNew.summary}</small>
+            </span>
+            <Download size={16} aria-hidden="true" />
+          </a>
 
           <div className="lesson-pack-grid">
             {lessonPacks.map((pack) => (

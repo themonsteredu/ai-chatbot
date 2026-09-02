@@ -726,6 +726,48 @@ select:focus-visible {
   line-height: 1.7;
 }
 
+/* 차시 자료 위에 놓는 ‘새 기능 안내’ 한 줄입니다. 활동지가 없어 슬라이드만 겁니다. */
+.lesson-pack-new {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 16px;
+  align-items: center;
+  gap: 13px;
+  margin-bottom: 16px;
+  padding: 15px 17px;
+  border: 1px solid #d8d2ff;
+  border-radius: 15px;
+  background: var(--violet-soft);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.lesson-pack-new > span:first-child {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #fff;
+  color: var(--violet);
+}
+
+.lesson-pack-new b {
+  display: block;
+  font-size: 14px;
+}
+
+.lesson-pack-new small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+
+.lesson-pack-new:hover {
+  border-color: var(--violet);
+}
+
 .lesson-pack-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
