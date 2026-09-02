@@ -61,6 +61,10 @@ export function describeExpr(expr: Expr, design: NameLookup): string {
       return `지금 ${expr.part}`;
     case "len":
       return `${describeExpr(expr.of, design)}의 글자 수`;
+    case "slice":
+      return `${describeExpr(expr.of, design)}의 ${describeExpr(expr.from, design)}번째부터 ${describeExpr(expr.count, design)}글자`;
+    case "tidy":
+      return `${describeExpr(expr.of, design)} ${expr.how}`;
     case "list-item":
       return `${nameOf(design, expr.target)}의 ${describeExpr(expr.index, design)}번째 줄`;
   }

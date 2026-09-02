@@ -95,11 +95,24 @@ export type EventId =
 /** ‘지금’ 블록이 꺼내 주는 것입니다. */
 export type NowPart = "날짜" | "시각" | "요일" | "년" | "월" | "일" | "시" | "분" | "초";
 
+/** 글자를 다듬는 방법입니다. */
+export type TidyHow = "빈칸 떼기" | "모두 소문자" | "모두 대문자";
+
 /** 소리 내기 블록이 낼 수 있는 소리입니다. */
 export type SoundName = "딩동" | "짝짝" | "삑" | "북";
 
 export type MathOp = "+" | "-" | "×" | "÷";
-export type CmpOp = "=" | "≠" | ">" | "<" | "≥" | "≤";
+export type CmpOp =
+  | "="
+  | "≠"
+  | ">"
+  | "<"
+  | "≥"
+  | "≤"
+  /** 글자끼리 봅니다. 퀴즈 채점에 씁니다. */
+  | "포함"
+  | "시작"
+  | "끝";
 export type LogicOp = "그리고" | "또는";
 
 /** 블록 구멍에 끼우는 값입니다. */
@@ -120,7 +133,11 @@ export type Expr =
   /** 글자 수입니다. 목록이면 줄 수입니다. */
   | { k: "len"; of: Expr }
   /** 목록의 몇 번째 줄입니다. 첫 줄이 1입니다. */
-  | { k: "list-item"; target: string; prop: string; index: Expr };
+  | { k: "list-item"; target: string; prop: string; index: Expr }
+  /** 글자의 일부를 오려 냅니다. 첫 글자가 1입니다. */
+  | { k: "slice"; of: Expr; from: Expr; count: Expr }
+  /** 글자를 다듬습니다. 앞뒤 빈칸을 떼거나 대·소문자를 맞춥니다. */
+  | { k: "tidy"; of: Expr; how: TidyHow };
 
 /** 이벤트가 일어났을 때 차례로 실행하는 동작입니다. */
 export type Action =

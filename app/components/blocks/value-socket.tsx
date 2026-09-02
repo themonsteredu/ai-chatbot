@@ -4,6 +4,7 @@ import type {
   ComponentNode,
   Expr,
   NowPart,
+  TidyHow,
 } from "../../../lib/chatbot-studio";
 import { REGISTRY } from "../../../lib/components/registry";
 
@@ -26,7 +27,12 @@ const KINDS: Array<{ value: Expr["k"]; label: string; advanced?: boolean }> = [
   { value: "now", label: "오늘·지금" },
   { value: "len", label: "글자 수", advanced: true },
   { value: "list-item", label: "목록의 몇 번째", advanced: true },
+  { value: "slice", label: "글자 오려 내기", advanced: true },
+  { value: "tidy", label: "글자 다듬기", advanced: true },
 ];
+
+/** 글자를 다듬는 방법입니다. 채점할 때 빈칸과 대·소문자를 맞춥니다. */
+const TIDY_HOWS: TidyHow[] = ["빈칸 떼기", "모두 소문자", "모두 대문자"];
 
 /** 목록을 가진 부품입니다. 목록 블록은 여기에만 붙습니다. */
 const listParts = (nodes: ComponentNode[]) =>
@@ -91,6 +97,15 @@ function blankOf(kind: Expr["k"], nodes: ComponentNode[]): Expr {
       return { k: "now", part: "날짜" };
     case "len":
       return { k: "len", of: { k: "text", v: "" } };
+    case "slice":
+      return {
+        k: "slice",
+        of: { k: "text", v: "" },
+        from: { k: "num", v: 1 },
+        count: { k: "num", v: 2 },
+      };
+    case "tidy":
+      return { k: "tidy", of: { k: "text", v: "" }, how: "빈칸 떼기" };
     case "list-item": {
       const first = listParts(nodes)[0];
       return {
@@ -256,6 +271,36 @@ export function ValueSocket({
         </span>
       )}
 
+      {value.k === "slice" && (
+        <span className="value-operands">
+          {nested(value.of, (next) => onChange({ ...value, of: next }))}
+          <b>의</b>
+          {nested(value.from, (next) => onChange({ ...value, from: next }))}
+          <b>번째부터</b>
+          {nested(value.count, (next) => onChange({ ...value, count: next }))}
+          <b>글자</b>
+        </span>
+      )}
+
+      {value.k === "tidy" && (
+        <span className="value-operands">
+          {nested(value.of, (next) => onChange({ ...value, of: next }))}
+          <select
+            aria-label="다듬는 방법"
+            value={value.how}
+            onChange={(event) =>
+              onChange({ ...value, how: event.target.value as TidyHow })
+            }
+          >
+            {TIDY_HOWS.map((how) => (
+              <option key={how} value={how}>
+                {how}
+              </option>
+            ))}
+          </select>
+        </span>
+      )}
+
       {value.k === "len" && (
         <span className="value-operands">
           {nested(value.of, (next) => onChange({ ...value, of: next }))}
@@ -276,7 +321,7 @@ export function ValueSocket({
             {(value.k === "math"
               ? ["+", "-", "×", "÷"]
               : value.k === "cmp"
-                ? ["=", "≠", ">", "<", "≥", "≤"]
+                ? ["=", "≠", ">", "<", "≥", "≤", "포함", "시작", "끝"]
                 : ["그리고", "또는"]
             ).map((op) => (
               <option key={op} value={op}>

@@ -28,6 +28,7 @@ import type {
   NowPart,
   PropValue,
   SoundName,
+  TidyHow,
   QaItem,
   Screen,
   TemplateId,
@@ -230,7 +231,8 @@ function normalizeScreens(raw: unknown): Screen[] {
 /* ------------------------------------------------------------------ */
 
 const MATH_OPS = new Set(["+", "-", "×", "÷"]);
-const CMP_OPS = new Set(["=", "≠", ">", "<", "≥", "≤"]);
+const CMP_OPS = new Set(["=", "≠", ">", "<", "≥", "≤", "포함", "시작", "끝"]);
+const TIDY_HOWS = new Set(["빈칸 떼기", "모두 소문자", "모두 대문자"]);
 const LOGIC_OPS = new Set(["그리고", "또는"]);
 
 function normalizeExpr(raw: unknown, depth = 0): Expr | null {
@@ -292,6 +294,18 @@ function normalizeExpr(raw: unknown, depth = 0): Expr | null {
     case "len": {
       const of = normalizeExpr(candidate.of, depth + 1);
       return of ? { k: "len", of } : null;
+    }
+    case "slice": {
+      const of = normalizeExpr(candidate.of, depth + 1);
+      const from = normalizeExpr(candidate.from, depth + 1);
+      const count = normalizeExpr(candidate.count, depth + 1);
+      return of && from && count ? { k: "slice", of, from, count } : null;
+    }
+    case "tidy": {
+      const of = normalizeExpr(candidate.of, depth + 1);
+      return of && TIDY_HOWS.has(candidate.how as string)
+        ? { k: "tidy", of, how: candidate.how as TidyHow }
+        : null;
     }
     case "list-item": {
       const index = normalizeExpr(candidate.index, depth + 1);

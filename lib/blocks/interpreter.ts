@@ -189,6 +189,16 @@ export function evaluate(
             : asNumber(left) === asNumber(right);
         return expr.op === "=" ? same : !same;
       }
+      // 글자끼리 보는 것들입니다. 퀴즈 채점에 씁니다.
+      if (expr.op === "포함" || expr.op === "시작" || expr.op === "끝") {
+        const haystack = asText(left);
+        const needle = asText(right);
+        if (!needle) return false;
+        if (expr.op === "포함") return haystack.includes(needle);
+        return expr.op === "시작"
+          ? haystack.startsWith(needle)
+          : haystack.endsWith(needle);
+      }
       const a = asNumber(left);
       const b = asNumber(right);
       switch (expr.op) {
@@ -231,6 +241,27 @@ export function evaluate(
       const at = Math.round(asNumber(evaluate(expr.index, design, state, depth + 1, env))) - 1;
       const item = list[at] as { text?: unknown } | undefined;
       return typeof item?.text === "string" ? item.text : "";
+    }
+    case "slice": {
+      const text = asText(evaluate(expr.of, design, state, depth + 1, env));
+      const letters = [...text];
+      // 아이들은 첫 글자를 1번이라고 셉니다.
+      const from = Math.max(
+        0,
+        Math.round(asNumber(evaluate(expr.from, design, state, depth + 1, env))) - 1,
+      );
+      const count = Math.max(
+        0,
+        Math.round(asNumber(evaluate(expr.count, design, state, depth + 1, env))),
+      );
+      return letters.slice(from, from + count).join("");
+    }
+    case "tidy": {
+      const text = asText(evaluate(expr.of, design, state, depth + 1, env));
+      if (expr.how === "빈칸 떼기") return text.trim();
+      return expr.how === "모두 소문자"
+        ? text.toLowerCase()
+        : text.toUpperCase();
     }
     case "len": {
       const value = evaluate(expr.of, design, state, depth + 1, env);

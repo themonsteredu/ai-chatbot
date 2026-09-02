@@ -420,3 +420,49 @@ test("turns the page to another screen", () => {
   state = runEvent(program, {}, state, { componentId: "c1", event: "click" });
   assert.equal(state.screen, "s2");
 });
+
+test("marks an answer right however the child typed it", () => {
+  const design = {};
+  const state = { ...emptyState(), vars: { 답: "  Seoul  " } };
+  const tidy = { k: "tidy", of: { k: "tidy", of: { k: "var", name: "답" }, how: "빈칸 떼기" }, how: "모두 소문자" };
+
+  // 앞뒤 빈칸과 대·소문자를 맞추면 채점이 됩니다.
+  assert.equal(evaluate(tidy, design, state), "seoul");
+  assert.equal(
+    evaluate({ k: "cmp", op: "=", a: tidy, b: { k: "text", v: "seoul" } }, design, state),
+    true,
+  );
+});
+
+test("compares text the way a quiz needs to", () => {
+  const design = {};
+  const state = { ...emptyState(), vars: { 글: "우리 반 알림장" } };
+  const cmp = (op, b) =>
+    evaluate({ k: "cmp", op, a: { k: "var", name: "글" }, b: { k: "text", v: b } }, design, state);
+
+  assert.equal(cmp("포함", "알림"), true);
+  assert.equal(cmp("포함", "숙제"), false);
+  assert.equal(cmp("시작", "우리"), true);
+  assert.equal(cmp("끝", "알림장"), true);
+  assert.equal(cmp("끝", "우리"), false);
+  // 빈 글자는 아무 데나 들어맞아 채점이 늘 참이 됩니다. 거짓으로 둡니다.
+  assert.equal(cmp("포함", ""), false);
+});
+
+test("cuts letters out of a word, counting from one", () => {
+  const design = {};
+  const state = { ...emptyState(), vars: { 이름: "김하늘" } };
+  const slice = (from, count) =>
+    evaluate(
+      { k: "slice", of: { k: "var", name: "이름" }, from: { k: "num", v: from }, count: { k: "num", v: count } },
+      design, state,
+    );
+
+  assert.equal(slice(1, 1), "김");
+  assert.equal(slice(2, 2), "하늘");
+  assert.equal(slice(3, 9), "늘");
+  // 이상한 수를 넣어도 웹앱이 깨지면 안 됩니다.
+  assert.equal(slice(0, 2), "김하");
+  assert.equal(slice(-5, 1), "김");
+  assert.equal(slice(2, -3), "");
+});

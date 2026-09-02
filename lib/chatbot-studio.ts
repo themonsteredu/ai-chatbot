@@ -20,6 +20,7 @@ export type {
   CmpOp,
   NowPart,
   SoundName,
+  TidyHow,
   ComponentNode,
   ComponentTypeId,
   EventBlock,
