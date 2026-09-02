@@ -224,6 +224,14 @@ export function evaluate(
     }
     case "now":
       return nowValue(expr.part, env.now());
+    case "list-item": {
+      const list = resolveProp(design, state, expr.target, expr.prop);
+      if (!Array.isArray(list)) return "";
+      // 아이들은 첫 줄을 1번이라고 셉니다.
+      const at = Math.round(asNumber(evaluate(expr.index, design, state, depth + 1, env))) - 1;
+      const item = list[at] as { text?: unknown } | undefined;
+      return typeof item?.text === "string" ? item.text : "";
+    }
     case "len": {
       const value = evaluate(expr.of, design, state, depth + 1, env);
       if (Array.isArray(value)) return value.length;
@@ -322,6 +330,30 @@ function runActions(
       case "open-screen":
         state = { ...state, screen: action.screen };
         break;
+      case "list-add":
+      case "list-clear": {
+        const node = design[action.target];
+        const spec = node ? propSpec(node.type, action.prop) : undefined;
+        // 목록 속성에만 씁니다. 다른 속성에 넣으면 화면이 깨집니다.
+        if (spec?.kind !== "itemlist") break;
+        if (action.kind === "list-clear") {
+          state = setProp(state, action.target, action.prop, []);
+          break;
+        }
+        const current = resolveProp(design, state, action.target, action.prop);
+        const rows = Array.isArray(current) ? [...current] : [];
+        const text = asText(evaluate(action.value, design, state, 0, env)).slice(0, 40);
+        if (!text || rows.length >= (spec.maxItems ?? 20)) break;
+        // 지웠다 다시 넣어도 겹치지 않는 번호를 짓습니다.
+        const taken = new Set(
+          rows.map((row) => (row as { id?: string }).id ?? ""),
+        );
+        let serial = rows.length + 1;
+        while (taken.has(`add-${serial}`)) serial += 1;
+        rows.push({ id: `add-${serial}`, text });
+        state = setProp(state, action.target, action.prop, rows as PropValue);
+        break;
+      }
       case "play-sound":
         // 소리는 화면 쪽이 냅니다. 여기서는 무엇을 몇 번째로 낼지만 적어 둡니다.
         state = { ...state, sound: action.sound, soundAt: state.soundAt + 1 };

@@ -350,6 +350,9 @@ const SPECS: ComponentSpec[] = [
         key: "items",
         label: "목록 내용",
         kind: "itemlist",
+        // 블록이 읽고 줄을 더할 수 있습니다. 통째로 바꾸는 것은 막아 둡니다.
+        // 글자를 넣어 버리면 목록이 아니게 되어 화면이 깨집니다.
+        blockReadable: true,
         default: [
           { id: "list-1", text: "첫 번째 줄" },
           { id: "list-2", text: "두 번째 줄" },
@@ -564,6 +567,7 @@ const SPECS: ComponentSpec[] = [
         key: "items",
         label: "체크할 항목",
         kind: "itemlist",
+        blockReadable: true,
         default: [
           { id: "check-1", text: "첫 번째 할 일" },
           { id: "check-2", text: "두 번째 할 일" },

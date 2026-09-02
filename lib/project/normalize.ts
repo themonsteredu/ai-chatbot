@@ -293,6 +293,22 @@ function normalizeExpr(raw: unknown, depth = 0): Expr | null {
       const of = normalizeExpr(candidate.of, depth + 1);
       return of ? { k: "len", of } : null;
     }
+    case "list-item": {
+      const index = normalizeExpr(candidate.index, depth + 1);
+      if (
+        !index ||
+        typeof candidate.target !== "string" ||
+        typeof candidate.prop !== "string"
+      ) {
+        return null;
+      }
+      return {
+        k: "list-item",
+        target: candidate.target.slice(0, 24),
+        prop: candidate.prop.slice(0, 32),
+        index,
+      };
+    }
     case "join": {
       if (!Array.isArray(candidate.parts)) return null;
       const parts = candidate.parts
@@ -374,6 +390,25 @@ function normalizeActions(raw: unknown, depth = 0): Action[] {
           times,
           body: normalizeActions(candidate.body, depth + 1),
         });
+        break;
+      }
+      case "list-add":
+      case "list-clear": {
+        if (
+          typeof candidate.target !== "string" ||
+          typeof candidate.prop !== "string"
+        ) {
+          continue;
+        }
+        const target = candidate.target.slice(0, 24);
+        const prop = candidate.prop.slice(0, 32);
+        if (candidate.kind === "list-clear") {
+          out.push({ id, kind: "list-clear", target, prop });
+          break;
+        }
+        const value = normalizeExpr(candidate.value);
+        if (!value) continue;
+        out.push({ id, kind: "list-add", target, prop, value });
         break;
       }
       case "play-sound": {

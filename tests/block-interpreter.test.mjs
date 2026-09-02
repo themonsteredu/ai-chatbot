@@ -329,3 +329,75 @@ test("keeps only the variables a student asked to remember", () => {
   assert.equal(started.vars.점수, 12);
   assert.equal(started.vars.이번판, 0);
 });
+
+/** 목록을 가진 부품 하나짜리 설계입니다. */
+const listDesign = () => ({
+  c1: {
+    id: "c1",
+    type: "list",
+    name: "목록1",
+    props: { items: [{ id: "item-1", text: "첫 줄" }] },
+  },
+});
+
+const listProgram = (body) => ({
+  events: [{ id: "e1", componentId: "c1", event: "click", body }],
+  variables: [],
+});
+
+test("stacks a new row onto a list, and reads it back", () => {
+  const design = listDesign();
+  let state = emptyState();
+  const program = listProgram([
+    { id: "a1", kind: "list-add", target: "c1", prop: "items", value: { k: "text", v: "둘째 줄" } },
+  ]);
+
+  state = runEvent(program, design, state, { componentId: "c1", event: "click" });
+  const rows = resolveProp(design, state, "c1", "items");
+  assert.deepEqual(rows.map((row) => row.text), ["첫 줄", "둘째 줄"]);
+
+  // 몇 번째 줄인지, 몇 줄인지 읽을 수 있어야 합니다. 첫 줄이 1번입니다.
+  const nth = (index) =>
+    evaluate({ k: "list-item", target: "c1", prop: "items", index: { k: "num", v: index } }, design, state);
+  assert.equal(nth(1), "첫 줄");
+  assert.equal(nth(2), "둘째 줄");
+  assert.equal(nth(9), "");
+  assert.equal(
+    evaluate({ k: "len", of: { k: "prop", target: "c1", prop: "items" } }, design, state),
+    2,
+  );
+});
+
+test("empties a list, and refuses to fill one past its limit", () => {
+  const design = listDesign();
+  let state = emptyState();
+
+  state = runEvent(
+    listProgram([{ id: "a1", kind: "list-clear", target: "c1", prop: "items" }]),
+    design, state, { componentId: "c1", event: "click" },
+  );
+  assert.deepEqual(resolveProp(design, state, "c1", "items"), []);
+
+  // 목록 부품은 20줄까지입니다. 반복 블록으로 끝없이 쌓이면 안 됩니다.
+  const add = listProgram([
+    { id: "a1", kind: "repeat", times: { k: "num", v: 30 },
+      body: [{ id: "a2", kind: "list-add", target: "c1", prop: "items", value: { k: "text", v: "줄" } }] },
+  ]);
+  state = runEvent(add, design, state, { componentId: "c1", event: "click" });
+  assert.equal(resolveProp(design, state, "c1", "items").length, 20);
+});
+
+test("never lets a list block touch a prop that is not a list", () => {
+  // 글자 속성에 줄을 더하면 목록이 아니게 되어 화면이 깨집니다.
+  const design = {
+    c1: { id: "c1", type: "label", name: "글자1", props: { text: "그대로" } },
+  };
+  let state = emptyState();
+  state = runEvent(
+    listProgram([
+      { id: "a1", kind: "list-add", target: "c1", prop: "text", value: { k: "text", v: "줄" } },
+    ]),
+    design, state, { componentId: "c1", event: "click" },
+  );
+  assert.equal(resolveProp(design, state, "c1", "text"), "그대로");
+});

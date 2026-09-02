@@ -61,6 +61,8 @@ export function describeExpr(expr: Expr, design: NameLookup): string {
       return `지금 ${expr.part}`;
     case "len":
       return `${describeExpr(expr.of, design)}의 글자 수`;
+    case "list-item":
+      return `${nameOf(design, expr.target)}의 ${describeExpr(expr.index, design)}번째 줄`;
   }
 }
 
@@ -84,6 +86,10 @@ export function describeAction(action: Action, design: NameLookup): string {
       return `${action.screen} 화면 열기`;
     case "play-sound":
       return `‘${action.sound}’ 소리 내기`;
+    case "list-add":
+      return `${nameOf(design, action.target)}에 ${describeExpr(action.value, design)} 한 줄 더하기`;
+    case "list-clear":
+      return `${nameOf(design, action.target)} 비우기`;
   }
 }
 
@@ -102,6 +108,17 @@ export const ACTION_CHOICES: Array<{
   },
   { kind: "show-message", label: "말풍선 보여 주기", hint: "화면에 안내를 띄워요" },
   { kind: "play-sound", label: "소리 내기", hint: "딩동·짝짝 같은 소리를 내요" },
+  {
+    kind: "list-add",
+    label: "목록에 더하기",
+    hint: "목록 맨 아래에 한 줄 쌓아요",
+  },
+  {
+    kind: "list-clear",
+    label: "목록 비우기",
+    hint: "쌓아 둔 줄을 모두 지워요",
+    advanced: true,
+  },
   {
     kind: "set-var",
     label: "변수 정하기",

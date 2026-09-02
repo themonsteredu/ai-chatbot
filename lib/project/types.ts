@@ -118,7 +118,9 @@ export type Expr =
   /** 오늘 날짜나 지금 시각입니다. */
   | { k: "now"; part: NowPart }
   /** 글자 수입니다. 목록이면 줄 수입니다. */
-  | { k: "len"; of: Expr };
+  | { k: "len"; of: Expr }
+  /** 목록의 몇 번째 줄입니다. 첫 줄이 1입니다. */
+  | { k: "list-item"; target: string; prop: string; index: Expr };
 
 /** 이벤트가 일어났을 때 차례로 실행하는 동작입니다. */
 export type Action =
@@ -129,7 +131,11 @@ export type Action =
   | { id: string; kind: "repeat"; times: Expr; body: Action[] }
   | { id: string; kind: "open-screen"; screen: string }
   /** 소리를 냅니다. 맞혔을 때·틀렸을 때를 귀로 알려 줍니다. */
-  | { id: string; kind: "play-sound"; sound: SoundName };
+  | { id: string; kind: "play-sound"; sound: SoundName }
+  /** 목록 맨 아래에 한 줄 더합니다. 방명록처럼 쌓아 갈 때 씁니다. */
+  | { id: string; kind: "list-add"; target: string; prop: string; value: Expr }
+  /** 목록을 비웁니다. */
+  | { id: string; kind: "list-clear"; target: string; prop: string };
 
 export type ActionKind = Action["kind"];
 

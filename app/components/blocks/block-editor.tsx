@@ -328,6 +328,10 @@ function ActionList({
   const writable = nodes.filter((node) =>
     REGISTRY[node.type].props.some((prop) => prop.blockWritable),
   );
+  /** 목록을 가진 부품입니다. 목록 블록은 여기에만 붙습니다. */
+  const listParts = nodes.filter((node) =>
+    REGISTRY[node.type].props.some((prop) => prop.kind === "itemlist"),
+  );
 
   const blankAction = (kind: Action["kind"]): Action => {
     const id = freshId("a");
@@ -349,6 +353,17 @@ function ActionList({
         return { id, kind, value: { k: "text", v: "잘했어요!" } };
       case "play-sound":
         return { id, kind, sound: "딩동" };
+      case "list-add":
+      case "list-clear": {
+        const first = listParts[0];
+        const prop = first
+          ? REGISTRY[first.type].props.find((one) => one.kind === "itemlist")
+          : undefined;
+        const where = { target: first?.id ?? "", prop: prop?.key ?? "items" };
+        return kind === "list-clear"
+          ? { id, kind, ...where }
+          : { id, kind, ...where, value: { k: "text", v: "" } };
+      }
       case "set-var":
         return { id, kind, name: variables[0] ?? "", value: { k: "num", v: 0 } };
       case "if":
@@ -465,6 +480,10 @@ function ActionRow({
   const writableProps = target
     ? REGISTRY[target.type].props.filter((prop) => prop.blockWritable)
     : [];
+  /** 목록을 가진 부품입니다. 목록 블록은 여기에만 붙습니다. */
+  const listParts = nodes.filter((node) =>
+    REGISTRY[node.type].props.some((prop) => prop.kind === "itemlist"),
+  );
 
   return (
     <div className={`action-block tone-${action.kind}`}>
@@ -506,6 +525,44 @@ function ActionRow({
             <span>을(를)</span>
             {socket(action.value, (value) => onChange({ ...action, value }))}
             <span>(으)로 바꾸기</span>
+          </>
+        )}
+
+        {(action.kind === "list-add" || action.kind === "list-clear") && (
+          <>
+            <select
+              aria-label="목록 고르기"
+              value={action.target}
+              onChange={(input) => {
+                const next = nodes.find((one) => one.id === input.target.value);
+                const prop = next
+                  ? REGISTRY[next.type].props.find(
+                      (one) => one.kind === "itemlist",
+                    )
+                  : undefined;
+                onChange({
+                  ...action,
+                  target: input.target.value,
+                  prop: prop?.key ?? action.prop,
+                });
+              }}
+            >
+              <option value="">목록을 골라요</option>
+              {listParts.map((node) => (
+                <option key={node.id} value={node.id}>
+                  {node.name}
+                </option>
+              ))}
+            </select>
+            {action.kind === "list-add" ? (
+              <>
+                <span>에</span>
+                {socket(action.value, (value) => onChange({ ...action, value }))}
+                <span>한 줄 더하기</span>
+              </>
+            ) : (
+              <span>비우기</span>
+            )}
           </>
         )}
 

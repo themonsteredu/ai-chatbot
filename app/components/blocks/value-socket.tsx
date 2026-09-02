@@ -25,7 +25,19 @@ const KINDS: Array<{ value: Expr["k"]; label: string; advanced?: boolean }> = [
   { value: "random", label: "아무 수" },
   { value: "now", label: "오늘·지금" },
   { value: "len", label: "글자 수", advanced: true },
+  { value: "list-item", label: "목록의 몇 번째", advanced: true },
 ];
+
+/** 목록을 가진 부품입니다. 목록 블록은 여기에만 붙습니다. */
+const listParts = (nodes: ComponentNode[]) =>
+  nodes.filter((node) =>
+    REGISTRY[node.type].props.some((prop) => prop.kind === "itemlist"),
+  );
+
+const firstListProp = (node: ComponentNode | undefined) =>
+  node
+    ? REGISTRY[node.type].props.find((prop) => prop.kind === "itemlist")?.key
+    : undefined;
 
 /** ‘오늘·지금’이 꺼내 줄 수 있는 것입니다. */
 const NOW_PARTS: NowPart[] = [
@@ -79,6 +91,15 @@ function blankOf(kind: Expr["k"], nodes: ComponentNode[]): Expr {
       return { k: "now", part: "날짜" };
     case "len":
       return { k: "len", of: { k: "text", v: "" } };
+    case "list-item": {
+      const first = listParts(nodes)[0];
+      return {
+        k: "list-item",
+        target: first?.id ?? "",
+        prop: firstListProp(first) ?? "items",
+        index: { k: "num", v: 1 },
+      };
+    }
   }
 }
 
@@ -206,6 +227,33 @@ export function ValueSocket({
             </option>
           ))}
         </select>
+      )}
+
+      {value.k === "list-item" && (
+        <span className="value-operands">
+          <select
+            aria-label="목록 고르기"
+            value={value.target}
+            onChange={(event) => {
+              const node = nodes.find((one) => one.id === event.target.value);
+              onChange({
+                ...value,
+                target: event.target.value,
+                prop: firstListProp(node) ?? value.prop,
+              });
+            }}
+          >
+            <option value="">목록을 골라요</option>
+            {listParts(nodes).map((node) => (
+              <option key={node.id} value={node.id}>
+                {node.name}
+              </option>
+            ))}
+          </select>
+          <b>의</b>
+          {nested(value.index, (next) => onChange({ ...value, index: next }))}
+          <b>번째 줄</b>
+        </span>
       )}
 
       {value.k === "len" && (
