@@ -744,5 +744,8 @@ test("keeps a student's app openable where the school network blocks it", async 
   // 설치 화면이 열리면 스스로 담고, 초록불로 알려 줍니다.
   assert.match(ready, /type: "precache"/);
   assert.match(ready, /담아 뒀어요/);
+  // 아이패드·아이폰은 홈 화면 아이콘 앱이 저장 공간을 따로 써서, Safari에 담은
+  // 것만으로는 학교에서 아이콘이 안 열립니다. 초록불 대신 따로 담으라고 합니다.
+  assert.match(ready, /홈 화면 아이콘은 따로 담아야 해요/);
   assert.match(player, /<OfflineReady \/>/);
 });

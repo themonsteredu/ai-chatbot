@@ -5795,6 +5795,13 @@ select:focus-visible {
   color: #a4303f;
 }
 
+/* 아이패드·아이폰의 Safari 탭: 반쪽만 담긴 상태라 노란색으로 둡니다. */
+.offline-ready.ios-tab {
+  border-color: #efd88a;
+  background: #fff8dc;
+  color: #7a5a00;
+}
+
 .offline-ready button {
   display: inline-flex;
   flex: none;

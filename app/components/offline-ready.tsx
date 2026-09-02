@@ -1,7 +1,8 @@
 "use client";
 
-import { Check, CloudOff, Loader2, RefreshCw } from "lucide-react";
+import { Check, CloudOff, Loader2, RefreshCw, Smartphone } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { detectBrowser } from "../../lib/install-guide";
 
 /**
  * 인터넷이 막혀도 이 앱이 열리게, 지금 화면이 쓰는 파일을 미리 담아 둡니다.
@@ -69,6 +70,9 @@ async function precache(): Promise<boolean> {
 export function OfflineReady() {
   const [status, setStatus] = useState<Status>("idle");
   const [installedApp, setInstalledApp] = useState(false);
+  // 아이폰·아이패드는 홈 화면 아이콘 앱이 Safari와 저장 공간을 따로 씁니다.
+  // Safari에 담은 것은 아이콘으로 열 때 없습니다. 아이콘으로도 한 번 열어야 합니다.
+  const [ios, setIos] = useState(false);
 
   const run = useCallback(async () => {
     if (!("serviceWorker" in navigator)) {
@@ -93,6 +97,7 @@ export function OfflineReady() {
         window.matchMedia("(display-mode: standalone)").matches ||
           navigatorWithStandalone.standalone === true,
       );
+      setIos(detectBrowser(navigator.userAgent).startsWith("ios"));
       void run();
     }, 1200);
     return () => window.clearTimeout(timer);
@@ -100,22 +105,40 @@ export function OfflineReady() {
 
   if (status === "unsupported" || status === "idle") return null;
 
+  // 아이패드·아이폰의 Safari 탭에서는 "담았다"가 반쪽짜리입니다. 초록색으로
+  // 두면 다 된 줄 알고 학교에 가서 빈 창을 만납니다.
+  const iosTabOnly = status === "ready" && ios && !installedApp;
+
   return (
-    <div className={`offline-ready ${status}`} role="status">
+    <div
+      className={`offline-ready ${status}${iosTabOnly ? " ios-tab" : ""}`}
+      role="status"
+    >
       {status === "working" && (
         <>
           <Loader2 size={13} aria-hidden="true" className="spin" />
           <span>학교에서도 열리게 담는 중…</span>
         </>
       )}
-      {status === "ready" && (
+      {iosTabOnly && (
+        <>
+          <Smartphone size={13} aria-hidden="true" />
+          <span>
+            <b>Safari에는 담았어요. 홈 화면 아이콘은 따로 담아야 해요.</b> 공유
+            버튼 → ‘홈 화면에 추가’를 한 다음, <b>인터넷이 되는 동안</b> 그
+            아이콘으로 한 번 열어 주세요. 그때 이 줄이 초록색이 되면 끝이에요.
+          </span>
+        </>
+      )}
+      {status === "ready" && !iosTabOnly && (
         <>
           <Check size={13} aria-hidden="true" />
           <span>
-            <b>담아 뒀어요.</b> 인터넷이 막혀도 이 앱은 열려요. 반 제출과 QR만
-            인터넷이 필요해요.
-            {!installedApp &&
-              " 홈 화면에 추가했다면 그 아이콘으로도 한 번 열어 두세요."}
+            <b>담아 뒀어요.</b>{" "}
+            {installedApp
+              ? "이 아이콘은 이제 인터넷이 막혀도 열려요."
+              : "인터넷이 막혀도 이 앱은 열려요."}{" "}
+            반 제출과 QR만 인터넷이 필요해요.
           </span>
         </>
       )}
