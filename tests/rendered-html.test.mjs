@@ -178,7 +178,15 @@ test("saves and installs every student project as its own phone web app", async 
   assert.match(installer, /api\/webapp-manifest/);
   assert.match(installer, /‘\{appName\}’ 설치/);
   assert.match(installer, /beforeinstallprompt/);
-  assert.match(installer, /홈 화면에 추가/);
+  // 메뉴 이름은 브라우저마다 달라 lib/install-guide.ts가 알려 줍니다.
+  assert.match(
+    installer,
+    /installGuide\(detectBrowser\(navigator\.userAgent\), appName\)/,
+  );
+  assert.match(
+    await readFile(new URL("../lib/install-guide.ts", import.meta.url), "utf8"),
+    /홈 화면에 추가/,
+  );
   // 학생 웹앱을 실행하는 동안에는 문서의 매니페스트 링크를 나중에 추가되는 것까지
   // 그 웹앱 것으로 바꿔 두고, 편집 화면으로 돌아갈 때 원래대로 되돌립니다.
   assert.match(installer, /link\[rel="manifest"\]/);

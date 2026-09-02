@@ -1,13 +1,23 @@
 "use client";
 
-import { ArrowUp, Check, Download, Share2, X } from "lucide-react";
+import { ArrowUp, Check, Copy, Download, Share2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { encodeProject, type WebAppProject } from "../../lib/chatbot-studio";
+import {
+  detectBrowser,
+  installGuide,
+  type InstallGuide,
+} from "../../lib/install-guide";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+};
+
+/** layout.tsx의 머리 스크립트가 화면이 뜨기 전에 붙잡아 둔 신호입니다. */
+type WindowWithPrompt = Window & {
+  __webappInstallPrompt?: BeforeInstallPromptEvent;
 };
 
 type PwaInstallButtonProps = {
@@ -32,6 +42,9 @@ export function PwaInstallButton({
   // 확인창이 떠 있는 동안 어디를 봐야 하는지 화면에 크게 알려 줍니다.
   const [prompting, setPrompting] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  // 설치창이 안 뜰 때 보여 줄, 이 브라우저에 맞는 길입니다.
+  const [guide, setGuide] = useState<InstallGuide | null>(null);
+  const [copied, setCopied] = useState(false);
 
   // 설치한 앱이 브라우저 저장 공간을 못 읽는 아이폰에서도 열리도록, 설계 내용을
   // 매니페스트에 실어 시작 주소에 담습니다.
@@ -123,14 +136,21 @@ export function PwaInstallButton({
     const alreadyInstalled =
       window.matchMedia("(display-mode: standalone)").matches ||
       navigatorWithStandalone.standalone === true;
-    const installedTimer = window.setTimeout(
-      () => setInstalled(alreadyInstalled),
-      0,
-    );
+    // 화면이 뜨기 전에 온 신호는 문서 머리 스크립트가 붙잡아 두었습니다.
+    const stashed = () => (window as WindowWithPrompt).__webappInstallPrompt;
+    const installedTimer = window.setTimeout(() => {
+      setInstalled(alreadyInstalled);
+      const early = stashed();
+      if (early) setInstallPrompt(early);
+    }, 0);
 
     const capturePrompt = (event: Event) => {
       event.preventDefault();
       setInstallPrompt(event as BeforeInstallPromptEvent);
+    };
+    const pickUpStashed = () => {
+      const early = stashed();
+      if (early) setInstallPrompt(early);
     };
     const markInstalled = () => {
       setInstalled(true);
@@ -139,18 +159,32 @@ export function PwaInstallButton({
     };
 
     window.addEventListener("beforeinstallprompt", capturePrompt);
+    window.addEventListener("webapp-install-ready", pickUpStashed);
     window.addEventListener("appinstalled", markInstalled);
     return () => {
       window.clearTimeout(installedTimer);
       window.removeEventListener("beforeinstallprompt", capturePrompt);
+      window.removeEventListener("webapp-install-ready", pickUpStashed);
       window.removeEventListener("appinstalled", markInstalled);
       restoreDocumentMetadata();
     };
   }, [accent, appId, appName, encodedProject]);
 
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+    } catch {
+      window.prompt("아래 주소를 복사해 주세요.", window.location.href);
+    }
+  };
+
   const install = async () => {
     if (installed) return;
     if (!installPrompt) {
+      // 브라우저가 설치창을 내주지 않으면, 이 브라우저의 메뉴 이름으로 길을 알려 줍니다.
+      setGuide(installGuide(detectBrowser(navigator.userAgent), appName));
+      setCopied(false);
       setShowHelp(true);
       return;
     }
@@ -207,12 +241,30 @@ export function PwaInstallButton({
               <X size={13} aria-hidden="true" />
             </button>
             <Share2 size={16} aria-hidden="true" />
-            <p>
-              <b>‘{appName}’</b>을 저장하려면 아이폰은 Safari 아래쪽의
-              공유 버튼을 누른 뒤 <strong>‘홈 화면에 추가’</strong>를
-              선택하세요. 안드로이드는 브라우저 메뉴의
-              <strong> ‘앱 설치’</strong>를 선택하면 됩니다.
-            </p>
+            <div>
+              <p>
+                <b>{guide?.title ?? `‘${appName}’을 홈 화면에 넣기`}</b>
+              </p>
+              <ol>
+                {(guide?.steps ?? []).map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ol>
+              {guide?.needsAnotherBrowser && (
+                <button
+                  className="pwa-install-copy"
+                  type="button"
+                  onClick={copyLink}
+                >
+                  <Copy size={12} aria-hidden="true" />
+                  {copied ? "주소를 복사했어요" : "이 앱 주소 복사"}
+                </button>
+              )}
+              <small>
+                이미 넣었다면 홈 화면에서 ‘{appName}’ 아이콘을 찾아 보세요.
+                그 아이콘으로 열면 설치창은 다시 뜨지 않아요.
+              </small>
+            </div>
           </div>,
           document.body,
         )}

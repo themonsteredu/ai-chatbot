@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
+import Script from "next/script";
 import { ServiceWorkerRegistration } from "./components/service-worker";
 import "./globals.css";
 
@@ -32,6 +33,17 @@ export const viewport: Viewport = {
   themeColor: "#6956e8",
 };
 
+/**
+ * 브라우저가 "이 앱은 설치할 수 있다"고 알리는 beforeinstallprompt를 문서
+ * 머리에서 먼저 붙잡아 둡니다.
+ *
+ * 두 번째 방문부터는 서비스워커와 매니페스트가 이미 있어서 Chrome이 이 신호를
+ * 화면이 뜨기도 전에 보냅니다. React가 뜬 뒤에야 듣기 시작하면 놓치고, 설치
+ * 버튼은 설치창 대신 "직접 추가하세요" 안내만 띄우게 됩니다. 여기서 잡아 두면
+ * 설치 버튼(pwa-install.tsx)이 나중에 꺼내 씁니다.
+ */
+const CAPTURE_INSTALL_PROMPT = `window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__webappInstallPrompt=e;window.dispatchEvent(new Event("webapp-install-ready"));});`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -40,6 +52,9 @@ export default function RootLayout({
   return (
     <html lang="ko" className={geist.variable}>
       <body>
+        <Script id="capture-install-prompt" strategy="beforeInteractive">
+          {CAPTURE_INSTALL_PROMPT}
+        </Script>
         {children}
         <ServiceWorkerRegistration />
       </body>

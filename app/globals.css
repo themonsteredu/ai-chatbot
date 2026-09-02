@@ -5572,6 +5572,42 @@ select:focus-visible {
   }
 }
 
+/* 설치창이 안 뜰 때의 안내입니다. 이 브라우저의 메뉴 이름으로 한 줄씩 알려 줍니다. */
+.pwa-install-help ol {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  list-style: decimal;
+  text-align: left;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.pwa-install-help small {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.pwa-install-help .pwa-install-copy {
+  position: static;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--violet);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--violet);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
 .pwa-install-help {
   position: fixed;
   z-index: 60;
