@@ -101,6 +101,8 @@ function adoptLegacy(saved: SavedShape, nodes: ComponentNode[]) {
 
 export type AppRuntime = {
   interactive: boolean;
+  /** 지금 열려 있는 화면입니다. */
+  screenId: string;
   resolve: (node: ComponentNode, key: string) => PropValue;
   text: (node: ComponentNode, key: string) => string;
   bool: (node: ComponentNode, key: string) => boolean;
@@ -123,7 +125,12 @@ export function useAppRuntime(
 ): AppRuntime {
   const screen = project.screens[0];
   const blocks = project.blocks;
-  const design = useMemo(() => nodeIndex(screen.children), [screen.children]);
+  // 블록은 어느 화면의 부품이든 가리킬 수 있어야 합니다. 화면을 넘긴 뒤에도
+  // 앞 화면의 부품을 바꾸는 블록이 그대로 살아 있어야 하기 때문입니다.
+  const design = useMemo(
+    () => nodeIndex(project.screens.flatMap((one) => one.children)),
+    [project.screens],
+  );
 
   const scopeId = dataScope?.appId ?? DRAFT_SCOPE_ID;
   const scopeLegacyTitle = dataScope?.legacyTitle ?? project.title;
@@ -311,6 +318,8 @@ export function useAppRuntime(
   return useMemo(
     () => ({
       interactive,
+      /** 지금 열려 있는 화면입니다. 블록의 ‘화면 열기’가 바꿉니다. */
+      screenId: state.runtime.screen,
       resolve,
       text: (node, key) => {
         const value = resolve(node, key);
@@ -338,6 +347,7 @@ export function useAppRuntime(
       storageFull,
     }),
     [
+      state.runtime.screen,
       clearMessage,
       fire,
       interactive,

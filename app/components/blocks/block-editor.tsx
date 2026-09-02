@@ -18,8 +18,9 @@ import type {
   EventBlock,
   EventId,
   Expr,
-  WebAppProject,
+  Screen,
   SoundName,
+  WebAppProject,
 } from "../../../lib/chatbot-studio";
 import { SCREEN_TARGET } from "../../../lib/chatbot-studio";
 
@@ -48,9 +49,8 @@ export function BlockPalette({
   onAdvancedChange,
   onChange,
 }: BlockPaletteProps) {
-  const screen = project.screens[0];
-  const nodes: ComponentNode[] = [...walk(screen.children)].map(
-    (entry) => entry.node,
+  const nodes: ComponentNode[] = project.screens.flatMap((screen) =>
+    [...walk(screen.children)].map((entry) => entry.node),
   );
   const blocks = project.blocks;
 
@@ -151,9 +151,8 @@ export function BlockCanvas({
   onChange,
   onSelectComponent,
 }: BlockCanvasProps) {
-  const screen = project.screens[0];
-  const nodes: ComponentNode[] = [...walk(screen.children)].map(
-    (entry) => entry.node,
+  const nodes: ComponentNode[] = project.screens.flatMap((screen) =>
+    [...walk(screen.children)].map((entry) => entry.node),
   );
   const blocks = project.blocks;
   const variables = blocks.variables.map((variable) => variable.name);
@@ -175,7 +174,7 @@ export function BlockCanvas({
       <header className="block-canvas-header">
         <div>
           <span className="canvas-kicker">
-            {screen.name.toUpperCase()} · WEB APP LOGIC
+            {project.appName.toUpperCase()} · WEB APP LOGIC
           </span>
           <h2>내 웹앱의 움직임</h2>
         </div>
@@ -188,6 +187,7 @@ export function BlockCanvas({
             key={event.id}
             event={event}
             nodes={nodes}
+            screens={project.screens}
             variables={variables}
             advanced={advanced}
             onSelectComponent={onSelectComponent}
@@ -214,6 +214,7 @@ export function BlockCanvas({
 type EventCardProps = {
   event: EventBlock;
   nodes: ComponentNode[];
+  screens: Screen[];
   variables: string[];
   advanced: boolean;
   onSelectComponent: (id: string) => void;
@@ -224,6 +225,7 @@ type EventCardProps = {
 function EventCard({
   event,
   nodes,
+  screens,
   variables,
   advanced,
   onSelectComponent,
@@ -298,6 +300,7 @@ function EventCard({
 
       <ActionList
         actions={event.body}
+        screens={screens}
         nodes={nodes}
         variables={variables}
         advanced={advanced}
@@ -311,6 +314,8 @@ function EventCard({
 type ActionListProps = {
   actions: Action[];
   nodes: ComponentNode[];
+  /** 화면 열기 블록이 고를 수 있는 화면입니다. */
+  screens: Screen[];
   variables: string[];
   advanced: boolean;
   depth: number;
@@ -320,6 +325,7 @@ type ActionListProps = {
 function ActionList({
   actions,
   nodes,
+  screens,
   variables,
   advanced,
   depth,
@@ -353,6 +359,8 @@ function ActionList({
         return { id, kind, value: { k: "text", v: "잘했어요!" } };
       case "play-sound":
         return { id, kind, sound: "딩동" };
+      case "open-screen":
+        return { id, kind, screen: screens[0]?.id ?? "" };
       case "list-add":
       case "list-clear": {
         const first = listParts[0];
@@ -403,6 +411,7 @@ function ActionList({
           <ActionRow
             action={action}
             nodes={nodes}
+            screens={screens}
             writable={writable}
             variables={variables}
             advanced={advanced}
@@ -442,6 +451,7 @@ function ActionList({
 type ActionRowProps = {
   action: Action;
   nodes: ComponentNode[];
+  screens: Screen[];
   writable: ComponentNode[];
   variables: string[];
   advanced: boolean;
@@ -456,6 +466,7 @@ type ActionRowProps = {
 function ActionRow({
   action,
   nodes,
+  screens,
   writable,
   variables,
   advanced,
@@ -566,6 +577,26 @@ function ActionRow({
           </>
         )}
 
+        {action.kind === "open-screen" && (
+          <>
+            <select
+              aria-label="열 화면"
+              value={action.screen}
+              onChange={(input) =>
+                onChange({ ...action, screen: input.target.value })
+              }
+            >
+              <option value="">화면을 골라요</option>
+              {screens.map((one) => (
+                <option key={one.id} value={one.id}>
+                  {one.name}
+                </option>
+              ))}
+            </select>
+            <span>열기</span>
+          </>
+        )}
+
         {action.kind === "play-sound" && (
           <>
             <span>소리</span>
@@ -622,6 +653,7 @@ function ActionRow({
             <ActionList
               actions={action.then}
               nodes={nodes}
+              screens={screens}
               variables={variables}
               advanced={advanced}
               depth={depth + 1}
@@ -631,6 +663,7 @@ function ActionRow({
             <ActionList
               actions={action.otherwise ?? []}
               nodes={nodes}
+              screens={screens}
               variables={variables}
               advanced={advanced}
               depth={depth + 1}
@@ -646,6 +679,7 @@ function ActionRow({
             <ActionList
               actions={action.body}
               nodes={nodes}
+              screens={screens}
               variables={variables}
               advanced={advanced}
               depth={depth + 1}

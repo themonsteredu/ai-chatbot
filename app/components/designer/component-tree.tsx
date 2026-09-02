@@ -13,7 +13,11 @@ import {
 import { useEffect, useRef, useState, type DragEvent } from "react";
 import type { ComponentNode, WebAppProject } from "../../../lib/chatbot-studio";
 import { REGISTRY } from "../../../lib/components/registry";
-import { holdCandidates, type MoveStep } from "../../../lib/project/tree";
+import {
+  holdCandidates,
+  screenOf,
+  type MoveStep,
+} from "../../../lib/project/tree";
 import { PartIcon } from "../runtime/part-icon";
 
 export const REORDER_MIME = "application/x-webapp-reorder";
@@ -48,6 +52,8 @@ export type TreeSelection = "screen" | "header" | string;
 
 type ComponentTreeProps = {
   project: WebAppProject;
+  /** 편집 중인 화면입니다. 없으면 첫 화면입니다. */
+  screenId?: string;
   selected: TreeSelection;
   onSelect: (selection: TreeSelection) => void;
   onDragStartNode: (nodeId: string, event: DragEvent<HTMLElement>) => void;
@@ -151,6 +157,7 @@ function MoveBar({
 
 export function ComponentTree({
   project,
+  screenId,
   selected,
   onSelect,
   onDragStartNode,
@@ -164,7 +171,8 @@ export function ComponentTree({
   canMove,
   onHold,
 }: ComponentTreeProps) {
-  const screen = project.screens[0];
+  // 지금 편집하고 있는 화면입니다. 화면을 여러 개 만들 수 있습니다.
+  const screen = screenOf(project.screens, screenId ?? "");
 
   const renderNode = (node: ComponentNode, depth: number) => {
     const spec = REGISTRY[node.type];

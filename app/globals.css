@@ -2618,6 +2618,68 @@ select:focus-visible {
   border-bottom: 1px solid var(--line);
 }
 
+/* 화면을 고르는 띠입니다. 화면이 하나뿐이면 이름과 삭제는 숨깁니다. */
+.screen-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 0 10px 8px;
+}
+
+.screen-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 4px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 99px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.screen-tabs button.active {
+  border-color: var(--violet);
+  background: var(--violet-soft);
+  color: var(--violet);
+}
+
+.screen-tabs .add-screen {
+  padding: 4px 8px;
+  color: var(--violet);
+}
+
+.screen-name-row {
+  display: flex;
+  gap: 6px;
+  padding: 0 10px 9px;
+}
+
+.screen-name-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.screen-name-row button {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--danger);
+  cursor: pointer;
+}
+
 .component-tree {
   display: grid;
   gap: 3px;

@@ -17,6 +17,7 @@ import {
   Settings2,
   Share2,
   Smartphone,
+  Trash2,
   Sparkles,
   Undo2,
   Workflow,
@@ -50,6 +51,7 @@ import {
   locate,
   moveNode,
   placeNear,
+  screenOf,
   removeNode,
   stepNode,
   updateNode,
@@ -98,7 +100,9 @@ type Selected = "screen" | "header" | string;
 export function ChatbotStudio() {
   const history = useProjectHistory(cloneProject(DEFAULT_PROJECT));
   const project = history.project;
-  const screen = project.screens[0];
+  // 지금 편집하고 있는 화면입니다. 실행할 때는 블록이 연 화면을 그립니다.
+  const [activeScreenId, setActiveScreenId] = useState("");
+  const screen = screenOf(project.screens, activeScreenId);
 
   const [mode, setMode] = useState<StudioMode>("designer");
   const [selected, setSelected] = useState<Selected>("screen");
@@ -145,12 +149,28 @@ export function ChatbotStudio() {
     [screen.children],
   );
 
+  /** 웹앱 전체의 부품입니다. 이름과 아이디가 화면을 건너 겹치지 않게 씁니다. */
+  const allNodes = useMemo(
+    () => project.screens.flatMap((one) => one.children),
+    [project.screens],
+  );
+
+  /** 웹앱 전체에 놓은 부품 수입니다. 화면이 여러 개일 수 있습니다. */
+  const totalComponents = useMemo(
+    () =>
+      project.screens.reduce(
+        (sum, one) => sum + [...walk(one.children)].length,
+        0,
+      ),
+    [project.screens],
+  );
+
   // 지난 작업을 되살릴 수 있고, 아직 아무것도 만들지 않았을 때만 '이어서
   // 만들기' 띠를 띄웁니다. 학생이 부품이나 블록을 하나라도 놓으면 새로
   // 만드는 것으로 보고 띠를 거두며, 그때부터 자동 저장이 다시 켜집니다.
   const showResumeBar =
     resumableDraft !== null &&
-    componentCount === 0 &&
+    totalComponents === 0 &&
     project.blocks.events.length === 0;
 
   const reset = history.reset;
@@ -348,8 +368,8 @@ export function ChatbotStudio() {
     history.commit(
       (current) => ({
         ...current,
-        screens: current.screens.map((one, index) =>
-          index === 0 ? { ...one, children: change(one.children) } : one,
+        screens: current.screens.map((one) =>
+          one.id === screen.id ? { ...one, children: change(one.children) } : one,
         ),
       }),
       { label, coalesceKey },
@@ -364,7 +384,8 @@ export function ChatbotStudio() {
       notify(`${REGISTRY[type].name}은(는) 화면에 하나만 놓을 수 있어요.`);
       return;
     }
-    const node = createNode(screen.children, type);
+    // 화면이 여러 개일 수 있어, 이름과 아이디는 웹앱 전체를 보고 짓습니다.
+    const node = createNode(screen.children, type, allNodes);
     // 끌어 놓지 않고 팔레트를 눌렀을 때는, 지금 고른 자리를 따라 놓습니다.
     // 태블릿에는 끌어 놓기가 없어 이 길로만 배치 부품을 채웁니다.
     const place = at ?? placeNear(screen.children, selected);
@@ -413,6 +434,65 @@ export function ChatbotStudio() {
     notify(`${node.name}을(를) ${box.name} 안에 담았어요.`);
   };
 
+  /* ---------------- 화면 ---------------- */
+
+  const addScreen = () => {
+    if (project.screens.length >= 10) {
+      notify("화면은 10개까지 만들 수 있어요.");
+      return;
+    }
+    const taken = new Set(project.screens.map((one) => one.id));
+    let serial = project.screens.length + 1;
+    while (taken.has(`s${serial}`)) serial += 1;
+    const fresh = { id: `s${serial}`, name: `Screen${serial}`, children: [] };
+    history.commit(
+      (current) => ({ ...current, screens: [...current.screens, fresh] }),
+      { label: `${fresh.name} 추가` },
+    );
+    setActiveScreenId(fresh.id);
+    setSelected("screen");
+    notify(`${fresh.name}을(를) 만들었어요.`);
+  };
+
+  const renameScreen = (screenId: string, name: string) =>
+    history.commit(
+      (current) => ({
+        ...current,
+        screens: current.screens.map((one) =>
+          one.id === screenId ? { ...one, name: name.slice(0, 24) } : one,
+        ),
+      }),
+      { label: "화면 이름 바꾸기", coalesceKey: `screen-name:${screenId}` },
+    );
+
+  const removeScreen = (screenId: string) => {
+    if (project.screens.length <= 1) {
+      notify("화면은 적어도 하나는 있어야 해요.");
+      return;
+    }
+    const gone = project.screens.find((one) => one.id === screenId);
+    const goneIds = new Set(
+      [...walk(gone?.children ?? [])].map(({ node }) => node.id),
+    );
+    history.commit(
+      (current) => ({
+        ...current,
+        screens: current.screens.filter((one) => one.id !== screenId),
+        // 사라진 화면의 부품을 가리키던 블록도 함께 걷어 냅니다.
+        blocks: {
+          ...current.blocks,
+          events: current.blocks.events.filter(
+            (event) => !goneIds.has(event.componentId),
+          ),
+        },
+      }),
+      { label: `${gone?.name ?? "화면"} 삭제` },
+    );
+    setActiveScreenId("");
+    setSelected("screen");
+    notify(`${gone?.name ?? "화면"}을(를) 지웠어요. 되돌리기로 되살릴 수 있어요.`);
+  };
+
   const changeProp = (nodeId: string, key: string, value: PropValue) => {
     setChildren(
       (children) =>
@@ -444,7 +524,7 @@ export function ChatbotStudio() {
     let createdId = "";
     setChildren(
       (children) => {
-        const result = duplicateNode(children, nodeId);
+        const result = duplicateNode(children, nodeId, allNodes);
         createdId = result.created?.id ?? "";
         return result.nodes;
       },
@@ -461,8 +541,8 @@ export function ChatbotStudio() {
     history.commit(
       (current) => ({
         ...current,
-        screens: current.screens.map((one, index) =>
-          index === 0
+        screens: current.screens.map((one) =>
+          one.id === screen.id
             ? { ...one, children: removeNode(one.children, nodeId) }
             : one,
         ),
@@ -1161,11 +1241,60 @@ export function ChatbotStudio() {
 
           <section className="build-section components-panel">
             <div className="panel-title horizontal">
+              <span>화면</span>
+              <small>{project.screens.length}개</small>
+            </div>
+            <div className="screen-tabs">
+              {project.screens.map((one) => (
+                <button
+                  className={one.id === screen.id ? "active" : ""}
+                  key={one.id}
+                  type="button"
+                  onClick={() => {
+                    setActiveScreenId(one.id);
+                    setSelected("screen");
+                  }}
+                >
+                  <Smartphone size={13} aria-hidden="true" />
+                  {one.name}
+                </button>
+              ))}
+              <button
+                className="add-screen"
+                type="button"
+                title="화면 추가"
+                aria-label="화면 추가"
+                onClick={addScreen}
+              >
+                <Plus size={14} aria-hidden="true" />
+              </button>
+            </div>
+            {project.screens.length > 1 && (
+              <div className="screen-name-row">
+                <input
+                  aria-label="화면 이름"
+                  value={screen.name}
+                  maxLength={24}
+                  onChange={(event) => renameScreen(screen.id, event.target.value)}
+                />
+                <button
+                  type="button"
+                  aria-label={`${screen.name} 삭제`}
+                  title="이 화면 삭제"
+                  onClick={() => removeScreen(screen.id)}
+                >
+                  <Trash2 size={14} aria-hidden="true" />
+                </button>
+              </div>
+            )}
+
+            <div className="panel-title horizontal">
               <span>내가 놓은 부품</span>
               <small>{componentCount}개</small>
             </div>
             <ComponentTree
               project={project}
+              screenId={screen.id}
               selected={selected}
               {...designHooks}
               onSelect={selectTarget}
@@ -1297,6 +1426,7 @@ export function ChatbotStudio() {
                 </div>
                 <PhonePreview
                   project={project}
+                  screenId={screen.id}
                   design={designHooks}
                   chromeSelection={
                     selected === "screen" || selected === "header"
@@ -1372,7 +1502,7 @@ export function ChatbotStudio() {
             <footer>
               <span>
                 <Check size={14} aria-hidden="true" />
-                부품 {componentCount}개 · 블록 {project.blocks.events.length}개
+                부품 {totalComponents}개 · 블록 {project.blocks.events.length}개
               </span>
               <button
                 className="preview-save-app"

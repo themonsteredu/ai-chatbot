@@ -5,6 +5,7 @@ import { useEffect, useState, type DragEvent } from "react";
 import type { ComponentNode, WebAppProject } from "../../lib/chatbot-studio";
 import type { RuntimeScope } from "../../lib/runtime-store";
 import { DRAFT_SCOPE_ID } from "../../lib/runtime-store";
+import { screenOf } from "../../lib/project/tree";
 import { ChatbotSheet } from "./runtime/parts/chatbot";
 import { RenderNode, type DesignHooks } from "./runtime/render-node";
 import { useAppRuntime } from "./runtime/use-app-runtime";
@@ -22,6 +23,8 @@ type PhonePreviewProps = {
   chromeSelection?: "screen" | "header" | "";
   /** 팔레트에서 끌어온 부품을 화면 맨 끝에 놓습니다. */
   onDropAtEnd?: (event: DragEvent<HTMLElement>) => void;
+  /** 편집 중에 보고 있는 화면입니다. 실행 중에는 블록이 정합니다. */
+  screenId?: string;
 };
 
 export function PhonePreview({
@@ -33,10 +36,15 @@ export function PhonePreview({
   onSelectChrome,
   chromeSelection = "",
   onDropAtEnd,
+  screenId,
 }: PhonePreviewProps) {
   const runtime = useAppRuntime(project, interactive, dataScope);
   const [chatNode, setChatNode] = useState<ComponentNode | null>(null);
-  const screen = project.screens[0];
+  // 실행 중에는 블록이 연 화면을, 편집 중에는 학생이 고른 화면을 그립니다.
+  const screen = screenOf(
+    project.screens,
+    interactive ? runtime.screenId : (screenId ?? ""),
+  );
 
   const campScope: RuntimeScope = dataScope ?? {
     appId: DRAFT_SCOPE_ID,

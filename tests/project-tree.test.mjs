@@ -389,3 +389,22 @@ test("offers every part a layout part could take", () => {
     "배치 부품 안에 있는 부품도 옮겨 담을 수 있어야 합니다.",
   );
 });
+
+test("names parts so two screens never share an id", () => {
+  // 블록은 아이디로 부품을 찾습니다. 화면을 건너 겹치면 다른 화면의 글자가
+  // 함께 바뀝니다.
+  const first = build(["label", "button"]);
+  const second = [];
+  const everywhere = [...first, ...second];
+
+  const fresh = createNode(second, "label", everywhere);
+  assert.ok(!everywhere.some((node) => node.id === fresh.id), "아이디가 겹칩니다.");
+  assert.notEqual(fresh.name, "글자1");
+
+  // 복제도 마찬가지입니다.
+  const { created } = duplicateNode(first, first[0].id, [...everywhere, fresh]);
+  assert.ok(
+    ![...everywhere, fresh].some((node) => node.id === created.id),
+    "복제한 부품의 아이디가 겹칩니다.",
+  );
+});

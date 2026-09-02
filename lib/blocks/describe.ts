@@ -83,7 +83,7 @@ export function describeAction(action: Action, design: NameLookup): string {
     case "repeat":
       return `${describeExpr(action.times, design)}번 반복하기`;
     case "open-screen":
-      return `${action.screen} 화면 열기`;
+      return `${action.screen} 화면으로 넘기기`;
     case "play-sound":
       return `‘${action.sound}’ 소리 내기`;
     case "list-add":
@@ -124,6 +124,11 @@ export const ACTION_CHOICES: Array<{
     label: "변수 정하기",
     hint: "숫자나 글을 기억해 둬요",
     advanced: true,
+  },
+  {
+    kind: "open-screen",
+    label: "화면 넘기기",
+    hint: "다른 화면으로 넘어가요",
   },
   { kind: "if", label: "만약 ~라면", hint: "조건에 따라 갈라져요", advanced: true },
   { kind: "repeat", label: "반복하기", hint: "여러 번 되풀이해요", advanced: true },

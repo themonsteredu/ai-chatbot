@@ -401,3 +401,22 @@ test("never lets a list block touch a prop that is not a list", () => {
   );
   assert.equal(resolveProp(design, state, "c1", "text"), "그대로");
 });
+
+test("turns the page to another screen", () => {
+  const program = {
+    events: [
+      {
+        id: "e1",
+        componentId: "c1",
+        event: "click",
+        body: [{ id: "a1", kind: "open-screen", screen: "s2" }],
+      },
+    ],
+    variables: [],
+  };
+  let state = emptyState("s1");
+  assert.equal(state.screen, "s1");
+
+  state = runEvent(program, {}, state, { componentId: "c1", event: "click" });
+  assert.equal(state.screen, "s2");
+});

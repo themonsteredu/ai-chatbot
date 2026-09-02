@@ -60,12 +60,17 @@ export function nextId(nodes: ComponentNode[], seed = "c") {
 export function createNode(
   nodes: ComponentNode[],
   type: ComponentTypeId,
+  /**
+   * 웹앱 전체의 부품입니다. 화면이 여러 개면 아이디와 이름이 화면을 건너
+   * 겹치면 안 됩니다. 블록이 아이디로 부품을 찾기 때문입니다.
+   */
+  everywhere: ComponentNode[] = nodes,
 ): ComponentNode {
   const spec = specFor(type);
   const node: ComponentNode = {
-    id: nextId(nodes),
+    id: nextId(everywhere),
     type,
-    name: nextName(nodes, type),
+    name: nextName(everywhere, type),
     props: {},
   };
   if (spec.acceptsChildren) node.children = [];
@@ -340,12 +345,14 @@ export function moveNode(
 export function duplicateNode(
   nodes: ComponentNode[],
   id: string,
+  /** 웹앱 전체의 부품입니다. 아이디와 이름이 화면을 건너 겹치면 안 됩니다. */
+  everywhere: ComponentNode[] = nodes,
 ): { nodes: ComponentNode[]; created: ComponentNode | null } {
   const source = findNode(nodes, id);
   const at = locate(nodes, id);
   if (!source || !at) return { nodes, created: null };
 
-  let working = nodes;
+  let working = everywhere;
   const copy = (node: ComponentNode): ComponentNode => {
     const next: ComponentNode = {
       id: nextId(working, "c"),
