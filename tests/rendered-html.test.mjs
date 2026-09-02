@@ -202,7 +202,7 @@ test("saves and installs every student project as its own phone web app", async 
   assert.match(studio, /if \(sharedProject && seedOnly && nextAppId\)|sharedProject && seedOnly && nextAppId/);
   assert.match(manifestRoute, /icon-192\.png/);
   assert.match(manifestRoute, /purpose: "maskable"/);
-  assert.match(serviceWorker, /my-webapp-shell-v3/);
+  assert.match(serviceWorker, /my-webapp-shell-v4/);
   assert.match(serviceWorker, /icon-maskable-512\.png/);
 
   // 제작 도구 자체도 갤럭시에서 ‘앱 설치’가 뜨고 아이폰에서 홈 화면 아이콘이
@@ -716,4 +716,25 @@ test("builds layouts by tapping, for tablets with no drag and drop", async () =>
   // 팔레트를 눌러서 놓을 때도 고른 자리를 따라갑니다.
   assert.match(studio, /placeNear\(screen\.children, selected\)/);
   assert.match(palette, /놓을 자리를 고르고 눌러요/);
+});
+
+test("keeps a student's app openable where the school network blocks it", async () => {
+  const [sw, ready, player] = await Promise.all([
+    readFile(new URL("public/sw.js", root), "utf8"),
+    readFile(new URL("app/components/offline-ready.tsx", root), "utf8"),
+    readFile(new URL("app/components/webapp-player.tsx", root), "utf8"),
+  ]);
+
+  // 화면이 부탁하면 서비스워커가 지금 쓰는 파일을 미리 담고, 다 담았는지 답합니다.
+  assert.match(sw, /data\.type !== "precache"/);
+  assert.match(sw, /reply\(\{ ok: failed\.length === 0, failed \}\)/);
+  // 인터넷이 막히면 담아 둔 앱 셸을 대신 띄웁니다.
+  assert.match(sw, /caches\.match\("\/"\)/);
+  // 설치 정보만은 /api/ 아래여도 담습니다. 없으면 안드로이드가 설치를 못 띄웁니다.
+  assert.match(sw, /MANIFEST_PATH = "\/api\/webapp-manifest"/);
+
+  // 설치 화면이 열리면 스스로 담고, 초록불로 알려 줍니다.
+  assert.match(ready, /type: "precache"/);
+  assert.match(ready, /담아 뒀어요/);
+  assert.match(player, /<OfflineReady \/>/);
 });

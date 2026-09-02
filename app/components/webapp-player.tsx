@@ -3,6 +3,7 @@
 import { Pencil, Rocket } from "lucide-react";
 import type { WebAppProject } from "../../lib/chatbot-studio";
 import type { RuntimeScope } from "../../lib/runtime-store";
+import { OfflineReady } from "./offline-ready";
 import { PhonePreview } from "./phone-preview";
 import { PwaInstallButton } from "./pwa-install";
 
@@ -49,6 +50,7 @@ export function WebAppPlayer({
           </button>
         </nav>
       </header>
+      <OfflineReady />
       <div className="standalone-phone-wrap">
         <PhonePreview
           project={project}
