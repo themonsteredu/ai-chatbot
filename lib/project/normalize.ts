@@ -25,7 +25,9 @@ import type {
   EventBlock,
   Expr,
   ListItem,
+  NowPart,
   PropValue,
+  SoundName,
   QaItem,
   Screen,
   TemplateId,
@@ -37,6 +39,21 @@ const MAX_COMPONENTS = 120;
 const MAX_EVENTS = 60;
 const MAX_ACTIONS = 40;
 const MAX_EXPR_DEPTH = 8;
+
+/** ‘오늘·지금’과 소리 이름은 정해진 것만 받습니다. */
+const NOW_PARTS = new Set<string>([
+  "날짜",
+  "시각",
+  "요일",
+  "년",
+  "월",
+  "일",
+  "시",
+  "분",
+  "초",
+]);
+
+const SOUNDS = new Set<string>(["딩동", "짝짝", "삑", "북"]);
 
 const VALID_ICONS: ActionIcon[] = [
   "book",
@@ -263,6 +280,19 @@ function normalizeExpr(raw: unknown, depth = 0): Expr | null {
       }
       return null;
     }
+    case "random": {
+      const min = normalizeExpr(candidate.min, depth + 1);
+      const max = normalizeExpr(candidate.max, depth + 1);
+      return min && max ? { k: "random", min, max } : null;
+    }
+    case "now":
+      return NOW_PARTS.has(candidate.part as string)
+        ? { k: "now", part: candidate.part as NowPart }
+        : null;
+    case "len": {
+      const of = normalizeExpr(candidate.of, depth + 1);
+      return of ? { k: "len", of } : null;
+    }
     case "join": {
       if (!Array.isArray(candidate.parts)) return null;
       const parts = candidate.parts
@@ -346,6 +376,11 @@ function normalizeActions(raw: unknown, depth = 0): Action[] {
         });
         break;
       }
+      case "play-sound": {
+        if (!SOUNDS.has(candidate.sound as string)) continue;
+        out.push({ id, kind: "play-sound", sound: candidate.sound as SoundName });
+        break;
+      }
       case "open-screen": {
         if (typeof candidate.screen !== "string") continue;
         out.push({
@@ -383,15 +418,28 @@ function normalizeBlocks(raw: unknown, screens: Screen[]): BlockProgram {
       (event): event is Record<string, unknown> =>
         Boolean(event) && typeof event === "object",
     )
-    .map((event, index) => ({
-      id: textOr(event.id, `e${index + 1}`).slice(0, 24),
-      componentId: textOr(event.componentId, SCREEN_TARGET).slice(0, 24),
-      event: String(event.event ?? "click") as EventBlock["event"],
-      body: normalizeActions(event.body),
-    }))
+    .map((event, index) => {
+      const block: EventBlock = {
+        id: textOr(event.id, `e${index + 1}`).slice(0, 24),
+        componentId: textOr(event.componentId, SCREEN_TARGET).slice(0, 24),
+        event: String(event.event ?? "click") as EventBlock["event"],
+        body: normalizeActions(event.body),
+      };
+      if (block.event === "tick") {
+        // 1초보다 자주 되풀이하면 기기가 버겁고, 10분이면 수업 한 차시입니다.
+        const every =
+          typeof event.every === "number" && Number.isFinite(event.every)
+            ? Math.round(event.every)
+            : 1;
+        block.every = Math.max(1, Math.min(every, 600));
+      }
+      return block;
+    })
     .filter((event) => known.has(event.componentId))
     .filter((event) => {
-      if (event.componentId === SCREEN_TARGET) return event.event === "open";
+      if (event.componentId === SCREEN_TARGET) {
+        return event.event === "open" || event.event === "tick";
+      }
       const node = findByIdInScreens(screens, event.componentId);
       if (!node) return false;
       return REGISTRY[node.type].events.some((spec) => spec.id === event.event);
@@ -408,6 +456,7 @@ function normalizeBlocks(raw: unknown, screens: Screen[]): BlockProgram {
     .map((item) => ({
       name: textOr(item.name, "값").slice(0, 24),
       initial: normalizeExpr(item.initial) ?? { k: "num" as const, v: 0 },
+      ...(item.remember === true ? { remember: true } : {}),
     }));
 
   return { events, variables };

@@ -82,6 +82,8 @@ export type Screen = {
 
 export type EventId =
   | "open"
+  /** 화면이 열려 있는 동안 몇 초마다 되풀이됩니다. */
+  | "tick"
   | "click"
   | "change"
   | "item-checked"
@@ -89,6 +91,12 @@ export type EventId =
   | "session-saved"
   | "printed"
   | "asked";
+
+/** ‘지금’ 블록이 꺼내 주는 것입니다. */
+export type NowPart = "날짜" | "시각" | "요일" | "년" | "월" | "일" | "시" | "분" | "초";
+
+/** 소리 내기 블록이 낼 수 있는 소리입니다. */
+export type SoundName = "딩동" | "짝짝" | "삑" | "북";
 
 export type MathOp = "+" | "-" | "×" | "÷";
 export type CmpOp = "=" | "≠" | ">" | "<" | "≥" | "≤";
@@ -104,7 +112,13 @@ export type Expr =
   | { k: "math"; op: MathOp; a: Expr; b: Expr }
   | { k: "cmp"; op: CmpOp; a: Expr; b: Expr }
   | { k: "logic"; op: LogicOp; a: Expr; b: Expr }
-  | { k: "join"; parts: Expr[] };
+  | { k: "join"; parts: Expr[] }
+  /** min과 max 사이에서 아무 수나 하나 고릅니다. 주사위·뽑기에 씁니다. */
+  | { k: "random"; min: Expr; max: Expr }
+  /** 오늘 날짜나 지금 시각입니다. */
+  | { k: "now"; part: NowPart }
+  /** 글자 수입니다. 목록이면 줄 수입니다. */
+  | { k: "len"; of: Expr };
 
 /** 이벤트가 일어났을 때 차례로 실행하는 동작입니다. */
 export type Action =
@@ -113,7 +127,9 @@ export type Action =
   | { id: string; kind: "set-var"; name: string; value: Expr }
   | { id: string; kind: "if"; test: Expr; then: Action[]; otherwise?: Action[] }
   | { id: string; kind: "repeat"; times: Expr; body: Action[] }
-  | { id: string; kind: "open-screen"; screen: string };
+  | { id: string; kind: "open-screen"; screen: string }
+  /** 소리를 냅니다. 맞혔을 때·틀렸을 때를 귀로 알려 줍니다. */
+  | { id: string; kind: "play-sound"; sound: SoundName };
 
 export type ActionKind = Action["kind"];
 
@@ -124,9 +140,19 @@ export type EventBlock = {
   componentId: string;
   event: EventId;
   body: Action[];
+  /** "tick"일 때 몇 초마다 되풀이할지입니다. */
+  every?: number;
 };
 
-export type BlockVariable = { name: string; initial: Expr };
+export type BlockVariable = {
+  name: string;
+  initial: Expr;
+  /**
+   * 켜면 웹앱을 닫았다 열어도 값이 남습니다. 점수나 기록처럼 이어져야 하는
+   * 값에 씁니다. 끄면 열 때마다 첫 값으로 시작합니다.
+   */
+  remember?: boolean;
+};
 
 export type BlockProgram = {
   events: EventBlock[];

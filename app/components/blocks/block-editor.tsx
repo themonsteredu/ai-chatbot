@@ -7,6 +7,7 @@ import {
   MonitorPlay,
   Plus,
   Sparkles,
+  Timer,
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
@@ -18,8 +19,12 @@ import type {
   EventId,
   Expr,
   WebAppProject,
+  SoundName,
 } from "../../../lib/chatbot-studio";
 import { SCREEN_TARGET } from "../../../lib/chatbot-studio";
+
+/** 소리 내기 블록이 고를 수 있는 소리입니다. */
+const SOUNDS: SoundName[] = ["딩동", "짝짝", "삑", "북"];
 import { REGISTRY } from "../../../lib/components/registry";
 import { ACTION_CHOICES } from "../../../lib/blocks/describe";
 import { walk } from "../../../lib/project/tree";
@@ -78,6 +83,15 @@ export function BlockPalette({
         >
           <MonitorPlay size={16} aria-hidden="true" />
           화면을 열었을 때
+        </button>
+
+        <button
+          className="block-chip event"
+          type="button"
+          onClick={() => addEvent(SCREEN_TARGET, "tick")}
+        >
+          <Timer size={16} aria-hidden="true" />
+          몇 초마다 되풀이
         </button>
 
         {triggerable.map((node) =>
@@ -219,7 +233,9 @@ function EventCard({
   const node = nodes.find((one) => one.id === event.componentId);
   const label =
     event.componentId === SCREEN_TARGET
-      ? "열렸을 때"
+      ? event.event === "tick"
+        ? "이 있는 동안"
+        : "열렸을 때"
       : (node &&
           REGISTRY[node.type].events.find((spec) => spec.id === event.event)
             ?.label) ||
@@ -246,6 +262,29 @@ function EventCard({
             {event.componentId === SCREEN_TARGET ? "화면" : (node?.name ?? "없어진 부품")}
           </b>{" "}
           {label}
+          {event.event === "tick" && (
+            <>
+              {" "}
+              <input
+                className="tick-seconds"
+                type="number"
+                min={1}
+                max={600}
+                aria-label="몇 초마다"
+                value={event.every ?? 1}
+                onChange={(input) =>
+                  onChange({
+                    ...event,
+                    every: Math.max(
+                      1,
+                      Math.min(Number(input.target.value) || 1, 600),
+                    ),
+                  })
+                }
+              />{" "}
+              초마다
+            </>
+          )}
         </span>
         <button
           className="delete-block"
@@ -308,6 +347,8 @@ function ActionList({
       }
       case "show-message":
         return { id, kind, value: { k: "text", v: "잘했어요!" } };
+      case "play-sound":
+        return { id, kind, sound: "딩동" };
       case "set-var":
         return { id, kind, name: variables[0] ?? "", value: { k: "num", v: 0 } };
       case "if":
@@ -468,6 +509,26 @@ function ActionRow({
           </>
         )}
 
+        {action.kind === "play-sound" && (
+          <>
+            <span>소리</span>
+            <select
+              aria-label="낼 소리"
+              value={action.sound}
+              onChange={(event) =>
+                onChange({ ...action, sound: event.target.value as SoundName })
+              }
+            >
+              {SOUNDS.map((sound) => (
+                <option key={sound} value={sound}>
+                  {sound}
+                </option>
+              ))}
+            </select>
+            <span>내기</span>
+          </>
+        )}
+
         {action.kind === "show-message" && (
           <>
             {socket(action.value, (value) => onChange({ ...action, value }))}
@@ -614,6 +675,26 @@ function VariablePanel({
               })
             }
           />
+          <label
+            className="variable-remember"
+            title="켜면 웹앱을 닫았다 열어도 값이 남아요"
+          >
+            <input
+              type="checkbox"
+              checked={variable.remember === true}
+              onChange={(input) =>
+                onChange({
+                  ...blocks,
+                  variables: blocks.variables.map((one) =>
+                    one.name === variable.name
+                      ? { ...one, remember: input.target.checked }
+                      : one,
+                  ),
+                })
+              }
+            />
+            기억
+          </label>
           <button
             type="button"
             aria-label={`${variable.name} 삭제`}

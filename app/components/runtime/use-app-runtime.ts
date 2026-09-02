@@ -3,11 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   emptyState,
+  rememberedVars,
   resolveProp,
   runEvent,
   startState,
+  tickSeconds,
   type RuntimeState,
 } from "../../../lib/blocks/interpreter";
+import { playSound } from "./sounds";
 import type {
   ComponentNode,
   EventId,
@@ -41,6 +44,8 @@ type AppState = {
 type SavedShape = {
   props?: unknown;
   vars?: unknown;
+  /** 기억하기를 켠 변수입니다. 다시 열어도 이어집니다. */
+  kept?: unknown;
   extra?: unknown;
   // v3 시절 모양입니다. 기능이 하나뿐이던 때라 부품 아이디가 없었습니다.
   checkedItems?: unknown;
@@ -133,8 +138,21 @@ export function useAppRuntime(
   useEffect(() => {
     if (!interactive) return;
     const timer = window.setTimeout(() => {
+        let kept: Record<string, PropValue> = {};
+      try {
+        const saved = readRuntime(
+          window.localStorage,
+          { appId: scopeId, legacyTitle: scopeLegacyTitle },
+          "runtime",
+        );
+        const parsed = saved ? (JSON.parse(saved) as SavedShape) : null;
+        kept = asRecord(parsed?.kept) as Record<string, PropValue>;
+      } catch {
+        // 기억해 둔 값이 깨졌으면 첫 값으로 시작합니다.
+      }
+
       let restored: AppState = {
-        runtime: startState(blocks, design, screen.id),
+        runtime: startState(blocks, design, screen.id, kept),
         extra: {},
       };
       try {
@@ -184,14 +202,42 @@ export function useAppRuntime(
         // 학생이 적은 것만 남깁니다. 블록이 계산한 속성·변수를 같이 저장하면
         // 다음에 열 때 그 값이 설계를 덮어써서 고친 것이 반영되지 않습니다.
         // 사진이 든 기록에서 저장 공간을 아끼는 효과도 있습니다.
-        JSON.stringify({ extra: state.extra }),
+        JSON.stringify({
+          extra: state.extra,
+          // 기억하기를 켠 변수만 남깁니다. 나머지는 열 때마다 첫 값입니다.
+          kept: rememberedVars(blocks, state.runtime),
+        }),
       );
       // 저장에 실패한 것을 말없이 넘기면 학생은 저장된 줄 압니다.
       setStorageFull(result === "full");
     }, 0);
 
     return () => window.clearTimeout(timer);
-  }, [interactive, ready, scopeId, scopeLegacyTitle, state]);
+  }, [blocks, interactive, ready, scopeId, scopeLegacyTitle, state]);
+
+  /* 블록이 낸 소리를 실제로 냅니다. 같은 소리를 두 번 내도 알아채려고 횟수를 봅니다. */
+  const soundAt = state.runtime.soundAt;
+  const soundName = state.runtime.sound;
+  useEffect(() => {
+    if (!interactive || soundAt === 0 || !soundName) return;
+    playSound(soundName);
+  }, [interactive, soundAt, soundName]);
+
+  /* ‘화면이 있는 동안 되풀이’ 블록을 몇 초마다 실행합니다. */
+  const every = tickSeconds(blocks);
+  useEffect(() => {
+    if (!interactive || !ready || every <= 0) return;
+    const timer = window.setInterval(() => {
+      setState((current) => ({
+        ...current,
+        runtime: runEvent(blocks, design, current.runtime, {
+          componentId: "screen",
+          event: "tick",
+        }),
+      }));
+    }, every * 1000);
+    return () => window.clearInterval(timer);
+  }, [blocks, design, every, interactive, ready]);
 
   const resolve = useCallback(
     (node: ComponentNode, key: string) => {

@@ -8,6 +8,8 @@ import {
   resolveProp,
   runEvent,
   startState,
+  tickSeconds,
+  rememberedVars,
 } from "../lib/blocks/interpreter.ts";
 import { nodeIndex } from "../lib/project/tree.ts";
 
@@ -224,4 +226,106 @@ test("sets up variables and runs the screen-open block on start", () => {
   );
   assert.equal(state.vars["점수"], 10);
   assert.equal(resolveProp(design, state, "l1", "text"), "점수는 10");
+});
+
+/** 아무 수와 지금 시각은 바깥에서 받습니다. 시험은 정해진 값을 넣습니다. */
+const fixedEnv = (random, iso) => ({
+  random: () => random,
+  now: () => new Date(iso),
+});
+
+test("rolls a number between the two ends, either way round", () => {
+  const design = {};
+  const state = emptyState();
+  const roll = (min, max, random) =>
+    evaluate({ k: "random", min: { k: "num", v: min }, max: { k: "num", v: max } },
+      design, state, 0, fixedEnv(random, "2026-09-01T09:00:00"));
+
+  assert.equal(roll(1, 6, 0), 1);
+  assert.equal(roll(1, 6, 0.999), 6);
+  assert.equal(roll(1, 6, 0.5), 4);
+  // 큰 수를 앞에 적어도 됩니다. 아이들이 순서를 자주 바꿔 적습니다.
+  assert.equal(roll(6, 1, 0), 1);
+});
+
+test("reads today's date and time from the device", () => {
+  const design = {};
+  const state = emptyState();
+  const env = fixedEnv(0, "2026-09-01T14:05:09");
+  const now = (part) => evaluate({ k: "now", part }, design, state, 0, env);
+
+  assert.equal(now("날짜"), "2026년 9월 1일");
+  assert.equal(now("시각"), "14:05");
+  assert.equal(now("요일"), "화");
+  assert.equal(now("월"), 9);
+  assert.equal(now("분"), 5);
+});
+
+test("counts the letters in a value", () => {
+  const design = {};
+  const state = { ...emptyState(), vars: { 이름: "김하늘" } };
+  assert.equal(evaluate({ k: "len", of: { k: "var", name: "이름" } }, design, state), 3);
+  assert.equal(evaluate({ k: "len", of: { k: "num", v: 1234 } }, design, state), 4);
+});
+
+test("records the sound to play, counting repeats", () => {
+  const program = {
+    events: [
+      {
+        id: "e1",
+        componentId: "c1",
+        event: "click",
+        body: [{ id: "a1", kind: "play-sound", sound: "짝짝" }],
+      },
+    ],
+    variables: [],
+  };
+  const design = {};
+  let state = emptyState();
+
+  state = runEvent(program, design, state, { componentId: "c1", event: "click" });
+  assert.equal(state.sound, "짝짝");
+  assert.equal(state.soundAt, 1);
+
+  // 같은 소리를 다시 내도 화면이 알아채야 합니다.
+  state = runEvent(program, design, state, { componentId: "c1", event: "click" });
+  assert.equal(state.soundAt, 2);
+});
+
+test("repeats a screen block on the shortest interval the student set", () => {
+  const tickProgram = (...seconds) => ({
+    events: seconds.map((every, index) => ({
+      id: `e${index + 1}`,
+      componentId: "screen",
+      event: "tick",
+      every,
+      body: [],
+    })),
+    variables: [],
+  });
+
+  assert.equal(tickSeconds(tickProgram()), 0);
+  assert.equal(tickSeconds(tickProgram(5)), 5);
+  assert.equal(tickSeconds(tickProgram(10, 2, 60)), 2);
+  // 0초마다 되풀이하면 기기가 멈춥니다. 1초가 가장 짧습니다.
+  assert.equal(tickSeconds(tickProgram(0)), 1);
+});
+
+test("keeps only the variables a student asked to remember", () => {
+  const program = {
+    events: [],
+    variables: [
+      { name: "점수", initial: { k: "num", v: 0 }, remember: true },
+      { name: "이번판", initial: { k: "num", v: 0 } },
+    ],
+  };
+  const design = {};
+  const state = { ...emptyState(), vars: { 점수: 12, 이번판: 3 } };
+
+  assert.deepEqual(rememberedVars(program, state), { 점수: 12 });
+
+  // 다시 열면 기억한 값으로 시작하고, 나머지는 첫 값입니다.
+  const started = startState(program, design, "s1", { 점수: 12, 이번판: 99 });
+  assert.equal(started.vars.점수, 12);
+  assert.equal(started.vars.이번판, 0);
 });

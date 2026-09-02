@@ -1,6 +1,10 @@
 "use client";
 
-import type { ComponentNode, Expr } from "../../../lib/chatbot-studio";
+import type {
+  ComponentNode,
+  Expr,
+  NowPart,
+} from "../../../lib/chatbot-studio";
 import { REGISTRY } from "../../../lib/components/registry";
 
 /**
@@ -18,6 +22,22 @@ const KINDS: Array<{ value: Expr["k"]; label: string; advanced?: boolean }> = [
   { value: "cmp", label: "비교", advanced: true },
   { value: "logic", label: "그리고·또는", advanced: true },
   { value: "join", label: "이어 붙이기", advanced: true },
+  { value: "random", label: "아무 수" },
+  { value: "now", label: "오늘·지금" },
+  { value: "len", label: "글자 수", advanced: true },
+];
+
+/** ‘오늘·지금’이 꺼내 줄 수 있는 것입니다. */
+const NOW_PARTS: NowPart[] = [
+  "날짜",
+  "시각",
+  "요일",
+  "년",
+  "월",
+  "일",
+  "시",
+  "분",
+  "초",
 ];
 
 function blankOf(kind: Expr["k"], nodes: ComponentNode[]): Expr {
@@ -52,6 +72,13 @@ function blankOf(kind: Expr["k"], nodes: ComponentNode[]): Expr {
       };
     case "join":
       return { k: "join", parts: [{ k: "text", v: "" }, { k: "text", v: "" }] };
+    case "random":
+      // 주사위가 가장 흔한 쓰임이라 1~6으로 시작합니다.
+      return { k: "random", min: { k: "num", v: 1 }, max: { k: "num", v: 6 } };
+    case "now":
+      return { k: "now", part: "날짜" };
+    case "len":
+      return { k: "len", of: { k: "text", v: "" } };
   }
 }
 
@@ -154,6 +181,38 @@ export function ValueSocket({
 
       {value.k === "prop" && (
         <PropPicker value={value} nodes={nodes} onChange={onChange} />
+      )}
+
+      {value.k === "random" && (
+        <span className="value-operands">
+          {nested(value.min, (next) => onChange({ ...value, min: next }))}
+          <b>부터</b>
+          {nested(value.max, (next) => onChange({ ...value, max: next }))}
+          <b>까지</b>
+        </span>
+      )}
+
+      {value.k === "now" && (
+        <select
+          aria-label="무엇을 꺼낼지"
+          value={value.part}
+          onChange={(event) =>
+            onChange({ k: "now", part: event.target.value as NowPart })
+          }
+        >
+          {NOW_PARTS.map((part) => (
+            <option key={part} value={part}>
+              {part}
+            </option>
+          ))}
+        </select>
+      )}
+
+      {value.k === "len" && (
+        <span className="value-operands">
+          {nested(value.of, (next) => onChange({ ...value, of: next }))}
+          <b>의 글자 수</b>
+        </span>
       )}
 
       {(value.k === "math" || value.k === "cmp" || value.k === "logic") && (

@@ -26,7 +26,7 @@ export function propLabel(design: NameLookup, id: string, key: string) {
 }
 
 export function eventLabel(design: NameLookup, id: string, event: EventId) {
-  if (id === SCREEN_TARGET) return "열렸을 때";
+  if (id === SCREEN_TARGET) return event === "tick" ? "가 있는 동안 되풀이" : "열렸을 때";
   const node = design[id];
   if (!node) return "일어났을 때";
   return (
@@ -55,6 +55,12 @@ export function describeExpr(expr: Expr, design: NameLookup): string {
       return `(${describeExpr(expr.a, design)} ${expr.op} ${describeExpr(expr.b, design)})`;
     case "join":
       return expr.parts.map((part) => describeExpr(part, design)).join(" + ");
+    case "random":
+      return `${describeExpr(expr.min, design)}부터 ${describeExpr(expr.max, design)}까지 아무 수`;
+    case "now":
+      return `지금 ${expr.part}`;
+    case "len":
+      return `${describeExpr(expr.of, design)}의 글자 수`;
   }
 }
 
@@ -76,6 +82,8 @@ export function describeAction(action: Action, design: NameLookup): string {
       return `${describeExpr(action.times, design)}번 반복하기`;
     case "open-screen":
       return `${action.screen} 화면 열기`;
+    case "play-sound":
+      return `‘${action.sound}’ 소리 내기`;
   }
 }
 
@@ -93,6 +101,7 @@ export const ACTION_CHOICES: Array<{
     hint: "다른 부품의 글이나 색을 바꿔요",
   },
   { kind: "show-message", label: "말풍선 보여 주기", hint: "화면에 안내를 띄워요" },
+  { kind: "play-sound", label: "소리 내기", hint: "딩동·짝짝 같은 소리를 내요" },
   {
     kind: "set-var",
     label: "변수 정하기",

@@ -6988,6 +6988,44 @@ select:focus-visible {
   font-size: 11px;
 }
 
+/* 변수를 기기에 남길지 고르는 자리입니다. 점수처럼 이어져야 하는 값에 켭니다. */
+.variable-remember {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.variable-remember:has(input:checked) {
+  border-color: #c9c0ff;
+  background: var(--violet-soft);
+  color: var(--violet);
+}
+
+.variable-remember input {
+  width: 13px;
+  height: 13px;
+  accent-color: var(--violet);
+}
+
+/* ‘몇 초마다 되풀이’ 블록의 초를 적는 칸입니다. */
+.event-block .tick-seconds {
+  width: 52px;
+  padding: 3px 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+}
+
 .variable-row button {
   margin-left: auto;
   display: inline-flex;

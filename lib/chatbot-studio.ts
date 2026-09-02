@@ -18,6 +18,8 @@ export type {
   BlockProgram,
   BlockVariable,
   CmpOp,
+  NowPart,
+  SoundName,
   ComponentNode,
   ComponentTypeId,
   EventBlock,
