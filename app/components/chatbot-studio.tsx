@@ -621,6 +621,8 @@ export function ChatbotStudio() {
       setDropTargetId((current) => (current === target ? "" : current)),
     onTouchDragStart: (node: ComponentNode) =>
       dragHandlers({ kind: "move", nodeId: node.id, label: node.name }),
+    onResize: (nodeId: string, width: string) =>
+      changeProp(nodeId, "width", width),
   };
 
   /* ---------------- 저장·공유 ---------------- */

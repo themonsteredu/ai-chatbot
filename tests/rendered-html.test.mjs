@@ -797,3 +797,27 @@ test("lets a finger drag parts, since touch screens have no drag and drop", asyn
   assert.match(studio, /kind: "new", type, label: name/);
   assert.match(studio, /kind: "move", nodeId: node\.id/);
 });
+
+test("resizes a part by dragging its edge, in steps that stay responsive", async () => {
+  const [slot, style, registry, studio] = await Promise.all([
+    readFile(new URL("app/components/runtime/render-node.tsx", root), "utf8"),
+    readFile(new URL("app/components/runtime/style.ts", root), "utf8"),
+    readFile(new URL("lib/components/registry.ts", root), "utf8"),
+    readFile(new URL("app/components/chatbot-studio.tsx", root), "utf8"),
+  ]);
+
+  // 넓은 것부터 좁은 것 차례여야 손잡이를 끄는 방향과 맞습니다.
+  assert.match(style, /WIDTH_STEPS = \["full", "two-thirds", "half", "auto"\]/);
+  for (const step of ["full", "two-thirds", "half", "auto"]) {
+    assert.ok(style.includes(step), `너비 단계에 ${step}이 없습니다.`);
+    assert.ok(registry.includes(step), `속성 판에 ${step}이 없습니다.`);
+  }
+
+  // 손잡이는 고른 부품에만 붙고, 끌면 너비 속성을 바꿉니다.
+  assert.match(slot, /selected && design\.onResize/);
+  assert.match(slot, /onResize\(node\.id, step\)/);
+  assert.match(studio, /changeProp\(nodeId, "width", width\)/);
+  // 손잡이를 못 잡는 학생도 방향키로 바꿀 수 있어야 합니다.
+  assert.match(slot, /ArrowRight/);
+  assert.match(slot, /aria-valuenow/);
+});

@@ -106,8 +106,9 @@ const SPACES = [
 
 const WIDTHS = [
   { value: "full", label: "꽉 채우기" },
-  { value: "auto", label: "내용만큼" },
+  { value: "two-thirds", label: "3분의 2" },
   { value: "half", label: "절반" },
+  { value: "auto", label: "내용만큼" },
 ];
 
 /**

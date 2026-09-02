@@ -11,7 +11,7 @@ import type { ComponentNode } from "../../../lib/chatbot-studio";
 import { REGISTRY } from "../../../lib/components/registry";
 import type { RuntimeScope } from "../../../lib/runtime-store";
 import { CampReport } from "../camp-report";
-import { containerStyle, isVisible } from "./style";
+import { WIDTH_STEPS, containerStyle, isVisible } from "./style";
 import type { AppRuntime } from "./use-app-runtime";
 import {
   ButtonPart,
@@ -46,6 +46,8 @@ export type DesignHooks = {
   onTouchDragStart?: (node: ComponentNode) => {
     onPointerDown: (event: PointerEvent<HTMLElement>) => void;
   };
+  /** 가장자리를 끌어 너비를 바꿉니다. */
+  onResize?: (nodeId: string, width: string) => void;
 };
 
 export type RenderNodeProps = {
@@ -144,6 +146,88 @@ function Part({ node, runtime, campScope, onOpenChat, design }: RenderNodeProps)
   }
 }
 
+/**
+ * 고른 부품의 오른쪽 가장자리에 붙는 손잡이입니다. 끌면 너비가 정해진 네 단계로
+ * 걸리며 바뀝니다.
+ *
+ * 픽셀로 자유롭게 늘이지 않는 까닭: 웹앱은 화면 폭에 맞춰 늘어나야 합니다. 만든
+ * 아이패드에서 예뻐도 친구 휴대폰에서 깨지면, 초등 교실에서 가장 잡기 어려운
+ * 문제가 됩니다.
+ */
+function ResizeHandle({
+  node,
+  onResize,
+}: {
+  node: ComponentNode;
+  onResize: (nodeId: string, width: string) => void;
+}) {
+  const grab = (event: PointerEvent<HTMLElement>) => {
+    event.stopPropagation();
+    event.preventDefault();
+    const slot = event.currentTarget.parentElement;
+    if (!slot) return;
+    const box = slot.getBoundingClientRect();
+    const handle = event.currentTarget;
+    handle.setPointerCapture(event.pointerId);
+
+    const pick = (x: number) => {
+      // 왼쪽 끝에서 얼마나 왔는지를 보고 가장 가까운 단계를 고릅니다.
+      const ratio = Math.max(0, Math.min((x - box.left) / box.width, 1));
+      const step =
+        ratio > 0.82
+          ? "full"
+          : ratio > 0.58
+            ? "two-thirds"
+            : ratio > 0.34
+              ? "half"
+              : "auto";
+      if (step !== (node.props.width ?? "full")) onResize(node.id, step);
+    };
+
+    const move = (moving: globalThis.PointerEvent) => pick(moving.clientX);
+    const done = () => {
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", done);
+      handle.removeEventListener("pointercancel", done);
+    };
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", done);
+    handle.addEventListener("pointercancel", done);
+  };
+
+  // 넓은 것이 1, 좁은 것이 4입니다. 읽어 주는 프로그램이 지금 몇 단계인지 말해 줍니다.
+  const step = WIDTH_STEPS.indexOf(
+    String(node.props.width ?? "full") as (typeof WIDTH_STEPS)[number],
+  );
+
+  return (
+    <span
+      className="part-resize"
+      role="slider"
+      tabIndex={0}
+      aria-label={`${node.name} 너비 조절`}
+      aria-valuemin={1}
+      aria-valuemax={WIDTH_STEPS.length}
+      aria-valuenow={(step < 0 ? 0 : step) + 1}
+      onClick={(event) => event.stopPropagation()}
+      onPointerDown={grab}
+      onKeyDown={(event) => {
+        // 손잡이를 못 잡는 학생도 방향키로 넓히고 좁힐 수 있어야 합니다.
+        const move =
+          event.key === "ArrowRight" ? -1 : event.key === "ArrowLeft" ? 1 : 0;
+        if (move === 0) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const next = Math.max(
+          0,
+          Math.min((step < 0 ? 0 : step) + move, WIDTH_STEPS.length - 1),
+        );
+        onResize(node.id, WIDTH_STEPS[next]);
+      }}
+    />
+  );
+}
+
 export function RenderNode(props: RenderNodeProps) {
   const { node, design } = props;
   const hidden = !isVisible(node.props);
@@ -198,6 +282,9 @@ export function RenderNode(props: RenderNodeProps) {
         </span>
       )}
       {Part(props)}
+      {selected && design.onResize && (
+        <ResizeHandle node={node} onResize={design.onResize} />
+      )}
     </div>
   );
 }

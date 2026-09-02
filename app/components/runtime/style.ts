@@ -46,10 +46,14 @@ const SPACE: Record<string, string> = {
   lg: "20px",
 };
 
+/** 넓은 것부터 좁은 것 차례입니다. 가장자리를 끌어 조절할 때 이 차례로 걸립니다. */
+export const WIDTH_STEPS = ["full", "two-thirds", "half", "auto"] as const;
+
 const WIDTH: Record<string, string> = {
   full: "100%",
-  auto: "fit-content",
+  "two-thirds": "66%",
   half: "50%",
+  auto: "fit-content",
 };
 
 const JUSTIFY: Record<string, string> = {

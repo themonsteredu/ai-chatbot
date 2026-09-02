@@ -6239,6 +6239,8 @@ select:focus-visible {
 }
 
 .part-slot.design {
+  /* 너비 손잡이가 이 칸을 기준으로 오른쪽 끝에 붙습니다. */
+  position: relative;
   cursor: pointer;
   border-radius: 12px;
   outline-offset: 2px;
@@ -6257,6 +6259,32 @@ select:focus-visible {
    학생이 다시 찾아 켤 수 있습니다. */
 .part-slot.part-hidden {
   opacity: 0.45;
+}
+
+/* 고른 부품의 오른쪽 가장자리 손잡이입니다. 끌면 너비가 네 단계로 걸립니다. */
+.part-resize {
+  position: absolute;
+  top: 50%;
+  right: -3px;
+  z-index: 3;
+  width: 14px;
+  height: 34px;
+  transform: translateY(-50%);
+  border: 1px solid var(--violet);
+  border-radius: 99px;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(42, 47, 70, 0.18);
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.part-resize::after {
+  content: "";
+  position: absolute;
+  inset: 9px 5px;
+  border-left: 1px solid var(--violet);
+  border-right: 1px solid var(--violet);
+  opacity: 0.75;
 }
 
 .part-hidden-badge {
