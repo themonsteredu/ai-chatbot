@@ -27,10 +27,8 @@ import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import {
   DEFAULT_PROJECT,
   PROJECT_TEMPLATES,
-  canonicalShareOrigin,
   cloneProject,
   decodeProject,
-  encodeProject,
   normalizeProject,
   type ComponentNode,
   type ComponentTypeId,
@@ -69,6 +67,7 @@ import { clearRuntime, DRAFT_SCOPE_ID } from "../../lib/runtime-store";
 import { BlockCanvas, BlockPalette } from "./blocks/block-editor";
 import { ColorField } from "./designer/color-field";
 import { ComponentTree, REORDER_MIME } from "./designer/component-tree";
+import { buildShareLink } from "./share-link";
 import { PALETTE_MIME, PalettePanel } from "./designer/palette-panel";
 import { PropertyEditor } from "./designer/property-editor";
 import { useProjectHistory } from "./designer/use-project-history";
@@ -623,29 +622,11 @@ export function ChatbotStudio() {
   /**
    * 공유 주소를 만듭니다. 내용을 서버에 저장하고 짧은 코드만 담는 쪽을
    * 먼저 시도합니다. 링크가 짧아야 QR이 성겨져 휴대폰 카메라가 잘 읽습니다.
-   * 저장소가 아직 연결되지 않았으면 내용을 통째로 담은 긴 링크를 씁니다.
+   * 설치 화면의 '주소 복사'도 같은 주소를 씁니다(share-link.ts).
    */
   const buildShareUrl = async () => {
     const savedApp = saveCurrentAsWebApp();
-    const url = new URL("/", canonicalShareOrigin());
-    url.searchParams.set("run", "install");
-    url.searchParams.set("app", savedApp.id);
-
-    try {
-      const response = await fetch("/api/share", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "create", project }),
-      });
-      const json = await response.json().catch(() => null);
-      if (!response.ok || !json?.id) throw new Error("share unavailable");
-      url.searchParams.set("sid", json.id);
-      return { url: url.toString(), code: String(json.id) };
-    } catch {
-      // 긴 링크에는 사진을 그대로 실을 수 없습니다. 주소가 한도를 넘습니다.
-      url.searchParams.set("project", encodeProject(project, { forManifest: true }));
-      return { url: url.toString(), code: "" };
-    }
+    return buildShareLink(project, savedApp.id);
   };
 
   const shareProject = async () => {

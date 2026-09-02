@@ -9,6 +9,7 @@ import {
   installGuide,
   type InstallGuide,
 } from "../../lib/install-guide";
+import { buildShareLink } from "./share-link";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -170,12 +171,17 @@ export function PwaInstallButton({
     };
   }, [accent, appId, appName, encodedProject]);
 
+  /**
+   * 다른 브라우저에 붙여 넣어도 내가 만든 것이 뜨는 주소를 복사합니다. 지금
+   * 주소창의 주소에는 내용이 없어서, 그것을 복사하면 빈 화면이 뜹니다.
+   */
   const copyLink = async () => {
+    const { url } = await buildShareLink(project, appId);
     try {
-      await navigator.clipboard.writeText(window.location.href);
+      await navigator.clipboard.writeText(url);
       setCopied(true);
     } catch {
-      window.prompt("아래 주소를 복사해 주세요.", window.location.href);
+      window.prompt("아래 주소를 복사해 주세요.", url);
     }
   };
 
@@ -257,7 +263,9 @@ export function PwaInstallButton({
                   onClick={copyLink}
                 >
                   <Copy size={12} aria-hidden="true" />
-                  {copied ? "주소를 복사했어요" : "이 앱 주소 복사"}
+                  {copied
+                    ? "복사했어요 · 주소창에 붙여 넣어요"
+                    : "내 웹앱 주소 복사"}
                 </button>
               )}
               <small>

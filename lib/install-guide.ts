@@ -50,8 +50,9 @@ export function installGuide(kind: BrowserKind, appName: string): InstallGuide {
       return {
         title: "이 앱 안의 브라우저로는 홈 화면에 넣을 수 없어요",
         steps: [
-          "오른쪽 위 메뉴(⋮ 또는 공유)에서 ‘다른 브라우저로 열기’ 또는 ‘Chrome으로 열기’를 눌러요",
-          "열린 Chrome(아이폰은 Safari)에서 다시 ‘설치’를 눌러요",
+          "아래 ‘내 웹앱 주소 복사’를 눌러요 (만든 내용이 실린 주소예요)",
+          "Safari(안드로이드는 Chrome)를 열고 주소창에 붙여 넣어요",
+          "거기서 다시 ‘설치’를 눌러요",
         ],
         needsAnotherBrowser: true,
       };
@@ -69,7 +70,8 @@ export function installGuide(kind: BrowserKind, appName: string): InstallGuide {
       return {
         title: "아이폰·아이패드는 Safari에서 넣는 게 가장 확실해요",
         steps: [
-          "주소를 복사해 Safari에서 열어요",
+          "아래 ‘내 웹앱 주소 복사’를 눌러요 (만든 내용이 실린 주소예요)",
+          "Safari를 열고 주소창에 붙여 넣어요",
           "공유 버튼 → ‘홈 화면에 추가’ → ‘추가’를 눌러요",
         ],
         needsAnotherBrowser: true,

@@ -575,7 +575,11 @@ test("builds share and QR links on the public production domain", async () => {
   assert.match(model, /canonicalShareOrigin/);
   assert.match(encode, /NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL/);
   // 공유와 QR은 같은 buildShareUrl을 쓰므로 공개 주소 사용은 한 곳에 모입니다.
-  assert.match(studio, /new URL\("\/", canonicalShareOrigin\(\)\)/);
+  // 공유 주소는 편집 화면과 설치 화면이 함께 쓰는 share-link.ts가 만듭니다.
+  assert.match(
+    await readFile(new URL("app/components/share-link.ts", root), "utf8"),
+    /new URL\("\/", canonicalShareOrigin\(\)\)/,
+  );
   assert.match(studio, /const \{ url \} = await buildShareUrl\(\)/);
   assert.match(studio, /const \{ url, code \} = await buildShareUrl\(\)/);
 });
@@ -591,10 +595,11 @@ test("keeps QR codes sparse with server-stored share codes", async () => {
 
   // 내용을 서버에 저장하고 짧은 코드만 담아야 QR이 성겨져 잘 읽힙니다.
   assert.match(studio, /buildShareUrl/);
-  assert.match(studio, /searchParams\.set\("sid", json\.id\)/);
+  const shareLink = await readFile(new URL("app/components/share-link.ts", root), "utf8");
+  assert.match(shareLink, /searchParams\.set\("sid", json\.id\)/);
   // 저장소가 없으면 내용을 담은 긴 링크로 대체합니다. 사진까지 실으면 주소가
   // 한도를 넘겨 QR이 만들어지지 않으므로 사진은 뺍니다.
-  assert.match(studio, /encodeProject\(project, \{ forManifest: true \}\)/);
+  assert.match(shareLink, /encodeProject\(project, \{ forManifest: true \}\)/);
   // 링크를 여는 쪽은 짧은 코드로 서버에서 내용을 받아 옵니다.
   assert.match(studio, /action: "get", id: sid/);
   assert.match(shareRoute, /normalizeProject/);
@@ -748,4 +753,20 @@ test("keeps a student's app openable where the school network blocks it", async 
   // 것만으로는 학교에서 아이콘이 안 열립니다. 초록불 대신 따로 담으라고 합니다.
   assert.match(ready, /홈 화면 아이콘은 따로 담아야 해요/);
   assert.match(player, /<OfflineReady \/>/);
+});
+
+test("copies a link that carries the design, not the bare install address", async () => {
+  const [studio, installer, share] = await Promise.all([
+    readFile(new URL("app/components/chatbot-studio.tsx", root), "utf8"),
+    readFile(new URL("app/components/pwa-install.tsx", root), "utf8"),
+    readFile(new URL("app/components/share-link.ts", root), "utf8"),
+  ]);
+
+  // 설치 화면 주소에는 설계 내용이 없어서, 그대로 복사해 다른 브라우저에 붙이면
+  // 빈 화면이 뜹니다. 공유·QR과 '주소 복사'가 같은 공유 주소를 만들어야 합니다.
+  assert.match(share, /searchParams\.set\("sid", json\.id\)/);
+  assert.match(share, /encodeProject\(project, \{ forManifest: true \}\)/);
+  assert.match(studio, /return buildShareLink\(project, savedApp\.id\)/);
+  assert.match(installer, /await buildShareLink\(project, appId\)/);
+  assert.doesNotMatch(installer, /writeText\(window\.location\.href\)/);
 });
